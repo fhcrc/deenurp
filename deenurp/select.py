@@ -53,7 +53,7 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
 
     c = itertools.chain(ref_seqs, query_seqs)
     ref_ids = frozenset(i.id for i in ref_seqs)
-    aligned = list(cmalign(c, mpi_args=['-np', str(threads)]))
+    aligned = list(cmalign(c, mpi_args=[]))
     with as_refpkg(i for i in aligned if i.id in ref_ids) as rp, \
              as_fasta(aligned) as fasta, \
              tempdir(prefix='jplace') as placedir, \
@@ -64,17 +64,32 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
         prune_leaves = set(voronoi(placedir('redup.jplace'), keep_leaves))
 
     result = frozenset(i.id for i in ref_seqs) - prune_leaves
+
     assert len(result) == keep_leaves
+
     return result
 
 def choose_references(deenurp_db, rdp_con, refs_per_cluster=5,
-        threads=DEFAULT_THREADS):
+        candidates=30, threads=DEFAULT_THREADS, min_cluster_prop=0.0):
+    """
+    Choose reference sequences from a search, choosing refs_per_cluster reference sequences for each nonoverlapping cluster.
+    """
     extractor = _sequence_extractor(rdp_con)
-    #total_weight = deenurp_db.total_weight()
+    total_weight = deenurp_db.total_weight()
 
-    for cluster_id, seqs, hits in deenurp_db.hits_by_cluster():
+    for cluster_id, seqs, hits in deenurp_db.hits_by_cluster(30):
         if not hits:
-            logging.info("No hits for cluster %d", cluster_id)
+            logging.debug("No hits for cluster %d", cluster_id)
+            continue
+        cluster_weight = sum(seq['weight'] for seq in seqs)
+        cluster_weight_prop = cluster_weight / total_weight
+
+        logging.info("Cluster #%d: %d references; %d sequences "
+                "[weight: %.2f/%.2f (%.1f%%)]", cluster_id, len(hits), len(seqs),
+                cluster_weight, total_weight, cluster_weight_prop * 100)
+
+        if cluster_weight_prop < min_cluster_prop:
+            logging.info("Not enough mass in cluster #%d. Skipping.", cluster_id)
             continue
 
         hit_names = frozenset(i['best_hit_name'] for i in hits)

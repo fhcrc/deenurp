@@ -28,6 +28,7 @@ def action(args):
     if args.weights:
         with args.weights:
             weights = search.dedup_info_to_counts(args.weights)
+        assert weights
     search.create_database(con, args.sequence_file, args.sequence_database,
             weights=weights, maxaccepts=args.maxaccepts,
             maxrejects=args.maxrejects, cluster_id=args.cluster_identity,

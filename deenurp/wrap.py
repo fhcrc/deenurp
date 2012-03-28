@@ -19,7 +19,7 @@ def data_path(*args):
 CM = data_path('bacteria16S_508_mod5.cm')
 
 @contextlib.contextmanager
-def nothing(obj):
+def nothing(obj=None):
     """
     The least interesting context manager.
     """
@@ -38,6 +38,16 @@ def _ntf(**kwargs):
             yield tf
     finally:
         os.unlink(tf.name)
+
+@contextlib.contextmanager
+def tempcopy(path, **kwargs):
+    prefix, suffix = os.path.splitext(os.path.basename(path))
+    a = {'prefix': prefix, 'suffix': suffix}
+    a.update(kwargs)
+    with open(path) as fp, _ntf(**a) as tf:
+        shutil.copyfileobj(fp, tf)
+        tf.close()
+        yield tf.name
 
 @contextlib.contextmanager
 def tempdir(**kwargs):
@@ -117,7 +127,7 @@ def guppy_redup(placefile, redup_file, output):
     logging.info(' '.join(cmd))
     subprocess.check_call(cmd)
 
-def pplacer(refpkg, alignment, posterior_prob=True, out_dir=None, threads=2):
+def pplacer(refpkg, alignment, posterior_prob=True, out_dir=None, threads=2, quiet=True):
     """
     Run pplacer on the provided refpkg
     """
@@ -131,9 +141,14 @@ def pplacer(refpkg, alignment, posterior_prob=True, out_dir=None, threads=2):
     if out_dir:
         jplace = os.path.join(out_dir, jplace)
 
-    logging.info(' '.join(cmd))
-    subprocess.check_call(cmd)
+    stdout = open(os.devnull, 'w') if quiet else nothing()
+
+    with stdout:
+        logging.info(' '.join(cmd))
+        subprocess.check_call(cmd, stdout=stdout)
+
     assert os.path.exists(jplace)
+
     return jplace
 
 def voronoi(jplace, leaves, algorithm='full', posterior_prop=True, point_mass=True):
@@ -166,6 +181,7 @@ def cmalign(sequences, mpi_args=None):
         cmd.extend(('-o', tf.name))
         cmd.append(CM)
         cmd.append(fasta)
+        logging.info(' '.join(cmd))
         subprocess.check_call(cmd, stdout=devnull)
 
         for sequence in SeqIO.parse(tf, 'stockholm'):

@@ -2,14 +2,10 @@
 Tools for building a reference set
 """
 import collections
-import contextlib
 import csv
 import itertools
 import logging
 import operator
-import os
-import os.path
-import shutil
 import sqlite3
 import tempfile
 
@@ -20,16 +16,6 @@ from Bio import SeqIO
 _ntf = tempfile.NamedTemporaryFile
 
 # Utility stuff
-@contextlib.contextmanager
-def temp_copy(path, **kwargs):
-    with open(path) as fp, _ntf(delete=False, **kwargs) as tf:
-        try:
-            shutil.copyfileobj(fp, tf)
-            tf.close()
-            yield tf.name
-        finally:
-            os.remove(tf.name)
-
 def dedup_info_to_counts(fp):
     """
     Convert a guppy dedup file (seqid1, seqid2, count) into a dictionary
@@ -362,7 +348,7 @@ def create_database(con, fasta_file, sequence_database, weights=None,
                 cluster_id=cluster_id, search_id=search_id, quiet=quiet)
 
     with con:
-        seq_count = _load_sequences(con, fasta_file)
+        seq_count = _load_sequences(con, fasta_file, weights=weights)
         logging.info("Inserted %d sequences", seq_count)
 
         logging.info("Clustering")
