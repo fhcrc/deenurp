@@ -344,9 +344,9 @@ INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name;
 
 """
 
-def create(con, fasta_file, sequence_database, weights=None,
-            maxaccepts=1, maxrejects=8, cluster_id=0.99, search_id=0.99,
-            quiet=True):
+def create_database(con, fasta_file, sequence_database, weights=None,
+        maxaccepts=1, maxrejects=8, cluster_id=0.99, search_id=0.99,
+        quiet=True):
     """
     Create a database of sequences searched against a sequence database for
     reference set creation.
@@ -375,7 +375,7 @@ def create(con, fasta_file, sequence_database, weights=None,
         logging.info("Merging clusters with common best-hits")
         _merge_clusters(con)
 
-def load(con):
+def load_database(con):
     """
     Open con as a SearchSequences object
     """
