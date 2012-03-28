@@ -72,3 +72,26 @@ GA05AQR02HZ4VX,GLKT0ZE02GQ2FO,1""")
         self.assertEqual({'FUM0LCO02JSVPV': 1.0,
             'FUM0LCO01DPWLL': 3.0,
             'GA05AQR02HZ4VX': 3.0}, actual)
+
+class MergeClustersTestCase(unittest.TestCase):
+    def test_multi_overlap(self):
+        inp = [(1, [1, 2, 3]),
+               (4, [9, 10]),
+               (5, [15, 16]),
+               (6, [16, 18]),
+               (8, [3, 18])]
+        expected = frozenset([frozenset([1, 2, 3, 18, 16, 15]), frozenset([9, 10])])
+        self.assertEqual(expected, search._merge_by_hit(inp))
+
+    def test_no_overlap(self):
+        inp = [(1, [1, 2]),
+               (2, [4, 8])]
+        expected = frozenset(frozenset(j) for i, j in inp)
+        self.assertEqual(expected, search._merge_by_hit(inp))
+
+    def test_single_overlap(self):
+        inp = [(1, [1, 2]),
+               (2, [4, 8]),
+               (3, [1, 16])]
+        expected = frozenset([frozenset([1, 2, 16]), frozenset([4, 8])])
+        self.assertEqual(expected, search._merge_by_hit(inp))
