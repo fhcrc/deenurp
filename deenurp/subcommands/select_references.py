@@ -1,3 +1,7 @@
+"""
+Choose optimal reference sequences
+"""
+
 import argparse
 import contextlib
 import sqlite3

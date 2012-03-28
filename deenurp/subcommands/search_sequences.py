@@ -1,3 +1,8 @@
+"""
+Search a set of sequences against a sequence database for reference package
+candidates.
+"""
+
 import argparse
 import sqlite3
 
