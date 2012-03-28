@@ -159,69 +159,6 @@ WHERE name IN {0} OR (tax_id IN {1} AND is_type = 'type');"""
 
     return extract_seqs
 
-def _merge_by_taxid(it):
-    """
-    Given an iterable of (tax_id, [cluster_id, [cluster_id...]]) pairs, returns
-    sets of clusters to merge based on shared tax_ids.
-    """
-    d = {}
-    for tax_id, cluster_ids in it:
-        s = set(cluster_ids)
-
-        # For each cluster, add any previous clusterings to the working cluster
-        for cluster_id in cluster_ids:
-            if cluster_id in d:
-                s |= d[cluster_id]
-
-        s = frozenset(s)
-        for cluster_id in s:
-            d[cluster_id] = s
-
-    return frozenset(d.values())
-
-def _find_clusters_to_merge(con):
-    """
-    Find clusters to merge
-    """
-    cursor = con.cursor()
-    # Generate a temporary table
-    cursor.executescript("""
-CREATE TEMPORARY TABLE tax_to_cluster
-AS
-SELECT DISTINCT tax_id, cluster_id
-FROM best_hits b
-INNER JOIN sequences s USING(sequence_id)
-INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name;
-CREATE INDEX IX_tax_to_cluster_TAX_ID ON tax_to_cluster(tax_id);
-""")
-
-    try:
-        sql = """
-SELECT cluster_id, tax_id
-FROM tax_to_cluster
-WHERE tax_id IN (SELECT tax_id FROM tax_to_cluster GROUP BY tax_id HAVING COUNT(cluster_id) > 1)
-ORDER BY tax_id;
-"""
-        cursor.execute(sql)
-        for g, v in itertools.groupby(cursor, operator.itemgetter(1)):
-            yield g, [i for i, _ in v]
-    finally:
-        cursor.execute("""DROP TABLE tax_to_cluster""")
-
-def merge_clusters(con):
-    cmd = """UPDATE cluster_sequences
-SET cluster_id = ?
-WHERE cluster_id = ?"""
-    with con:
-        cursor = con.cursor()
-        to_merge = _find_clusters_to_merge(con)
-        merged = _merge_by_taxid(to_merge)
-        for merge_group in merged:
-            first = min(merge_group)
-            logging.info("Merging %d clusters to %d", len(merge_group), first)
-            rows = ((first, i) for i in merge_group if i != first)
-            cursor.executemany(cmd, rows)
-
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
     """
     Given a set of reference sequences and query sequences

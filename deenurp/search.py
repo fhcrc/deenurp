@@ -1,11 +1,12 @@
-
 """
 Tools for building a reference set
 """
 import collections
 import contextlib
 import csv
+import itertools
 import logging
+import operator
 import os
 import os.path
 import shutil
@@ -105,6 +106,73 @@ INSERT INTO cluster_sequences (cluster_id, orig_cluster_id, sequence_name, is_se
 VALUES (?, ?, ?, ?)"""
             cursor.execute(sql, [record.cluster_number, record.cluster_number,
                 record.query_label, record.type == 'S'])
+
+# Merging
+def _merge_by_hit(it):
+    """
+    Given an iterable of (tax_id, [cluster_id, [cluster_id...]]) pairs, returns
+    sets of clusters to merge based on shared tax_ids.
+    """
+    d = {}
+    for tax_id, cluster_ids in it:
+        s = set(cluster_ids)
+
+        # For each cluster, add any previous clusterings to the working cluster
+        for cluster_id in cluster_ids:
+            if cluster_id in d:
+                s |= d[cluster_id]
+
+        s = frozenset(s)
+        for cluster_id in s:
+            d[cluster_id] = s
+
+    return frozenset(d.values())
+
+def _find_clusters_to_merge(con):
+    """
+    Find clusters to merge
+    """
+    cursor = con.cursor()
+    # Generate a temporary table
+    cursor.executescript("""
+CREATE TEMPORARY TABLE hits_to_cluster
+AS
+SELECT DISTINCT b.name as best_hit, cluster_id
+FROM best_hits b
+INNER JOIN sequences s USING(sequence_id)
+INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name;
+CREATE INDEX IX_hits_to_cluster_best_hit ON hits_to_cluster(best_hit);
+""")
+
+    try:
+        sql = """
+SELECT cluster_id, best_hit
+FROM hits_to_cluster
+WHERE best_hit IN (SELECT tax_id FROM hits_to_cluster GROUP BY best_hit HAVING COUNT(cluster_id) > 1)
+ORDER BY best_hit;
+"""
+        cursor.execute(sql)
+        for g, v in itertools.groupby(cursor, operator.itemgetter(1)):
+            yield g, [i for i, _ in v]
+    finally:
+        cursor.execute("""DROP TABLE hits_to_cluster""")
+
+def _merge_clusters(con):
+    """
+    Merge clusters which share a common best-hit
+    """
+    cmd = """UPDATE cluster_sequences
+SET cluster_id = ?
+WHERE cluster_id = ?"""
+
+    cursor = con.cursor()
+    to_merge = _find_clusters_to_merge(con)
+    merged = _merge_by_hit(to_merge)
+    for merge_group in merged:
+        first = min(merge_group)
+        logging.info("Merging %d clusters to %d", len(merge_group), first)
+        rows = ((first, i) for i in merge_group if i != first)
+        cursor.executemany(cmd, rows)
 
 def _search_all(con, sequence_database, quiet=True):
     """
@@ -292,6 +360,10 @@ def create(con, fasta_file, sequence_database, weights=None,
 
     with con:
         _search_all(con, sequence_database, quiet=quiet)
+
+    with con:
+        logging.info("Merging clusters with common best-hits")
+        _merge_clusters(con)
 
 def open(con):
     """
