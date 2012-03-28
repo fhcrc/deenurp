@@ -12,6 +12,8 @@ from Bio.SeqRecord import SeqRecord
 from .wrap import cmalign, as_refpkg, as_fasta, tempdir, redupfile_of_seqs, \
                   voronoi, guppy_redup, pplacer
 
+DEFAULT_THREADS = 12
+
 def seqrecord(name, residues, **annotations):
     sr = SeqRecord(Seq(residues), name)
     sr.annotations.update(annotations)
@@ -41,7 +43,8 @@ WHERE name IN {0} OR (tax_id IN {1} AND is_type = 'type');"""
 
     return extract_seqs
 
-def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
+def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
+        threads=DEFAULT_THREADS):
     """
     Given a set of reference sequences and query sequences
     """
@@ -50,12 +53,12 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
 
     c = itertools.chain(ref_seqs, query_seqs)
     ref_ids = frozenset(i.id for i in ref_seqs)
-    aligned = list(cmalign(c))
+    aligned = list(cmalign(c, mpi_args=['-np', str(threads)]))
     with as_refpkg(i for i in aligned if i.id in ref_ids) as rp, \
              as_fasta(aligned) as fasta, \
              tempdir(prefix='jplace') as placedir, \
              redupfile_of_seqs(query_seqs) as redup_path:
-        jplace = pplacer(rp.path, fasta, out_dir=placedir())
+        jplace = pplacer(rp.path, fasta, out_dir=placedir(), threads=threads)
         # Redup
         guppy_redup(jplace, redup_path, placedir('redup.jplace'))
         prune_leaves = set(voronoi(placedir('redup.jplace'), keep_leaves))
@@ -64,7 +67,8 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
     assert len(result) == keep_leaves
     return result
 
-def choose_references(deenurp_db, rdp_con, refs_per_cluster=5, threads=12):
+def choose_references(deenurp_db, rdp_con, refs_per_cluster=5,
+        threads=DEFAULT_THREADS):
     extractor = _sequence_extractor(rdp_con)
     #total_weight = deenurp_db.total_weight()
 
@@ -77,7 +81,7 @@ def choose_references(deenurp_db, rdp_con, refs_per_cluster=5, threads=12):
         tax_ids = frozenset(i['tax_id'] for i in hits)
         seqs = [seqrecord(i['name'], i['residues'], weight=i['weight']) for i in seqs]
         ref_seqs = list(extractor(hit_names, tax_ids))
-        keep = select_sequences_for_cluster(ref_seqs, seqs, refs_per_cluster)
+        keep = select_sequences_for_cluster(ref_seqs, seqs, refs_per_cluster, threads=threads)
         refs = [i for i in ref_seqs if i.id in keep]
 
         assert len(refs) == len(keep)

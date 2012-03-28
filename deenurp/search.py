@@ -375,7 +375,7 @@ def create_database(con, fasta_file, sequence_database, weights=None,
         logging.info("Merging clusters with common best-hits")
         _merge_clusters(con)
 
-def load_database(con):
+def open_database(con):
     """
     Open con as a SearchSequences object
     """
