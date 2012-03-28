@@ -118,6 +118,9 @@ def guppy_redup(placefile, redup_file, output):
     subprocess.check_call(cmd)
 
 def pplacer(refpkg, alignment, posterior_prob=True, out_dir=None, threads=2):
+    """
+    Run pplacer on the provided refpkg
+    """
     cmd = ['pplacer', '-j', str(threads), '-c', refpkg, alignment]
     if posterior_prob:
         cmd.append('-p')
@@ -133,9 +136,16 @@ def pplacer(refpkg, alignment, posterior_prob=True, out_dir=None, threads=2):
     assert os.path.exists(jplace)
     return jplace
 
-def voronoi(jplace, leaves, algorithm='full'):
+def voronoi(jplace, leaves, algorithm='full', posterior_prop=True, point_mass=True):
+    """
+    Run rppr voronoi on the given jplace file, cutting to the given number of leaves
+    """
     cmd = ['rppr', 'voronoi', '--algorithm', algorithm, jplace, '--leaves',
            str(leaves)]
+    if point_mass:
+        cmd.append('--point-mass')
+    if posterior_prop:
+        cmd.append('--pp')
     logging.info(' '.join(cmd))
     output = subprocess.check_output(cmd)
     return output.splitlines()
@@ -143,6 +153,8 @@ def voronoi(jplace, leaves, algorithm='full'):
 def cmalign(sequences, mpi_args=None):
     """
     Run cmalign
+
+    If mpi_args is specified, run via mpirun
     """
     if not mpi_args:
         cmd = ['cmalign']
