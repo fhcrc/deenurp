@@ -19,7 +19,32 @@ def data_path(*args):
 CM = data_path('bacteria16S_508_mod5.cm')
 
 @contextlib.contextmanager
+def nothing(obj):
+    """
+    The least interesting context manager.
+    """
+    yield obj
+
+@contextlib.contextmanager
+def _ntf(**kwargs):
+    """
+    Near-clone of tempfile.NamedTemporaryFile, but the file is deleted when the
+    context manager exits, rather than when it's closed.
+    """
+    kwargs['delete'] = False
+    tf = tempfile.NamedTemporaryFile(**kwargs)
+    try:
+        with tf:
+            yield tf
+    finally:
+        os.unlink(tf.name)
+
+@contextlib.contextmanager
 def tempdir(**kwargs):
+    """
+    Create a temporary directory for the duration of the context manager, removing
+    on exit.
+    """
     td = tempfile.mkdtemp(**kwargs)
     def p(*args):
         return os.path.join(td, *args)
@@ -30,11 +55,15 @@ def tempdir(**kwargs):
 
 @contextlib.contextmanager
 def as_fasta(sequences, **kwargs):
+    """
+    Write sequences to a temporary FASTA file. returns the name
+    """
     if 'suffix' not in kwargs:
         kwargs['suffix'] = '.fasta'
-    with tempfile.NamedTemporaryFile(**kwargs) as tf:
+    with _ntf(**kwargs) as tf:
         SeqIO.write(sequences, tf, 'fasta')
         tf.flush()
+        tf.close()
         yield tf.name
 
 @contextlib.contextmanager
@@ -43,11 +72,14 @@ def as_refpkg(sequences):
     Build a tree from sequences, generate a temporary reference package
     """
     sequences = list(sequences)
-    with tempfile.NamedTemporaryFile(prefix='fast', suffix='.log') as log_fp, \
-         tempfile.NamedTemporaryFile(prefix='fast', suffix='.tre') as tree_fp, \
+    with _ntf(prefix='fast', suffix='.log') as log_fp, \
+         _ntf(prefix='fast', suffix='.tre') as tree_fp, \
          tempdir(prefix='refpkg') as refpkg_dir:
+
+        log_fp.close()
+
         fasttree(sequences, log_fp.name, tree_fp, gtr=True)
-        tree_fp.flush()
+        tree_fp.close()
 
         rp = Refpkg(refpkg_dir('temp.refpkg'))
         rp.update_metadata('locus', '')
@@ -58,11 +90,12 @@ def as_refpkg(sequences):
 
 @contextlib.contextmanager
 def redupfile_of_seqs(sequences, **kwargs):
-    with tempfile.NamedTemporaryFile(**kwargs) as tf:
+    with _ntf(**kwargs) as tf:
         writer = csv.writer(tf, lineterminator='\n')
         rows = ((s.id, s.id, s.annotations.get('weight', 1.0)) for s in sequences)
         writer.writerows(rows)
         tf.flush()
+        tf.close()
         yield tf.name
 
 def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False, gamma=False):
