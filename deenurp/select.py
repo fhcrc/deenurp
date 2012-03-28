@@ -64,7 +64,7 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
     assert len(result) == keep_leaves
     return result
 
-def choose_references(deenurp_db, rdp_con, refs_per_cluster=5):
+def choose_references(deenurp_db, rdp_con, refs_per_cluster=5, threads=12):
     extractor = _sequence_extractor(rdp_con)
     #total_weight = deenurp_db.total_weight()
 
