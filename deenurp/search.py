@@ -110,11 +110,11 @@ VALUES (?, ?, ?, ?)"""
 # Merging
 def _merge_by_hit(it):
     """
-    Given an iterable of (tax_id, [cluster_id, [cluster_id...]]) pairs, returns
-    sets of clusters to merge based on shared tax_ids.
+    Given an iterable of (best_hit, [cluster_id, [cluster_id...]]) pairs, returns
+    sets of clusters to merge based on shared best_hits.
     """
     d = {}
-    for tax_id, cluster_ids in it:
+    for best_hit, cluster_ids in it:
         s = set(cluster_ids)
 
         # For each cluster, add any previous clusterings to the working cluster
@@ -375,7 +375,7 @@ def create(con, fasta_file, sequence_database, weights=None,
         logging.info("Merging clusters with common best-hits")
         _merge_clusters(con)
 
-def open(con):
+def load(con):
     """
     Open con as a SearchSequences object
     """
