@@ -140,7 +140,8 @@ AS
 SELECT DISTINCT b.name as best_hit, cluster_id
 FROM best_hits b
 INNER JOIN sequences s USING(sequence_id)
-INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name;
+INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name
+WHERE hit_idx = 0; -- Only accept best hit
 CREATE INDEX IX_hits_to_cluster_best_hit ON hits_to_cluster(best_hit);
 """)
 
@@ -148,7 +149,9 @@ CREATE INDEX IX_hits_to_cluster_best_hit ON hits_to_cluster(best_hit);
         sql = """
 SELECT cluster_id, best_hit
 FROM hits_to_cluster
-WHERE best_hit IN (SELECT tax_id FROM hits_to_cluster GROUP BY best_hit HAVING COUNT(cluster_id) > 1)
+WHERE best_hit IN (SELECT best_hit
+                   FROM hits_to_cluster
+                   GROUP BY best_hit HAVING COUNT(cluster_id) > 1)
 ORDER BY best_hit;
 """
         cursor.execute(sql)
@@ -332,6 +335,13 @@ CREATE TABLE params (
   key VARCHAR PRIMARY KEY,
   val VARCHAR
 );
+
+CREATE VIEW cluster_hits AS
+SELECT cs.cluster_id, bh.name AS best_hit
+FROM best_hits bh
+INNER JOIN sequences s USING (sequence_id)
+INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name;
+
 """
 
 def create(con, fasta_file, sequence_database, weights=None,
@@ -353,12 +363,12 @@ def create(con, fasta_file, sequence_database, weights=None,
 
     with con:
         seq_count = _load_sequences(con, fasta_file)
-    logging.info("Inserted %d sequences", seq_count)
+        logging.info("Inserted %d sequences", seq_count)
 
-    with con:
+        logging.info("Clustering")
         _cluster(con, fasta_file, quiet=quiet)
 
-    with con:
+        logging.info("Searching")
         _search_all(con, sequence_database, quiet=quiet)
 
     with con:
