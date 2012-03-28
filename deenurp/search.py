@@ -189,9 +189,9 @@ VALUES (?, ?, ?, ?)"""
                         sql = """INSERT INTO clusters (cluster_id) VALUES (?)"""
                         cursor.execute(sql, [record.cluster_number])
                     sql = """
-INSERT INTO cluster_sequences (cluster_id, sequence_name, is_seed)
-VALUES (?, ?, ?)"""
-                    cursor.execute(sql, [record.cluster_number,
+INSERT INTO cluster_sequences (cluster_id, orig_cluster_id, sequence_name, is_seed)
+VALUES (?, ?, ?, ?)"""
+                    cursor.execute(sql, [record.cluster_number, record.cluster_number,
                         record.query_label, record.type == 'S'])
 
     def _search_all(self):
@@ -266,6 +266,7 @@ CREATE TABLE clusters (
 
 CREATE TABLE cluster_sequences (
   cluster_id INTEGER REFERENCES clusters(cluster_id) ON DELETE CASCADE,
+  orig_cluster_id INTEGER REFERENCES clusters(cluster_id),
   sequence_name INTEGER REFERENCES sequences(name) ON DELETE CASCADE,
   is_seed TINYINT DEFAULT 0
 );

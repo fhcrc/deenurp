@@ -1,16 +1,17 @@
 """
 Select reference sequences for inclusion
 """
-import csv
 import contextlib
+import csv
+import itertools
 import json
+import logging
+import operator
 import os
 import os.path
-import itertools
-import logging
-import subprocess
 import shutil
 import sqlite3
+import subprocess
 import tempfile
 
 from Bio import SeqIO
@@ -18,20 +19,11 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from taxtastic.refpkg import Refpkg
 
+def data_path(*args):
+    return os.path.join(os.path.dirname(__file__), 'data', *args)
 
-def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False, gamma=False):
-    cmd = ['FastTree', '-nt', '-log', log_path]
-    for k, v in (('-gtr', gtr), ('-gamma', gamma), ('-quiet', quiet)):
-        if v:
-            cmd.append(k)
+CM = data_path('bacteria16S_508_mod5.cm')
 
-    logging.info(' '.join(cmd))
-    p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE)
-    SeqIO.write(sequences, p.stdin, 'fasta')
-    p.stdin.close()
-    p.wait()
-    if not p.returncode == 0:
-        raise subprocess.CalledProcessError(p.returncode)
 
 @contextlib.contextmanager
 def tempdir(**kwargs):
@@ -80,6 +72,20 @@ def redupfile_of_seqs(sequences, **kwargs):
         tf.flush()
         yield tf.name
 
+def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False, gamma=False):
+    cmd = ['FastTree', '-nt', '-log', log_path]
+    for k, v in (('-gtr', gtr), ('-gamma', gamma), ('-quiet', quiet)):
+        if v:
+            cmd.append(k)
+
+    logging.info(' '.join(cmd))
+    p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE)
+    SeqIO.write(sequences, p.stdin, 'fasta')
+    p.stdin.close()
+    p.wait()
+    if not p.returncode == 0:
+        raise subprocess.CalledProcessError(p.returncode)
+
 def guppy_redup(placefile, redup_file, output):
     cmd = ['guppy', 'redup', '-m', placefile, '-d', redup_file, '-o', output]
     logging.info(' '.join(cmd))
@@ -108,11 +114,6 @@ def voronoi(jplace, leaves, algorithm='full'):
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
-def data_path(*args):
-    return os.path.join(os.path.dirname(__file__), 'data', *args)
-
-CM = data_path('bacteria16S_508_mod5.cm')
-
 def cmalign(sequences, mpi_args=None):
     if not mpi_args:
         cmd = ['cmalign']
@@ -134,7 +135,7 @@ def seqrecord(name, residues, **annotations):
     sr.annotations.update(annotations)
     return sr
 
-def sequence_extractor(rdp_con):
+def _sequence_extractor(rdp_con):
     """
     returns a function to extract sequences that match a sequence name, or are a
     type strain from one of the represented tax_ids
@@ -158,6 +159,69 @@ WHERE name IN {0} OR (tax_id IN {1} AND is_type = 'type');"""
 
     return extract_seqs
 
+def _merge_by_taxid(it):
+    """
+    Given an iterable of (tax_id, [cluster_id, [cluster_id...]]) pairs, returns
+    sets of clusters to merge based on shared tax_ids.
+    """
+    d = {}
+    for tax_id, cluster_ids in it:
+        s = set(cluster_ids)
+
+        # For each cluster, add any previous clusterings to the working cluster
+        for cluster_id in cluster_ids:
+            if cluster_id in d:
+                s |= d[cluster_id]
+
+        s = frozenset(s)
+        for cluster_id in s:
+            d[cluster_id] = s
+
+    return frozenset(d.values())
+
+def _find_clusters_to_merge(con):
+    """
+    Find clusters to merge
+    """
+    cursor = con.cursor()
+    # Generate a temporary table
+    cursor.executescript("""
+CREATE TEMPORARY TABLE tax_to_cluster
+AS
+SELECT DISTINCT tax_id, cluster_id
+FROM best_hits b
+INNER JOIN sequences s USING(sequence_id)
+INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name;
+CREATE INDEX IX_tax_to_cluster_TAX_ID ON tax_to_cluster(tax_id);
+""")
+
+    try:
+        sql = """
+SELECT cluster_id, tax_id
+FROM tax_to_cluster
+WHERE tax_id IN (SELECT tax_id FROM tax_to_cluster GROUP BY tax_id HAVING COUNT(cluster_id) > 1)
+ORDER BY tax_id;
+"""
+        cursor.execute(sql)
+        for g, v in itertools.groupby(cursor, operator.itemgetter(1)):
+            yield g, [i for i, _ in v]
+    finally:
+        cursor.execute("""DROP TABLE tax_to_cluster""")
+
+def merge_clusters(con):
+    cmd = """UPDATE cluster_sequences
+SET cluster_id = ?
+WHERE cluster_id = ?"""
+    with con:
+        cursor = con.cursor()
+        to_merge = _find_clusters_to_merge(con)
+        merged = _merge_by_taxid(to_merge)
+        for merge_group in merged:
+            first = min(merge_group)
+            logging.info("Merging %d clusters to %d", len(merge_group), first)
+            rows = ((first, i) for i in merge_group if i != first)
+            cursor.executemany(cmd, rows)
+
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
     """
     Given a set of reference sequences and query sequences
@@ -169,9 +233,9 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
     ref_ids = frozenset(i.id for i in ref_seqs)
     aligned = list(cmalign(c))
     with as_refpkg(i for i in aligned if i.id in ref_ids) as rp, \
-         as_fasta(aligned) as fasta, \
-         tempdir(prefix='jplace') as placedir, \
-         redupfile_of_seqs(query_seqs) as redup_path:
+             as_fasta(aligned) as fasta, \
+             tempdir(prefix='jplace') as placedir, \
+             redupfile_of_seqs(query_seqs) as redup_path:
         jplace = pplacer(rp.path, fasta, out_dir=placedir())
         # Redup
         guppy_redup(jplace, redup_path, placedir('redup.jplace'))
@@ -182,15 +246,15 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5):
     return result
 
 def choose_references(deenurp_db, rdp_con, refs_per_cluster=5):
-    extractor = sequence_extractor(rdp_con)
-    total_weight = deenurp_db.total_weight()
+    extractor = _sequence_extractor(rdp_con)
+    #total_weight = deenurp_db.total_weight()
 
     for cluster_id, seqs, hits in deenurp_db.hits_by_cluster():
         if not hits:
             logging.info("No hits for cluster %d", cluster_id)
             continue
 
-        hit_names = [i['best_hit_name'] for i in hits]
+        hit_names = frozenset(i['best_hit_name'] for i in hits)
         tax_ids = frozenset(i['tax_id'] for i in hits)
         seqs = [seqrecord(i['name'], i['residues'], weight=i['weight']) for i in seqs]
         ref_seqs = list(extractor(hit_names, tax_ids))
