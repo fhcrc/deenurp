@@ -26,8 +26,7 @@ class DbTestCase(unittest.TestCase):
 
     def test_create(self):
         """Ensure all tables are created"""
-        expected = frozenset(['sequences', 'clusters', 'cluster_sequences',
-            'best_hits'])
+        expected = frozenset(['sequences', 'clusters', 'best_hits'])
         for i in expected:
             self.assertTrue(search._table_exists(self.con, i), msg=i)
 
@@ -43,11 +42,11 @@ class DbTestCase(unittest.TestCase):
     def test_cluster(self):
         search._load_sequences(self.con, self.seq_path)
         search._cluster(self.con, self.seq_path, quiet=True)
-        expected = [(0, u'S000438419', 1), (0, u'S000871964', 0), (1,
-            u'S000887598', 1), (0, u'S001610627', 0), (2, u'S002287639', 1),
-            (3, u'S000136473', 1), (4, u'S000137243', 1), (5, u'S001416053',
-                1), (6, u'S002222525', 1), (7, u'S000750001', 1)]
-        actual = list(self.cursor.execute("SELECT cluster_id, sequence_name, is_seed FROM cluster_sequences"))
+        expected = [(0, u'S000438419'), (0, u'S000871964'), (1,
+            u'S000887598'), (0, u'S001610627'), (2, u'S002287639'),
+            (3, u'S000136473'), (4, u'S000137243'), (5, u'S001416053'), (6, u'S002222525'), (7, u'S000750001')]
+        expected.sort()
+        actual = list(self.cursor.execute("SELECT cluster_id, name FROM sequences ORDER BY cluster_id"))
 
         self.assertEqual(len(expected), len(actual))
         self.assertEqual(expected, actual)
@@ -55,7 +54,7 @@ class DbTestCase(unittest.TestCase):
     def test_search_each_cluster(self):
         search._load_sequences(self.con, self.seq_path)
         search._cluster(self.con, self.seq_path, quiet=True)
-        result = search._search_all(self.con, self.db_path, quiet=True)
+        result = search._search_all(self.con, [self.db_path], quiet=True)
         self.assertEqual(10, result)
 
 class DedupInfoToCountsTestCase(unittest.TestCase):

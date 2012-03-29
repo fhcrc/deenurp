@@ -2,15 +2,16 @@
 Select reference sequences for inclusion
 """
 import itertools
-import json
 import logging
-import sqlite3
+import operator
+import tempfile
 
+from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from .wrap import cmalign, as_refpkg, as_fasta, tempdir, redupfile_of_seqs, \
-                  voronoi, guppy_redup, pplacer
+                  voronoi, guppy_redup, pplacer, esl_sfetch
 
 DEFAULT_THREADS = 12
 
@@ -19,32 +20,44 @@ def seqrecord(name, residues, **annotations):
     sr.annotations.update(annotations)
     return sr
 
-def _sequence_extractor(rdp_con):
+def _sequence_extractor(con):
     """
     returns a function to extract sequences that match a sequence name, or are a
     type strain from one of the represented tax_ids
     """
-    def _generate_in(coll):
-        return '({0})'.format(','.join('?' for i in coll))
+    cursor = con.cursor()
+    refpath_cache = {}
+    def reference_path(ref_id):
+        try:
+            return refpath_cache[ref_id]
+        except KeyError:
+            cursor.execute("""SELECT file_path FROM refs WHERE ref_id = ?""",
+                    [ref_id])
+            r = cursor.fetchone()[0]
+            refpath_cache[ref_id] = r
+            return r
 
-    rdp_con.row_factory = sqlite3.Row
-    cursor = rdp_con.cursor()
+    def extract_seqs(id_ref):
+        """
+        Extract sequences from id, ref_id pairs
+        """
+        key = operator.itemgetter(1)
+        id_ref = sorted(id_ref, key=key)
 
-    stmt = """SELECT * FROM sequences
-WHERE name IN {0} OR (tax_id IN {1} AND is_type = 'type');"""
+        with tempfile.NamedTemporaryFile(prefix='refs', suffix='.fasta') as tf:
+            for g, v in itertools.groupby(id_ref, key):
+                names = [i for i, _ in v]
+                ref_path = reference_path(g)
+                esl_sfetch(ref_path, names, tf)
 
-    def extract_seqs(sequence_ids, tax_ids):
-        s = stmt.format(_generate_in(sequence_ids), _generate_in(tax_ids))
-        cursor.execute(s, list(sequence_ids) + list(tax_ids))
-        for i in cursor:
-            sr = seqrecord(i['name'], i['residues'], species_name=i['species_name'],
-                lineage=json.loads(i['lineage']), tax_id=i['tax_id'], is_type=i['is_type'])
-            yield sr
+            tf.seek(0)
+            for s in SeqIO.parse(tf, 'fasta'):
+                yield s
 
     return extract_seqs
 
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
-        threads=DEFAULT_THREADS):
+        threads=DEFAULT_THREADS, mpi_args=None):
     """
     Given a set of reference sequences and query sequences
     """
@@ -53,8 +66,8 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
 
     c = itertools.chain(ref_seqs, query_seqs)
     ref_ids = frozenset(i.id for i in ref_seqs)
-    aligned = list(cmalign(c, mpi_args=[]))
-    with as_refpkg(i for i in aligned if i.id in ref_ids) as rp, \
+    aligned = list(cmalign(c, mpi_args=mpi_args))
+    with as_refpkg((i for i in aligned if i.id in ref_ids), threads=threads) as rp, \
              as_fasta(aligned) as fasta, \
              tempdir(prefix='jplace') as placedir, \
              redupfile_of_seqs(query_seqs) as redup_path:
@@ -69,12 +82,13 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
 
     return result
 
-def choose_references(deenurp_db, rdp_con, refs_per_cluster=5,
-        candidates=30, threads=DEFAULT_THREADS, min_cluster_prop=0.0):
+def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
+        threads=DEFAULT_THREADS, min_cluster_prop=0.0, mpi_args=None):
     """
-    Choose reference sequences from a search, choosing refs_per_cluster reference sequences for each nonoverlapping cluster.
+    Choose reference sequences from a search, choosing refs_per_cluster
+    reference sequences for each nonoverlapping cluster.
     """
-    extractor = _sequence_extractor(rdp_con)
+    extractor = _sequence_extractor(deenurp_db.con)
     total_weight = deenurp_db.total_weight()
 
     for cluster_id, seqs, hits in deenurp_db.hits_by_cluster(30):
@@ -92,11 +106,11 @@ def choose_references(deenurp_db, rdp_con, refs_per_cluster=5,
             logging.info("Not enough mass in cluster #%d. Skipping.", cluster_id)
             continue
 
-        hit_names = frozenset(i['best_hit_name'] for i in hits)
-        tax_ids = frozenset(i['tax_id'] for i in hits)
+        hit_names = frozenset((i['best_hit_name'], i['ref_id']) for i in hits)
         seqs = [seqrecord(i['name'], i['residues'], weight=i['weight']) for i in seqs]
-        ref_seqs = list(extractor(hit_names, tax_ids))
-        keep = select_sequences_for_cluster(ref_seqs, seqs, refs_per_cluster, threads=threads)
+        ref_seqs = list(extractor(hit_names))
+        keep = select_sequences_for_cluster(ref_seqs, seqs, refs_per_cluster,
+                threads=threads, mpi_args=mpi_args)
         refs = [i for i in ref_seqs if i.id in keep]
 
         assert len(refs) == len(keep)

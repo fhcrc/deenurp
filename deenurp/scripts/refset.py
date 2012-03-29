@@ -8,8 +8,9 @@ def main(argv=sys.argv[1:]):
     action, arguments = parse_arguments(argv)
 
     loglevel = {
-        0: logging.INFO,
-        1: logging.DEBUG,
+        0: logging.WARN,
+        1: logging.INFO,
+        2: logging.DEBUG,
     }.get(arguments.verbosity, logging.DEBUG)
 
     if arguments.verbosity > 1:

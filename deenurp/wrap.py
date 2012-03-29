@@ -77,7 +77,7 @@ def as_fasta(sequences, **kwargs):
         yield tf.name
 
 @contextlib.contextmanager
-def as_refpkg(sequences):
+def as_refpkg(sequences, threads=None):
     """
     Build a tree from sequences, generate a temporary reference package
     """
@@ -88,7 +88,7 @@ def as_refpkg(sequences):
 
         log_fp.close()
 
-        fasttree(sequences, log_fp.name, tree_fp, gtr=True)
+        fasttree(sequences, log_fp.name, tree_fp, gtr=True, threads=threads)
         tree_fp.close()
 
         rp = Refpkg(refpkg_dir('temp.refpkg'))
@@ -108,14 +108,19 @@ def redupfile_of_seqs(sequences, **kwargs):
         tf.close()
         yield tf.name
 
-def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False, gamma=False):
-    cmd = ['FastTree', '-nt', '-log', log_path]
+def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
+        gamma=False, threads=None):
+    executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
+    env = os.environ.copy()
+    if threads:
+        env['OMP_NUM_THREADS'] = str(threads)
+    cmd = [executable, '-nt', '-log', log_path]
     for k, v in (('-gtr', gtr), ('-gamma', gamma), ('-quiet', quiet)):
         if v:
             cmd.append(k)
 
     logging.info(' '.join(cmd))
-    p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE, env=env)
     SeqIO.write(sequences, p.stdin, 'fasta')
     p.stdin.close()
     p.wait()
@@ -171,7 +176,7 @@ def cmalign(sequences, mpi_args=None):
 
     If mpi_args is specified, run via mpirun
     """
-    if not mpi_args:
+    if mpi_args is None:
         cmd = ['cmalign']
     else:
         cmd = ['mpirun'] + mpi_args + ['cmalign', '--mpi']
@@ -186,3 +191,21 @@ def cmalign(sequences, mpi_args=None):
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
+
+def esl_sfetch(sequence_file, name_iter, output_fp):
+    """
+    Fetch sequences named in name_iter from sequence_file, indexing if
+    necessary, writing to output_fp.
+    """
+    if not os.path.exists(sequence_file + '.ssi'):
+        logging.info("No index exists for %s. creating.", sequence_file)
+        subprocess.check_call(['esl-sfetch', '--index', sequence_file])
+    cmd = ['esl-sfetch', '-f', sequence_file, '-']
+    logging.debug(' '.join(cmd))
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=output_fp)
+    for name in name_iter:
+        p.stdin.write('{0}\n'.format(name))
+    p.stdin.close()
+    p.wait()
+    if not p.returncode == 0:
+        raise subprocess.CalledProcessError(p.returncode, cmd)
