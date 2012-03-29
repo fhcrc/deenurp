@@ -63,7 +63,11 @@ def _unsearched_to_fasta(con, output_fp):
     Write all sequences from clusters with no hits to a FASTA file
     """
     cursor = con.cursor()
-    cursor.execute("""SELECT sequence_id, name, residues FROM sequences""")
+
+    cursor.execute("""SELECT sequence_id, name, residues FROM sequences
+WHERE cluster_id NOT IN (SELECT DISTINCT cluster_id
+                         FROM sequences
+                         INNER JOIN best_hits USING (sequence_id));""")
     count = 0
     for record in cursor:
         output_fp.write('>{0} {1}\n{2}\n'.format(*record))
@@ -189,7 +193,8 @@ def _search_all(con, sequence_databases, quiet=True):
                     [sequence_database])
             ref_id = cursor.lastrowid
 
-            _to_fasta(con, seq_fp)
+            u_count = _unsearched_to_fasta(con, seq_fp)
+            logging.info("%d sequences to search against %s", u_count, sequence_database)
             seq_fp.flush()
             uclust.search(sequence_database, seq_fp.name, uc_fp.name,
                     pct_id=p['search_id'], trunclabels=True,
