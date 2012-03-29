@@ -128,16 +128,16 @@ def _find_clusters_to_merge(con, max_hits=None):
     """
     cursor = con.cursor()
     # Generate a temporary table
-    cursor.executescript("""
+    cursor.execute("""
 CREATE TEMPORARY TABLE hits_to_cluster
 AS
 SELECT DISTINCT b.name as best_hit, cluster_id
 FROM best_hits b
 INNER JOIN sequences s USING(sequence_id)
 {0};
-CREATE INDEX IX_hits_to_cluster_best_hit ON hits_to_cluster(best_hit);
 """.format("" if not max_hits else "WHERE hit_idx < ?"),
     [] if not max_hits else [max_hits])
+    cursor.execute("CREATE INDEX IX_hits_to_cluster_best_hit ON hits_to_cluster(best_hit);")
 
     try:
         sql = """
@@ -214,7 +214,7 @@ VALUES (?, ?, ?, ?, ?)
                 cursor.executemany(sql, records)
                 count += cursor.rowcount
 
-        return count
+    return count
 
 def _load_sequences(con, sequence_file, weights=None):
     """
@@ -277,11 +277,11 @@ WHERE s.cluster_id = ?""", [cluster_id])
     def _hits_in_cluster(self, cluster_id, hits_per_cluster=30, max_per_seq=1000):
         cursor = self.con.cursor()
         hit_sql = """
-SELECT bh.name as best_hit_name, bh.tax_id, COUNT(*) AS hit_count
+SELECT bh.name as best_hit_name, bh.ref_id, COUNT(*) AS hit_count
 FROM best_hits bh
 INNER JOIN sequences s USING(sequence_id)
 WHERE s.cluster_id = ? AND bh.hit_idx < ?
-GROUP BY bh.name, bh.tax_id
+GROUP BY bh.name, bh.ref_id
 ORDER BY bh.hit_idx, s.weight DESC, s.length DESC
 LIMIT ?"""
         cursor.execute(hit_sql, [cluster_id, max_per_seq, hits_per_cluster])

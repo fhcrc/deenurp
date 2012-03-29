@@ -28,7 +28,6 @@ def build_parser(p):
     uc.add_argument('--search-identity', default=0.99, type=float,
             help="""Clustering identity level [default: %(default).2f]""")
 
-
 def action(args):
     con = sqlite3.connect(args.output)
     weights = None
