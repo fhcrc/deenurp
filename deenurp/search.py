@@ -217,7 +217,7 @@ def _search_all(con, sequence_databases, quiet=True):
             uclust.search(sequence_database, seq_fp.name, uc_fp.name,
                     pct_id=p['search_id'], trunclabels=True,
                     maxaccepts=p['maxaccepts'], maxrejects=p['maxrejects'],
-                    quiet=quiet)
+                    quiet=quiet, search_pct_id=0.9)
 
             by_seq = uclust.hits_by_sequence(uclust.parse_uclust_out(uc_fp))
 
