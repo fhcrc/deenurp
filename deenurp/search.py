@@ -58,6 +58,13 @@ def _table_exists(con, table_name):
 WHERE type = 'table' AND tbl_name = ?""", [table_name])
     return cursor.fetchone() is not None
 
+def _cursor_to_fasta(cursor, output_fp):
+    count = 0
+    for record in cursor:
+        output_fp.write('>{0}  {1}\n{2}\n'.format(*record))
+        count += 1
+    return count
+
 def _unsearched_to_fasta(con, output_fp):
     """
     Write all sequences from clusters with no hits to a FASTA file
@@ -68,11 +75,18 @@ def _unsearched_to_fasta(con, output_fp):
 WHERE cluster_id NOT IN (SELECT DISTINCT cluster_id
                          FROM sequences
                          INNER JOIN best_hits USING (sequence_id));""")
-    count = 0
-    for record in cursor:
-        output_fp.write('>{0} {1}\n{2}\n'.format(*record))
-        count += 1
-    return count
+    return _cursor_to_fasta(cursor, output_fp)
+
+
+def _desc_weight_to_fasta(con, output_fp):
+    """
+    Sort sequences by descending weight, then length; write to output_fp
+    """
+    cursor = con.cursor()
+    cursor.execute("""SELECT sequence_id, name, residues
+FROM sequences ORDER BY weight DESC, length DESC""")
+    return _cursor_to_fasta(cursor, output_fp)
+
 
 def _cluster(con, sequence_file, quiet=True):
     """
@@ -81,9 +95,12 @@ def _cluster(con, sequence_file, quiet=True):
     """
     cluster_id = _load_params(con)['cluster_id']
     cursor = con.cursor()
-    with tempfile.NamedTemporaryFile() as ntf:
-        uclust.sort_and_cluster(sequence_file, ntf.name,
-                pct_id=cluster_id, trunclabels=True, quiet=quiet)
+    with tempfile.NamedTemporaryFile() as ntf, \
+         tempfile.NamedTemporaryFile(suffix='.fasta') as fa:
+        _desc_weight_to_fasta(con, fa)
+        fa.flush()
+        uclust.cluster(fa.name, ntf.name, pct_id=cluster_id,
+                trunclabels=True, quiet=quiet, usersort=True)
         records = uclust.parse_uclust_out(ntf)
         records = (i for i in records if i.type in ('H', 'S'))
 
@@ -95,8 +112,9 @@ def _cluster(con, sequence_file, quiet=True):
                 cursor.execute(sql, [record.cluster_number])
             sql = """
             UPDATE sequences SET cluster_id = :1, orig_cluster_id = :1
-            WHERE name = :2"""
+            WHERE sequence_id = :2"""
             cursor.execute(sql, [record.cluster_number, record.query_label])
+            assert cursor.rowcount == 1
 
 # Merging
 def _merge_by_hit(it):
