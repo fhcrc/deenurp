@@ -114,9 +114,12 @@ def _merge_by_hit(it):
 
     return frozenset(d.values())
 
-def _find_clusters_to_merge(con):
+def _find_clusters_to_merge(con, max_hits=None):
     """
     Find clusters to merge
+
+    con: Database connection
+    max_hits: number of hits to consider in each cluster [default: consider all hits]
     """
     cursor = con.cursor()
     # Generate a temporary table
@@ -127,9 +130,11 @@ SELECT DISTINCT b.name as best_hit, cluster_id
 FROM best_hits b
 INNER JOIN sequences s USING(sequence_id)
 INNER JOIN cluster_sequences cs ON cs.sequence_name = s.name
-WHERE hit_idx = 0; -- Only accept best hit
+{0}
+-- WHERE hit_idx < 0;
 CREATE INDEX IX_hits_to_cluster_best_hit ON hits_to_cluster(best_hit);
-""")
+""".format("" if not max_hits else "WHERE hit_idx < ?"),
+    [] if not max_hits else [max_hits])
 
     try:
         sql = """

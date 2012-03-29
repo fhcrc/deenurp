@@ -127,7 +127,7 @@ def guppy_redup(placefile, redup_file, output):
     logging.info(' '.join(cmd))
     subprocess.check_call(cmd)
 
-def pplacer(refpkg, alignment, posterior_prob=True, out_dir=None, threads=2, quiet=True):
+def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, quiet=True):
     """
     Run pplacer on the provided refpkg
     """
@@ -151,7 +151,7 @@ def pplacer(refpkg, alignment, posterior_prob=True, out_dir=None, threads=2, qui
 
     return jplace
 
-def voronoi(jplace, leaves, algorithm='full', posterior_prop=True, point_mass=True):
+def voronoi(jplace, leaves, algorithm='full', posterior_prop=False, point_mass=True):
     """
     Run rppr voronoi on the given jplace file, cutting to the given number of leaves
     """
