@@ -5,6 +5,9 @@ Choose optimal reference sequences
 import argparse
 import contextlib
 import sqlite3
+from romperroom import RefsetInternalFasta
+
+RefsetInternalFasta.install()
 
 from Bio import SeqIO
 
@@ -35,4 +38,4 @@ def action(args):
                     args.refs_per_cluster, candidates=args.cluster_candidates,
                     threads=args.threads, min_cluster_prop=args.min_mass_prop)
             with args.output as fp:
-                SeqIO.write(sequences, fp, 'fasta')
+                SeqIO.write(sequences, fp, 'deenurp-internal-fasta')
