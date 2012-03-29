@@ -4,6 +4,7 @@ Choose optimal reference sequences
 
 import argparse
 import contextlib
+import shlex
 import sqlite3
 from romperroom import RefsetInternalFasta
 
@@ -17,6 +18,7 @@ def build_parser(p):
     p.add_argument('search_db', help="""Output of `deenurp search-sequences`""")
     p.add_argument('--threads', help="""Number of threads [default:
             %(default)d]""", type=int, default=6)
+    p.add_argument('--mpi-args', type=shlex.split, default=[])
     p.add_argument('--refs-per-cluster', type=int, default=5, help="""Maximum
             references per cluster [default: %(default)d]""")
     p.add_argument('--cluster-candidates', type=int, default=30,
@@ -33,6 +35,6 @@ def action(args):
             search_db = search.open_database(s)
             sequences = select.choose_references(search_db,
                     args.refs_per_cluster, candidates=args.cluster_candidates,
-                    threads=args.threads, min_cluster_prop=args.min_mass_prop)
+                    threads=args.threads, min_cluster_prop=args.min_mass_prop, mpi_args=args.mpi_args)
             with args.output as fp:
                 SeqIO.write(sequences, fp, 'fasta')

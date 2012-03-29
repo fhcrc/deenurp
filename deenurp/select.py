@@ -57,7 +57,7 @@ def _sequence_extractor(con):
     return extract_seqs
 
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
-        threads=DEFAULT_THREADS):
+        threads=DEFAULT_THREADS, mpi_args=None):
     """
     Given a set of reference sequences and query sequences
     """
@@ -66,7 +66,7 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
 
     c = itertools.chain(ref_seqs, query_seqs)
     ref_ids = frozenset(i.id for i in ref_seqs)
-    aligned = list(cmalign(c, mpi_args=[]))
+    aligned = list(cmalign(c, mpi_args=mpi_args))
     with as_refpkg((i for i in aligned if i.id in ref_ids), threads=threads) as rp, \
              as_fasta(aligned) as fasta, \
              tempdir(prefix='jplace') as placedir, \
@@ -82,8 +82,8 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
 
     return result
 
-def choose_references(deenurp_db, refs_per_cluster=5,
-        candidates=30, threads=DEFAULT_THREADS, min_cluster_prop=0.0):
+def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
+        threads=DEFAULT_THREADS, min_cluster_prop=0.0, mpi_args=None):
     """
     Choose reference sequences from a search, choosing refs_per_cluster
     reference sequences for each nonoverlapping cluster.
@@ -109,7 +109,8 @@ def choose_references(deenurp_db, refs_per_cluster=5,
         hit_names = frozenset((i['best_hit_name'], i['ref_id']) for i in hits)
         seqs = [seqrecord(i['name'], i['residues'], weight=i['weight']) for i in seqs]
         ref_seqs = list(extractor(hit_names))
-        keep = select_sequences_for_cluster(ref_seqs, seqs, refs_per_cluster, threads=threads)
+        keep = select_sequences_for_cluster(ref_seqs, seqs, refs_per_cluster,
+                threads=threads, mpi_args=mpi_args)
         refs = [i for i in ref_seqs if i.id in keep]
 
         assert len(refs) == len(keep)

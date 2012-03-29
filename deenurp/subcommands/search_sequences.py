@@ -38,4 +38,4 @@ def action(args):
     search.create_database(con, args.sequence_file, args.sequence_databases,
             weights=weights, maxaccepts=args.maxaccepts,
             maxrejects=args.maxrejects, cluster_id=args.cluster_identity,
-            search_id=args.search_identity, quiet=args.verbosity == 0)
+            search_id=args.search_identity, quiet=args.verbosity < 2)

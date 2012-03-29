@@ -176,7 +176,7 @@ def cmalign(sequences, mpi_args=None):
 
     If mpi_args is specified, run via mpirun
     """
-    if not mpi_args:
+    if mpi_args is None:
         cmd = ['cmalign']
     else:
         cmd = ['mpirun'] + mpi_args + ['cmalign', '--mpi']
