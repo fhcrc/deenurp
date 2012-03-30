@@ -18,6 +18,18 @@ def data_path(*args):
 
 CM = data_path('bacteria16S_508_mod5.cm')
 
+def unique(iterable, key=lambda x: x):
+    """
+    Choose unique elements from iterable, using the value returned by `key` to
+    determine uniqueness.
+    """
+    s = set()
+    for i in iterable:
+        k = key(i)
+        if k not in s:
+            s.add(k)
+            yield i
+
 @contextlib.contextmanager
 def nothing(obj=None):
     """

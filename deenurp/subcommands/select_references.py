@@ -31,6 +31,9 @@ def build_parser(p):
             references per cluster [default: %(default)d]""")
     p.add_argument('--cluster-candidates', type=int, default=30,
             help="""Maximum candidate refs per cluster [default: %(default)d]""")
+    p.add_argument('--cluster-factor', type=int, default=2, help="""Factor by
+            which to expand reference selection for merged clusters [default:
+            %(default)d]""")
     p.add_argument('--min-mass-prop', help="""Minimum proportion of total mass
             in a cluster to require before searching for references [default:
             %(default)f]""", type=float, default=-1.0)
@@ -43,6 +46,7 @@ def action(args):
             search_db = search.open_database(s)
             sequences = select.choose_references(search_db,
                     args.refs_per_cluster, candidates=args.cluster_candidates,
-                    threads=args.threads, min_cluster_prop=args.min_mass_prop, mpi_args=args.mpi_args)
+                    threads=args.threads, min_cluster_prop=args.min_mass_prop,
+                    mpi_args=args.mpi_args, cluster_factor=args.cluster_factor)
             with args.output as fp:
                 SeqIO.write(unique_sequences(sequences), fp, 'fasta')

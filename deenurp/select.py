@@ -83,7 +83,8 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
     return result
 
 def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
-        threads=DEFAULT_THREADS, min_cluster_prop=0.0, mpi_args=None):
+        threads=DEFAULT_THREADS, min_cluster_prop=0.0, mpi_args=None,
+        cluster_factor=1):
     """
     Choose reference sequences from a search, choosing refs_per_cluster
     reference sequences for each nonoverlapping cluster.
@@ -91,7 +92,8 @@ def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
     extractor = _sequence_extractor(deenurp_db.con)
     total_weight = deenurp_db.total_weight()
 
-    for cluster_id, seqs, hits in deenurp_db.hits_by_cluster(30):
+    for cluster_id, seqs, hits in deenurp_db.hits_by_cluster(candidates,
+            cluster_factor=cluster_factor):
         if not hits:
             logging.debug("No hits for cluster %d", cluster_id)
             continue
@@ -106,10 +108,19 @@ def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
             logging.info("Not enough mass in cluster #%d. Skipping.", cluster_id)
             continue
 
+        # Increase the number of sequences to select for merged clusters by
+        # cluster_factor
+        cluster = deenurp_db.get_cluster(cluster_id)
+        select_count = min(refs_per_cluster + cluster_factor * (cluster.count - 1),
+                len(hits))
+        if cluster.count > 1:
+            logging.info("Selecting %d sequences for %d merged clusters.",
+                    select_count, cluster.count)
+
         hit_names = frozenset((i['best_hit_name'], i['ref_id']) for i in hits)
         seqs = [seqrecord(i['name'], i['residues'], weight=i['weight']) for i in seqs]
         ref_seqs = list(extractor(hit_names))
-        keep = select_sequences_for_cluster(ref_seqs, seqs, refs_per_cluster,
+        keep = select_sequences_for_cluster(ref_seqs, seqs, select_count,
                 threads=threads, mpi_args=mpi_args)
         refs = [i for i in ref_seqs if i.id in keep]
 

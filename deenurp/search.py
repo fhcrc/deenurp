@@ -12,6 +12,8 @@ import tempfile
 from romperroom import uclust
 from Bio import SeqIO
 
+from . import wrap
+
 _ntf = tempfile.NamedTemporaryFile
 
 # Utility stuff
@@ -61,7 +63,7 @@ WHERE type = 'table' AND tbl_name = ?""", [table_name])
 def _cursor_to_fasta(cursor, output_fp):
     count = 0
     for record in cursor:
-        output_fp.write('>{0}  {1}\n{2}\n'.format(*record))
+        output_fp.write('>{0} {1}\n{2}\n'.format(*record))
         count += 1
     return count
 
@@ -180,6 +182,10 @@ def _merge_clusters(con):
 SET cluster_id = ?
 WHERE cluster_id = ?"""
 
+    mcmd = """INSERT INTO merged_clusters (cluster_id, cluster_count, total_weight)
+SELECT :1, :2, SUM(weight)
+FROM sequences WHERE cluster_id = :1"""
+
     cursor = con.cursor()
     to_merge = _find_clusters_to_merge(con, 1)
     merged = _merge_by_hit(to_merge)
@@ -188,6 +194,16 @@ WHERE cluster_id = ?"""
         logging.info("Merging %d clusters to #%d", len(merge_group), first)
         rows = ((first, i) for i in merge_group if i != first)
         cursor.executemany(cmd, rows)
+
+        # Aggregate cluster metadata
+        cursor.execute(mcmd, [first, len(merge_group)])
+
+    # Add any unmerged clusters
+    cursor.execute("""INSERT INTO merged_clusters (cluster_id, cluster_count, total_weight)
+SELECT cluster_id, 1, SUM(weight)
+FROM sequences
+WHERE cluster_id NOT IN (SELECT cluster_id FROM merged_clusters)
+GROUP BY cluster_id""")
 
 def _search_all(con, sequence_databases, quiet=True):
     """
@@ -213,6 +229,9 @@ def _search_all(con, sequence_databases, quiet=True):
 
             u_count = _unsearched_to_fasta(con, seq_fp)
             logging.info("%d sequences to search against %s", u_count, sequence_database)
+            if u_count == 0:
+                return 0
+
             seq_fp.flush()
             uclust.search(sequence_database, seq_fp.name, uc_fp.name,
                     pct_id=p['search_id'], trunclabels=True,
@@ -259,6 +278,8 @@ def _create_tables(con, maxaccepts=1, maxrejects=8, cluster_id=0.99,
     rows = [(k, locals().get(k)) for k in _PARAMS.keys()]
     cursor.executemany("INSERT INTO params VALUES (?, ?)", rows)
 
+Cluster = collections.namedtuple('Cluster', ['cluster_id', 'count', 'weight'])
+
 class SearchedSequences(object):
     def __init__(self, con):
         self.con = con
@@ -270,7 +291,20 @@ class SearchedSequences(object):
         cursor = self.con.cursor()
         return cursor.execute("SELECT SUM(weight) FROM sequences").fetchone()[0]
 
-    def hits_by_cluster(self, hits_per_cluster=30, max_per_seq=1000):
+    def get_cluster(self, cluster_id):
+        """
+        Returns a Cluster object
+        """
+        cursor = self.con.cursor()
+        cursor.execute("""SELECT cluster_id, cluster_count, total_weight
+FROM merged_clusters WHERE cluster_id = ?""", [cluster_id])
+        result = cursor.fetchone()
+        if not result:
+            raise KeyError(cluster_id)
+        return Cluster(*result)
+
+    def hits_by_cluster(self, hits_per_cluster=30, cluster_factor=1,
+            max_per_seq=1000):
         """
         Generates an iterable of hits per cluster.
 
@@ -278,12 +312,13 @@ class SearchedSequences(object):
         (cluster_number, cluster_prop, cluster_seqs, cluster_hits)
         """
         cursor = self.con.cursor()
-        cursor.execute("""SELECT cluster_id FROM clusters""")
-        clusters = [i for i, in cursor]
-        for cluster_id in clusters:
+        cursor.execute("""SELECT cluster_id, cluster_count FROM merged_clusters""")
+        for cluster_id, count in cursor:
+            select_count = hits_per_cluster + cluster_factor * (count - 1)
             # Find sequences
             yield (cluster_id, self._sequences_in_cluster(cluster_id),
-                self._hits_in_cluster(cluster_id, hits_per_cluster, max_per_seq))
+                self._hits_in_cluster(cluster_id,
+                    select_count, max_per_seq))
 
     def _sequences_in_cluster(self, cluster_id):
         cursor = self.con.cursor()
@@ -295,20 +330,29 @@ WHERE s.cluster_id = ?""", [cluster_id])
     def _hits_in_cluster(self, cluster_id, hits_per_cluster=30, max_per_seq=1000):
         cursor = self.con.cursor()
         hit_sql = """
-SELECT bh.name as best_hit_name, bh.ref_id, COUNT(*) AS hit_count
+SELECT bh.name as best_hit_name, bh.ref_id
 FROM best_hits bh
 INNER JOIN sequences s USING(sequence_id)
 WHERE s.cluster_id = ? AND bh.hit_idx < ?
-GROUP BY bh.name, bh.ref_id
 ORDER BY bh.hit_idx, s.weight DESC, s.length DESC
 LIMIT ?"""
         cursor.execute(hit_sql, [cluster_id, max_per_seq, hits_per_cluster])
-        return [dict(zip(i.keys(), i)) for i in cursor]
+        r = (dict(zip(i.keys(), i)) for i in cursor)
+
+        # Choose the top `hits_per_cluster` distinct hits.
+        r = wrap.unique(r, operator.itemgetter('best_hit_name'))
+        return list(itertools.islice(r, 0, hits_per_cluster))
 
 # Database schema
 SCHEMA = """
 CREATE TABLE clusters (
   cluster_id INTEGER PRIMARY KEY AUTOINCREMENT
+);
+
+CREATE TABLE merged_clusters (
+  cluster_id INTEGER PRIMARY KEY REFERENCES clusters(cluster_id),
+  cluster_count INTEGER,
+  total_weight FLOAT
 );
 
 CREATE TABLE sequences (
