@@ -14,6 +14,14 @@ from Bio import SeqIO
 
 from .. import select, search, wrap
 
+def unique_sequences(it):
+    seen = set()
+    for sequence in it:
+        if sequence.id in seen:
+            continue
+        seen.add(sequence.id)
+        yield sequence
+
 def build_parser(p):
     p.add_argument('search_db', help="""Output of `deenurp search-sequences`""")
     p.add_argument('--threads', help="""Number of threads [default:
@@ -37,4 +45,4 @@ def action(args):
                     args.refs_per_cluster, candidates=args.cluster_candidates,
                     threads=args.threads, min_cluster_prop=args.min_mass_prop, mpi_args=args.mpi_args)
             with args.output as fp:
-                SeqIO.write(sequences, fp, 'fasta')
+                SeqIO.write(unique_sequences(sequences), fp, 'fasta')

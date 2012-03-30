@@ -181,11 +181,11 @@ SET cluster_id = ?
 WHERE cluster_id = ?"""
 
     cursor = con.cursor()
-    to_merge = _find_clusters_to_merge(con)
+    to_merge = _find_clusters_to_merge(con, 1)
     merged = _merge_by_hit(to_merge)
     for merge_group in merged:
         first = min(merge_group)
-        logging.info("Merging %d clusters to %d", len(merge_group), first)
+        logging.info("Merging %d clusters to #%d", len(merge_group), first)
         rows = ((first, i) for i in merge_group if i != first)
         cursor.executemany(cmd, rows)
 
