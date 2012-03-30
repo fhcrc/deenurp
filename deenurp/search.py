@@ -234,11 +234,16 @@ def _search_all(con, sequence_databases, quiet=True):
 
             seq_fp.flush()
             uclust.search(sequence_database, seq_fp.name, uc_fp.name,
-                    pct_id=p['search_id'], trunclabels=True,
+                    pct_id=0.9, trunclabels=True,
                     maxaccepts=p['maxaccepts'], maxrejects=p['maxrejects'],
-                    quiet=quiet, search_pct_id=0.9)
+                    quiet=quiet)
 
-            by_seq = uclust.hits_by_sequence(uclust.parse_uclust_out(uc_fp))
+            records = uclust.parse_uclust_out(uc_fp)
+
+            # Subset to records which match actual criteria
+            records = (i for i in records
+                       if i.type == 'H' and i.pct_id >= p['search_id'] * 100.0)
+            by_seq = uclust.hits_by_sequence(records)
 
             sql = """
 INSERT INTO best_hits (sequence_id, hit_idx, name, pct_id, ref_id)
