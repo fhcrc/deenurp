@@ -5,11 +5,9 @@ Choose reference sequences
 import argparse
 import contextlib
 import csv
+import operator
 import shlex
 import sqlite3
-from romperroom import RefsetInternalFasta
-
-RefsetInternalFasta.install()
 
 from Bio import SeqIO
 
@@ -27,14 +25,6 @@ def _load_tax_maps(fps, has_header=False):
                 raise ValueError("Multiple tax_ids specified for {0}".format(name))
             d[name] = taxid
     return d
-
-def unique_sequences(it):
-    seen = set()
-    for sequence in it:
-        if sequence.id in seen:
-            continue
-        seen.add(sequence.id)
-        yield sequence
 
 def build_parser(p):
     p.add_argument('search_db', help="""Output of `deenurp search-sequences`""")
@@ -92,7 +82,10 @@ def action(args):
                     threads=args.threads, min_cluster_prop=args.min_mass_prop,
                     mpi_args=args.mpi_args, cluster_factor=args.cluster_factor)
             with args.output as fp:
-                sequences = unique_sequences(sequences)
+                # Unique IDs
+                sequences = wrap.unique(sequences, key=operator.itemgetter('id'))
+                # Unique sequences
+                sequences = wrap.unique(sequences, key=lambda s: str(s.seq))
                 if taxid_map:
                     sequences= write_taxid(sequences)
                 SeqIO.write(sequences, fp, 'fasta')
