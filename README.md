@@ -34,5 +34,6 @@ optimal set of reference sequences.
 
 
 # TODO
-* Function to determine number of sequences to include for each cluster?
 * Re-add type-strains (harder with some named, some unnamed sequences)
+* Remove nearly identical sequences (prefer named)
+* Fix loneliness
