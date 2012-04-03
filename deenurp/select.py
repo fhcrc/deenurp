@@ -124,6 +124,11 @@ def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
                 threads=threads, mpi_args=mpi_args)
         refs = [i for i in ref_seqs if i.id in keep]
 
+        # Annotate
+        for sequence in refs:
+            sequence.annotations.update({'weight_prop': cluster_weight_prop,
+                'cluster_id': cluster_id})
+
         assert len(refs) == len(keep)
 
         for i in refs:

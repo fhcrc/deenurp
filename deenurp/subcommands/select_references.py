@@ -26,9 +26,25 @@ def _load_tax_maps(fps, has_header=False):
             d[name] = taxid
     return d
 
+def meta_writer(fp):
+    writer = csv.writer(fp, lineterminator='\n')
+    writer.writerow(('seqname', 'cluster_id', 'weight_prop'))
+
+    def inner(sequences):
+        with fp:
+            for sequence in sequences:
+                writer.writerow((sequence.id,
+                    sequence.annotations['cluster_id'],
+                    sequence.annotations['weight_prop']))
+                yield sequence
+
+    return inner
+
 def build_parser(p):
     p.add_argument('search_db', help="""Output of `deenurp search-sequences`""")
     p.add_argument('output', help="Output file (fasta)", type=argparse.FileType('w'))
+    p.add_argument('--output-meta', help="""File to write selection metadata""",
+            type=argparse.FileType('w'))
 
     mpi_group = p.add_argument_group('Number of processors')
     mpi_group.add_argument('--threads', help="""Number of threads [default:
@@ -81,11 +97,14 @@ def action(args):
                     args.refs_per_cluster, candidates=args.cluster_candidates,
                     threads=args.threads, min_cluster_prop=args.min_mass_prop,
                     mpi_args=args.mpi_args, cluster_factor=args.cluster_factor)
+
             with args.output as fp:
                 # Unique IDs
                 sequences = wrap.unique(sequences, key=operator.attrgetter('id'))
                 # Unique sequences
                 sequences = wrap.unique(sequences, key=lambda s: str(s.seq))
+                if args.output_meta:
+                    sequences = meta_writer(args.output_meta)(sequences)
                 if taxid_map:
                     sequences= write_taxid(sequences)
                 SeqIO.write(sequences, fp, 'fasta')
