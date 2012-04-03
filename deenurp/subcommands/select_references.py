@@ -83,7 +83,7 @@ def action(args):
                     mpi_args=args.mpi_args, cluster_factor=args.cluster_factor)
             with args.output as fp:
                 # Unique IDs
-                sequences = wrap.unique(sequences, key=operator.itemgetter('id'))
+                sequences = wrap.unique(sequences, key=operator.attrgetter('id'))
                 # Unique sequences
                 sequences = wrap.unique(sequences, key=lambda s: str(s.seq))
                 if taxid_map:
