@@ -38,7 +38,7 @@ def nothing(obj=None):
     yield obj
 
 @contextlib.contextmanager
-def _ntf(**kwargs):
+def ntf(**kwargs):
     """
     Near-clone of tempfile.NamedTemporaryFile, but the file is deleted when the
     context manager exits, rather than when it's closed.
@@ -56,7 +56,7 @@ def tempcopy(path, **kwargs):
     prefix, suffix = os.path.splitext(os.path.basename(path))
     a = {'prefix': prefix, 'suffix': suffix}
     a.update(kwargs)
-    with open(path) as fp, _ntf(**a) as tf:
+    with open(path) as fp, ntf(**a) as tf:
         shutil.copyfileobj(fp, tf)
         tf.close()
         yield tf.name
@@ -82,7 +82,7 @@ def as_fasta(sequences, **kwargs):
     """
     if 'suffix' not in kwargs:
         kwargs['suffix'] = '.fasta'
-    with _ntf(**kwargs) as tf:
+    with ntf(**kwargs) as tf:
         SeqIO.write(sequences, tf, 'fasta')
         tf.flush()
         tf.close()
@@ -94,8 +94,8 @@ def as_refpkg(sequences, threads=None):
     Build a tree from sequences, generate a temporary reference package
     """
     sequences = list(sequences)
-    with _ntf(prefix='fast', suffix='.log') as log_fp, \
-         _ntf(prefix='fast', suffix='.tre') as tree_fp, \
+    with ntf(prefix='fast', suffix='.log') as log_fp, \
+         ntf(prefix='fast', suffix='.tre') as tree_fp, \
          tempdir(prefix='refpkg') as refpkg_dir:
 
         log_fp.close()
@@ -112,7 +112,7 @@ def as_refpkg(sequences, threads=None):
 
 @contextlib.contextmanager
 def redupfile_of_seqs(sequences, **kwargs):
-    with _ntf(**kwargs) as tf:
+    with ntf(**kwargs) as tf:
         writer = csv.writer(tf, lineterminator='\n')
         rows = ((s.id, s.id, s.annotations.get('weight', 1.0)) for s in sequences)
         writer.writerows(rows)
