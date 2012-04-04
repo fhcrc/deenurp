@@ -215,12 +215,16 @@ def esl_sfetch(sequence_file, name_iter, output_fp):
     cmd = ['esl-sfetch', '-f', sequence_file, '-']
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=output_fp)
+    count = 0
     for name in name_iter:
         p.stdin.write('{0}\n'.format(name))
+        count += 1
     p.stdin.close()
     p.wait()
     if not p.returncode == 0:
         raise subprocess.CalledProcessError(p.returncode, cmd)
+
+    return count
 
 def load_tax_maps(fps, has_header=False):
     """
