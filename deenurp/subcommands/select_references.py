@@ -13,19 +13,6 @@ from Bio import SeqIO
 
 from .. import select, search, wrap
 
-def _load_tax_maps(fps, has_header=False):
-    d = {}
-    for fp in fps:
-        reader = csv.reader(fp)
-        if has_header:
-            next(reader) # Skip
-        for row in reader:
-            name, taxid = row[:2]
-            if name in d and taxid != d[name]:
-                raise ValueError("Multiple tax_ids specified for {0}".format(name))
-            d[name] = taxid
-    return d
-
 def meta_writer(fp):
     writer = csv.writer(fp, lineterminator='\n')
     writer.writerow(('seqname', 'cluster_id', 'weight_prop'))
@@ -79,7 +66,7 @@ def action(args):
     if args.taxid_maps and not args.tax_map_out:
         raise argparse.ArgumentError("--tax-map-out required with --taxid-map")
     if args.taxid_maps:
-        taxid_map = _load_tax_maps(args.taxid_maps, args.map_header)
+        taxid_map = wrap.load_tax_maps(args.taxid_maps, args.map_header)
         headers = ('seqname', 'tax_id')
         writer = csv.writer(args.tax_map_out, lineterminator='\n')
         writer.writerow(headers)

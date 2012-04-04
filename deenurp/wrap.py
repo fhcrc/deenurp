@@ -221,3 +221,19 @@ def esl_sfetch(sequence_file, name_iter, output_fp):
     p.wait()
     if not p.returncode == 0:
         raise subprocess.CalledProcessError(p.returncode, cmd)
+
+def load_tax_maps(fps, has_header=False):
+    """
+    Load tax maps from an iterable of file pointers
+    """
+    d = {}
+    for fp in fps:
+        reader = csv.reader(fp)
+        if has_header:
+            next(reader) # Skip
+        for row in reader:
+            name, taxid = row[:2]
+            if name in d and taxid != d[name]:
+                raise ValueError("Multiple tax_ids specified for {0}".format(name))
+            d[name] = taxid
+    return d
