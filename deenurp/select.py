@@ -4,6 +4,7 @@ Select reference sequences for inclusion
 import itertools
 import logging
 import operator
+import subprocess
 import tempfile
 
 from Bio import SeqIO
@@ -14,6 +15,7 @@ from .wrap import cmalign, as_refpkg, as_fasta, tempdir, redupfile_of_seqs, \
                   voronoi, guppy_redup, pplacer, esl_sfetch
 
 DEFAULT_THREADS = 12
+CLUSTER_THRESHOLD = 0.999
 
 def seqrecord(name, residues, **annotations):
     sr = SeqRecord(Seq(residues), name)
@@ -56,11 +58,23 @@ def _sequence_extractor(con):
 
     return extract_seqs
 
+def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
+    sequences = sorted(sequences, key=lambda s: len(s), reverse=True)
+    with as_fasta(sequences) as fp, tempfile.NamedTemporaryFile() as ntf:
+        cmd = ['usearch', '-cluster', fp, '-seedsout', ntf.name, '-id',
+                str(threshold), '-quiet', '-nowordcountreject']
+        subprocess.check_call(cmd)
+        r = list(SeqIO.parse(ntf, 'fasta'))
+    logging.info("Clustered %d to %d", len(sequences), len(r))
+    return r
+
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
         threads=DEFAULT_THREADS, mpi_args=None):
     """
     Given a set of reference sequences and query sequences
     """
+    # Cluster
+    ref_seqs = _cluster(ref_seqs)
     if len(ref_seqs) <= keep_leaves:
         return [i.id for i in ref_seqs]
 
