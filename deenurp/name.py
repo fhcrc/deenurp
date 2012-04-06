@@ -208,7 +208,7 @@ def update_taxids(refpkg, tax2tree_dict, output_fp):
                 i['tax_id'] = n
             w.writerow(i)
 
-def tax2tree(refpkg, output_path):
+def tax2tree(refpkg, output_fp):
     """
     Run tax2tree on a reference package lacking names
     """
@@ -221,8 +221,8 @@ def tax2tree(refpkg, output_path):
             '--output', output.name,
             '--tree', refpkg.file_abspath('tree')])
         try:
-            with open(consensus) as fp, open('seqinfo.csv', 'w') as ofp:
+            with open(consensus) as fp:
                 d = dict(parse_tax2tree_out(fp))
-                update_taxids(refpkg, d, ofp)
+                update_taxids(refpkg, d, output_fp)
         finally:
             os.remove(consensus)

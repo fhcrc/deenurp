@@ -1,4 +1,4 @@
-commands = 'add_reps', 'search_sequences', 'select_references'
+commands = 'add_reps', 'search_sequences', 'select_references', 'tax2tree'
 
 def itermodules(root=__name__):
     for command in commands:
