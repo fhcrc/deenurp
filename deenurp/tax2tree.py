@@ -7,9 +7,9 @@ from t2t import nlevel
 
 from . import wrap
 
-class Node(object):
+class TaxNode(object):
     """
-    Node in a taxonomy
+    TaxNode in a taxonomy
     """
     def __init__(self, rank, tax_id, parent=None, sequence_ids=None, children=None, name=None):
         self.rank = rank
@@ -41,6 +41,15 @@ class Node(object):
     @property
     def is_root(self):
         return self.parent is None
+
+    def at_rank(self, rank):
+        s = self
+        while s:
+            if s.rank == rank:
+                return s
+            s = s.parent
+        raise KeyError("No node at rank {0} for {1}".format(rank,
+            self.tax_id))
 
     def depth_first_iter(self):
         for child in self.children:
@@ -82,7 +91,7 @@ class Node(object):
             return l
 
     def __repr__(self):
-        return "<Node {0}:{1} [rank={2};children={3}]>".format(self.tax_id,
+        return "<TaxNode {0}:{1} [rank={2};children={3}]>".format(self.tax_id,
                 self.name, self.rank, len(self.children))
 
     def __iter__(self):
@@ -142,7 +151,7 @@ def generate_tax2tree_map(refpkg, output_fp):
     Generate a tax2tree map from a reference package, writing to output_fp
     """
     with open(refpkg.file_abspath('taxonomy')) as fp:
-        tax_root = Node.of_taxtable(fp)
+        tax_root = TaxNode.of_taxtable(fp)
 
     def lineage(tax_id):
         l = tax_root.get_node(tax_id).lineage()
@@ -174,7 +183,7 @@ def parse_tax2tree_out(fp):
 
 def update_taxids(refpkg, tax2tree_dict, output_fp):
     with open(refpkg.file_abspath('taxonomy')) as fp:
-        tax_root = Node.of_taxtable(fp)
+        tax_root = TaxNode.of_taxtable(fp)
     def lineage_ids(tax_id):
         if not tax_id:
             return frozenset()

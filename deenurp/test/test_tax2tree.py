@@ -1,7 +1,7 @@
 import os.path
 import unittest
 
-from deenurp import name
+from deenurp import tax2tree
 
 DN = os.path.dirname(__file__)
 
@@ -11,7 +11,7 @@ def data_path(*args):
 class NodeTestCase(unittest.TestCase):
     def setUp(self):
         with open(data_path('test_taxtable.csv')) as fp:
-            self.root = name.Node.of_taxtable(fp)
+            self.root = tax2tree.TaxNode.of_taxtable(fp)
 
     def test_index(self):
         self.assertEqual(self.root, self.root.get_node('1'))
