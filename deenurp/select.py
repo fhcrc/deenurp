@@ -2,6 +2,7 @@
 Select reference sequences for inclusion
 """
 import contextlib
+import csv
 import itertools
 import logging
 import operator
@@ -82,21 +83,22 @@ def _always_include(ref_seqs, keep_leaves):
             for i in seqs:
                 print >> tf, i.id
             tf.flush()
-            yield tf.name
+            yield ref_seqs, tf.name
     else:
-        yield None
+        yield seqs, None
 
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
         threads=DEFAULT_THREADS, mpi_args=None):
     """
-    Given a set of reference sequences and query sequences
+    Given a set of reference sequences and query sequences, select appropriate
+    keep_leaves appropriate references.
     """
     # Cluster
     ref_seqs = _cluster(ref_seqs)
     if len(ref_seqs) <= keep_leaves:
         return [i.id for i in ref_seqs]
 
-    with _always_include(ref_seqs, keep_leaves) as always:
+    with _always_include(ref_seqs, keep_leaves) as (ref_seqs, always):
         c = itertools.chain(ref_seqs, query_seqs)
         ref_ids = frozenset(i.id for i in ref_seqs)
         aligned = list(cmalign(c, mpi_args=mpi_args))
@@ -107,7 +109,8 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
             jplace = pplacer(rp.path, fasta, out_dir=placedir(), threads=threads)
             # Redup
             guppy_redup(jplace, redup_path, placedir('redup.jplace'))
-            prune_leaves = set(voronoi(placedir('redup.jplace'), keep_leaves, always_include=always))
+            prune_leaves = set(voronoi(placedir('redup.jplace'), keep_leaves,
+                              always_include=always))
 
     result = frozenset(i.id for i in ref_seqs) - prune_leaves
 
@@ -167,3 +170,38 @@ def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
 
         for i in refs:
             yield i
+
+def merge_meta(sequence_file, deenurp_db, output_fp):
+    """
+    Generate a merged metadata file for all sequences in sequence_file
+    """
+    seen_headers = set()
+    headers = []
+    sequence_ids = set(i.id for i in SeqIO.parse(sequence_file, 'fasta'))
+    assert sequence_ids
+    result = []
+
+    cursor = deenurp_db.con.cursor()
+    cursor.execute('SELECT DISTINCT meta_path FROM refs WHERE meta_path IS NOT NULL')
+    meta_files = [i[0] for i in cursor]
+
+    for meta_file in meta_files:
+        with open(meta_file) as fp:
+            reader = csv.DictReader(fp)
+            h = set(reader.fieldnames)
+            headers.extend(h - seen_headers)
+            seen_headers |= set(reader.fieldnames)
+            for i in reader:
+                if i['seqname'] in sequence_ids:
+                    sequence_ids.remove(i['seqname'])
+                    result.append(i)
+
+    # Add an empty line for everything else
+    for i in sequence_ids:
+        result.append({'seqname': i})
+
+    writer = csv.DictWriter(output_fp, headers)
+    writer.writeheader()
+    writer.writerows(result)
+
+    return len(result)

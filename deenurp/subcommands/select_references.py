@@ -30,8 +30,6 @@ def meta_writer(fp):
 def build_parser(p):
     p.add_argument('search_db', help="""Output of `deenurp search-sequences`""")
     p.add_argument('output', help="Output file (fasta)", type=argparse.FileType('w'))
-    p.add_argument('--output-meta', help="""File to write selection metadata""",
-            type=argparse.FileType('w'))
 
     mpi_group = p.add_argument_group('Number of processors')
     mpi_group.add_argument('--threads', help="""Number of threads [default:
@@ -51,31 +49,13 @@ def build_parser(p):
             proportion of total mass in a cluster to require before searching
             for references [default: %(default)f]""", type=float, default=-1.0)
 
-    taxonomy_options = p.add_argument_group('Taxonomy Options')
-    taxonomy_options.add_argument('-m', '--taxid-map', help="""CSV File mapping
-            from sequence ID to tax_id. May be specified multiple times.""",
-            action='append', dest='taxid_maps', metavar='MAP', type=argparse.FileType('r'))
-    taxonomy_options.add_argument('--map-header', help="""Taxonomy map(s) have
-            a header row. [default: %(default)s]""", default=False,
-            action='store_true')
-    taxonomy_options.add_argument('--tax-map-out', type=argparse.FileType('w'),
-            help="""File to write output seqid,taxid map""")
+    info_options = p.add_argument_group('Sequence info options')
+    info_options.add_argument('--seqinfo-out', type=argparse.FileType('w'),
+            help="""File to write merged metadata""")
+    info_options.add_argument('--output-meta', help="""File to write selection metadata""",
+            type=argparse.FileType('w'))
 
 def action(args):
-    taxid_map = None
-    if args.taxid_maps and not args.tax_map_out:
-        raise argparse.ArgumentError("--tax-map-out required with --taxid-map")
-    if args.taxid_maps:
-        taxid_map = wrap.load_tax_maps(args.taxid_maps, args.map_header)
-        headers = ('seqname', 'tax_id')
-        writer = csv.writer(args.tax_map_out, lineterminator='\n')
-        writer.writerow(headers)
-
-        def write_taxid(sequences):
-            with args.tax_map_out:
-                for sequence in sequences:
-                    writer.writerow((sequence.id, taxid_map.get(sequence.id)))
-                    yield sequence
     with wrap.tempcopy(args.search_db) as search_path:
         s = sqlite3.connect(search_path)
         with contextlib.closing(s):
@@ -88,10 +68,9 @@ def action(args):
             with args.output as fp:
                 # Unique IDs
                 sequences = wrap.unique(sequences, key=operator.attrgetter('id'))
-                # Unique sequences
-                sequences = wrap.unique(sequences, key=lambda s: str(s.seq))
                 if args.output_meta:
                     sequences = meta_writer(args.output_meta)(sequences)
-                if taxid_map:
-                    sequences= write_taxid(sequences)
                 SeqIO.write(sequences, fp, 'fasta')
+
+            if args.seqinfo_out:
+                select.merge_meta(fp.name, search_db, args.seqinfo_out)
