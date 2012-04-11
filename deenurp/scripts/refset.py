@@ -27,7 +27,8 @@ def parse_arguments(argv):
     """
     Extract command-line arguments for different actions.
     """
-    parser = argparse.ArgumentParser(description="deenurp pipeline")
+    parser = argparse.ArgumentParser(description="deenurp pipeline",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-v', '--verbose', dest='verbosity',
             action='count', default=1,

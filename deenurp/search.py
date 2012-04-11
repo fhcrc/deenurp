@@ -79,6 +79,10 @@ WHERE cluster_id NOT IN (SELECT DISTINCT cluster_id
                          INNER JOIN best_hits USING (sequence_id));""")
     return _cursor_to_fasta(cursor, output_fp)
 
+def _sequences_to_fasta(con, output_fp):
+    cursor = con.cursor()
+    cursor.execute("SELECT sequence_id, name, residues from sequences")
+    return _cursor_to_fasta(cursor, output_fp)
 
 def _desc_weight_to_fasta(con, output_fp):
     """
@@ -213,48 +217,60 @@ def _search_all(con, sequence_databases, quiet=True):
     sequence_databases are searched in order. Any sequence without a best hit
     in sequence_database[i-1] is searched in sequence_database[i].
     """
-    p = _load_params(con)
-
     cursor = con.cursor()
     count = 0
     # USEARCH everything
-    for sequence_database in sequence_databases:
-        with _ntf(prefix='seqs', suffix='.fasta') as seq_fp, \
-             _ntf(prefix='usearch') as uc_fp:
+    for sequence_database, meta in sequence_databases:
+        with _ntf(prefix='seqs', suffix='.fasta') as seq_fp:
 
             # Add a reference database
-            cursor.execute("""INSERT INTO refs (file_path) VALUES (?)""",
-                    [sequence_database])
+            cursor.execute("""INSERT INTO refs (file_path, meta_path) VALUES (?, ?)""",
+                    [sequence_database, meta])
             ref_id = cursor.lastrowid
 
-            u_count = _unsearched_to_fasta(con, seq_fp)
+            # Search against all databases, for now
+            #u_count = _unsearched_to_fasta(con, seq_fp)
+            u_count = _sequences_to_fasta(con, seq_fp)
+
             logging.info("%d sequences to search against %s", u_count, sequence_database)
             if u_count == 0:
                 return 0
 
             seq_fp.flush()
-            uclust.search(sequence_database, seq_fp.name, uc_fp.name,
-                    pct_id=0.9, trunclabels=True,
-                    maxaccepts=p['maxaccepts'], maxrejects=p['maxrejects'],
-                    quiet=quiet)
+            count += _search(con, seq_fp.name, ref_id, quiet=quiet)
 
-            records = uclust.parse_uclust_out(uc_fp)
+    return count
 
-            # Subset to records which match actual criteria
-            records = (i for i in records
-                       if i.type == 'H' and i.pct_id >= p['search_id'] * 100.0)
-            by_seq = uclust.hits_by_sequence(records)
+def _search(con, sequence_file, ref_id, quiet=True):
+    """
+    Search the sequences in a file against a reference database
+    """
+    p = _load_params(con)
 
-            sql = """
+    cursor = con.cursor()
+    count = 0
+    ref_name = cursor.execute("SELECT file_path FROM refs WHERE ref_id = ?",
+            [ref_id]).fetchone()[0]
+    with _ntf(prefix='usearch') as uc_fp:
+        uclust.search(ref_name, sequence_file, uc_fp.name, pct_id=0.9,
+                trunclabels=True, maxaccepts=p['maxaccepts'],
+                maxrejects=p['maxrejects'], quiet=quiet)
+
+        records = uclust.parse_uclust_out(uc_fp)
+        records = (i for i in records
+                   if i.type == 'H' and i.pct_id >= p['search_id'] * 100.0)
+        by_seq = uclust.hits_by_sequence(records)
+
+        sql = """
 INSERT INTO best_hits (sequence_id, hit_idx, name, pct_id, ref_id)
 VALUES (?, ?, ?, ?, ?)
 """
 
-            for _, hits in by_seq:
-                records = ((h.query_label, i, h.target_label, h.pct_id, ref_id)
-                           for i, h in enumerate(hits))
-                cursor.executemany(sql, records)
-                count += cursor.rowcount
+        for _, hits in by_seq:
+            records = ((h.query_label, i, h.target_label, h.pct_id, ref_id)
+                       for i, h in enumerate(hits))
+            cursor.executemany(sql, records)
+            count += cursor.rowcount
 
     return count
 
@@ -339,14 +355,15 @@ SELECT bh.name as best_hit_name, bh.ref_id
 FROM best_hits bh
 INNER JOIN sequences s USING(sequence_id)
 WHERE s.cluster_id = ? AND bh.hit_idx < ?
-ORDER BY bh.hit_idx, s.weight DESC, s.length DESC
-LIMIT ?"""
-        cursor.execute(hit_sql, [cluster_id, max_per_seq, hits_per_cluster])
+ORDER BY bh.ref_id, bh.hit_idx, s.weight DESC, s.length DESC"""
+        cursor.execute(hit_sql, [cluster_id, max_per_seq])
         r = (dict(zip(i.keys(), i)) for i in cursor)
 
         # Choose the top `hits_per_cluster` distinct hits.
         r = wrap.unique(r, operator.itemgetter('best_hit_name'))
-        return list(itertools.islice(r, 0, hits_per_cluster))
+        l = list(itertools.islice(r, 0, hits_per_cluster))
+        return l
+
 
 # Database schema
 SCHEMA = """
@@ -375,7 +392,8 @@ CREATE INDEX ix_sequences_cluster_id ON sequences(cluster_id);
 
 CREATE TABLE refs (
   ref_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  file_path VARCHAR
+  file_path VARCHAR,
+  meta_path VARCHAR
 );
 
 CREATE TABLE best_hits (
@@ -410,7 +428,7 @@ def create_database(con, fasta_file, reference_candidates, weights=None,
 
     con: Database connection
     fasta_file: query sequences
-    reference_candidates: Iterable of file names to be searched for candidate
+    reference_candidates: Iterable of (file name, metadata file)s to be searched for candidate
         reference sequences, ordered by decreasing preference. Any cluster with a
         hit in a previous database is not searched in subsequent databases.
     """

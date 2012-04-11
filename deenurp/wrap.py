@@ -168,7 +168,8 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
 
     return jplace
 
-def voronoi(jplace, leaves, algorithm='full', posterior_prop=False, point_mass=True):
+def voronoi(jplace, leaves, algorithm='pam', posterior_prop=False, point_mass=True,
+        always_include=None):
     """
     Run rppr voronoi on the given jplace file, cutting to the given number of leaves
     """
@@ -178,6 +179,8 @@ def voronoi(jplace, leaves, algorithm='full', posterior_prop=False, point_mass=T
         cmd.append('--point-mass')
     if posterior_prop:
         cmd.append('--pp')
+    if always_include:
+        cmd.extend(('--always-include', always_include))
     logging.info(' '.join(cmd))
     output = subprocess.check_output(cmd)
     return output.splitlines()

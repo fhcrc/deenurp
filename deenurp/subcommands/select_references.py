@@ -1,5 +1,5 @@
 """
-Choose reference sequences
+Choose reference sequences.
 """
 
 import argparse

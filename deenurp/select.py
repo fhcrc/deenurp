@@ -1,6 +1,7 @@
 """
 Select reference sequences for inclusion
 """
+import contextlib
 import itertools
 import logging
 import operator
@@ -15,7 +16,7 @@ from .wrap import cmalign, as_refpkg, as_fasta, tempdir, redupfile_of_seqs, \
                   voronoi, guppy_redup, pplacer, esl_sfetch
 
 DEFAULT_THREADS = 12
-CLUSTER_THRESHOLD = 0.999
+CLUSTER_THRESHOLD = 0.998
 
 def seqrecord(name, residues, **annotations):
     sr = SeqRecord(Seq(residues), name)
@@ -45,6 +46,7 @@ def _sequence_extractor(con):
         """
         key = operator.itemgetter(1)
         id_ref = sorted(id_ref, key=key)
+        d = dict(id_ref)
 
         with tempfile.NamedTemporaryFile(prefix='refs', suffix='.fasta') as tf:
             for g, v in itertools.groupby(id_ref, key):
@@ -54,19 +56,35 @@ def _sequence_extractor(con):
 
             tf.seek(0)
             for s in SeqIO.parse(tf, 'fasta'):
+                s.annotations['ref'] = d[s.id]
                 yield s
 
     return extract_seqs
 
 def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
-    sequences = sorted(sequences, key=lambda s: len(s), reverse=True)
     with as_fasta(sequences) as fp, tempfile.NamedTemporaryFile() as ntf:
         cmd = ['usearch', '-cluster', fp, '-seedsout', ntf.name, '-id',
-                str(threshold), '-quiet', '-nowordcountreject']
+                str(threshold),
+                '-usersort',
+                '-quiet', '-nowordcountreject']
         subprocess.check_call(cmd)
-        r = list(SeqIO.parse(ntf, 'fasta'))
+        r = frozenset(i.id for i in SeqIO.parse(ntf, 'fasta'))
     logging.info("Clustered %d to %d", len(sequences), len(r))
-    return r
+    return [i for i in sequences if i.id in r]
+
+@contextlib.contextmanager
+def _always_include(ref_seqs, keep_leaves):
+    key = lambda x: x.annotations['ref']
+    ref_seqs = sorted(ref_seqs, key=key)
+    seqs = list(next(itertools.groupby(ref_seqs, key=key))[1])
+    if len(seqs) < keep_leaves:
+        with tempfile.NamedTemporaryFile(prefix='keep') as tf:
+            for i in seqs:
+                print >> tf, i.id
+            tf.flush()
+            yield tf.name
+    else:
+        yield None
 
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
         threads=DEFAULT_THREADS, mpi_args=None):
@@ -78,17 +96,18 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
     if len(ref_seqs) <= keep_leaves:
         return [i.id for i in ref_seqs]
 
-    c = itertools.chain(ref_seqs, query_seqs)
-    ref_ids = frozenset(i.id for i in ref_seqs)
-    aligned = list(cmalign(c, mpi_args=mpi_args))
-    with as_refpkg((i for i in aligned if i.id in ref_ids), threads=threads) as rp, \
-             as_fasta(aligned) as fasta, \
-             tempdir(prefix='jplace') as placedir, \
-             redupfile_of_seqs(query_seqs) as redup_path:
-        jplace = pplacer(rp.path, fasta, out_dir=placedir(), threads=threads)
-        # Redup
-        guppy_redup(jplace, redup_path, placedir('redup.jplace'))
-        prune_leaves = set(voronoi(placedir('redup.jplace'), keep_leaves))
+    with _always_include(ref_seqs, keep_leaves) as always:
+        c = itertools.chain(ref_seqs, query_seqs)
+        ref_ids = frozenset(i.id for i in ref_seqs)
+        aligned = list(cmalign(c, mpi_args=mpi_args))
+        with as_refpkg((i for i in aligned if i.id in ref_ids), threads=threads) as rp, \
+                 as_fasta(aligned) as fasta, \
+                 tempdir(prefix='jplace') as placedir, \
+                 redupfile_of_seqs(query_seqs) as redup_path:
+            jplace = pplacer(rp.path, fasta, out_dir=placedir(), threads=threads)
+            # Redup
+            guppy_redup(jplace, redup_path, placedir('redup.jplace'))
+            prune_leaves = set(voronoi(placedir('redup.jplace'), keep_leaves, always_include=always))
 
     result = frozenset(i.id for i in ref_seqs) - prune_leaves
 
@@ -131,6 +150,7 @@ def choose_references(deenurp_db, refs_per_cluster=5, candidates=30,
             logging.info("Selecting %d sequences for %d merged clusters.",
                     select_count, cluster.count)
 
+        # Select sequences for the cluster, using `rppr voronoi`
         hit_names = frozenset((i['best_hit_name'], i['ref_id']) for i in hits)
         seqs = [seqrecord(i['name'], i['residues'], weight=i['weight']) for i in seqs]
         ref_seqs = list(extractor(hit_names))

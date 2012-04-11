@@ -54,7 +54,7 @@ class DbTestCase(unittest.TestCase):
     def test_search_each_cluster(self):
         search._load_sequences(self.con, self.seq_path)
         search._cluster(self.con, self.seq_path, quiet=True)
-        result = search._search_all(self.con, [self.db_path], quiet=True)
+        result = search._search_all(self.con, [(self.db_path, None)], quiet=True)
         self.assertEqual(10, result)
 
 class DedupInfoToCountsTestCase(unittest.TestCase):
