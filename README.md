@@ -32,8 +32,21 @@ optimal set of reference sequences.
 1. Place the query sequences on the tree
 1. Choose a specified number with `rppr voronoi`
 
+Sequences from the first reference file given to `search-sequences` (e.g.,
+named sequences) are preferred.
+
+### `refset.py add-reps`
+
+Fetches sequences from a sequence file which match the taxtable for a reference
+set at a given rank. Useful for adding type strains.
+
+### `refset.py tax2tree`
+
+Runs the `tax2tree` program on a reference package, updating the `seq_info`
+file.
+
+Sequences whose lineage changes are relabeled. The prior `tax_id` is added to
+the `seq_info` file in the reference package.
 
 # TODO
-* Re-add type-strains (harder with some named, some unnamed sequences)
-* Remove nearly identical sequences (prefer named)
 * Fix loneliness
