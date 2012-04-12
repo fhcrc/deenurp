@@ -68,6 +68,7 @@ def action(args):
             with args.output as fp:
                 # Unique IDs
                 sequences = wrap.unique(sequences, key=operator.attrgetter('id'))
+                sequences = wrap.unique(sequences, key=lambda s: str(s.seq))
                 if args.output_meta:
                     sequences = meta_writer(args.output_meta)(sequences)
                 SeqIO.write(sequences, fp, 'fasta')

@@ -200,7 +200,7 @@ def merge_meta(sequence_file, deenurp_db, output_fp):
     for i in sequence_ids:
         result.append({'seqname': i})
 
-    writer = csv.DictWriter(output_fp, headers)
+    writer = csv.DictWriter(output_fp, headers, quoting=csv.QUOTE_NONNUMERIC)
     writer.writeheader()
     writer.writerows(result)
 
