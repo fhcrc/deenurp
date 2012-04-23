@@ -121,12 +121,12 @@ def redupfile_of_seqs(sequences, **kwargs):
         yield tf.name
 
 def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
-        gamma=False, threads=None):
+        gamma=False, threads=None, prefix=None):
     executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
     env = os.environ.copy()
     if threads:
         env['OMP_NUM_THREADS'] = str(threads)
-    cmd = [executable, '-nt', '-log', log_path]
+    cmd = (prefix or []) + [executable, '-nt', '-log', log_path]
     for k, v in (('-gtr', gtr), ('-gamma', gamma), ('-quiet', quiet)):
         if v:
             cmd.append(k)
@@ -185,7 +185,7 @@ def voronoi(jplace, leaves, algorithm='pam', posterior_prop=False, point_mass=Tr
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
-def cmalign(sequences, mpi_args=None):
+def cmalign(sequences, output=None, mpi_args=None):
     """
     Run cmalign
 
@@ -198,13 +198,13 @@ def cmalign(sequences, mpi_args=None):
     cmd.extend(['--sub', '-1', '--dna', '--hbanded'])
     with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
          tempfile.NamedTemporaryFile(prefix='cmalign', suffix='.sto', dir='.') as tf:
-        cmd.extend(('-o', tf.name))
+        cmd.extend(('-o', output or tf.name))
         cmd.append(CM)
         cmd.append(fasta)
         logging.info(' '.join(cmd))
         subprocess.check_call(cmd, stdout=devnull)
 
-        for sequence in SeqIO.parse(tf, 'stockholm'):
+        for sequence in SeqIO.parse(output or tf, 'stockholm'):
             yield sequence
 
 def esl_sfetch(sequence_file, name_iter, output_fp):
