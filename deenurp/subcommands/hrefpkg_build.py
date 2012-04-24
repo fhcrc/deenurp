@@ -108,7 +108,8 @@ def tax_id_refpkg(index_refpkg, tax_id, threads=12):
             w.writeheader()
             rows = [i for i in r if i['tax_id'] in descendants]
             keep_seq_ids = frozenset(choose_sequence_ids(full_tax, rows))
-            rows = (i for i in r if i['seqname'] in keep_seq_ids)
+            rows = [i for i in rows if i['seqname'] in keep_seq_ids]
+            assert len(rows) == len(keep_seq_ids)
             w.writerows(rows)
             seq_info_fp.close()
 
