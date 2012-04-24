@@ -3,21 +3,17 @@ Build a hierarchical set of reference packages
 """
 
 import csv
+import logging
+import os.path
 import random
+import sys
+import tempfile
+
 
 from Bio import SeqIO
 from taxtastic.refpkg import Refpkg
 
 from .. import wrap, tax
-
-def fasta_db(s):
-    c = s.count(':')
-    if not c:
-        return s, None
-    elif c == 1:
-        return s.split(':')
-    else:
-        raise ValueError("invalid specification: {0}".format(s))
 
 def build_parser(p):
     p.add_argument('sequence_file', help="""All sequences""")
@@ -34,18 +30,20 @@ def action(a):
     with open(index_rp.file_abspath('taxonomy')) as fp:
         taxonomy = tax.TaxNode.from_taxtable(fp)
 
+    with open(a.seqinfo_file) as fp:
+        seqinfo = load_seqinfo(fp)
+
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
     for i, node in enumerate(nodes):
-        print '{0}: {1} ({2}/{3})'.format(node.tax_id, node.name, i + 1,
-                len(nodes))
-        tax_id_refpkg(index_rp, node.tax_id)
+        logging.info("%s: %s (%d/%d)", node.tax_id, node.name, i+1, len(nodes))
+        if os.path.exists(node.tax_id + '.refpkg'):
+            logging.warn("Refpkg exists: %s.refpkg. Skipping", node.tax_id)
+            continue
+        tax_id_refpkg(index_rp, node.tax_id, seqinfo)
 
-def seqinfo_tax_ids(seqinfo_fp):
-    """
-    Return all unique tax_ids in seqinfo_fp
-    """
+def load_seqinfo(seqinfo_fp):
     r = csv.DictReader(seqinfo_fp)
-    return frozenset(i['tax_id'] for i in r)
+    return list(r)
 
 def build_index_refpkg(sequence_file, seqinfo_file, taxonomy, dest='index.refpkg', **meta):
     rp = Refpkg(dest, create=True)
@@ -76,7 +74,7 @@ def choose_sequence_ids(taxonomy, seqinfo_rows, per_species=5):
         for i in spec_seqs:
             yield i
 
-def tax_id_refpkg(index_refpkg, tax_id, threads=12):
+def tax_id_refpkg(index_refpkg, tax_id, seqinfo, threads=12):
     """
     Build a reference package containing all descendants of tax_id from an
     index reference package.
@@ -86,7 +84,6 @@ def tax_id_refpkg(index_refpkg, tax_id, threads=12):
          wrap.ntf(prefix='tree', suffix='.tre') as tree_fp, \
          wrap.ntf(prefix='tree', suffix='.stats') as stats_fp, \
          wrap.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
-        stats_fp.close()
 
         # Subset taxonomy
         with open(index_refpkg.file_abspath('taxonomy')) as fp:
@@ -102,24 +99,32 @@ def tax_id_refpkg(index_refpkg, tax_id, threads=12):
             tax_fp.close()
 
         # Subset seq_info
-        with open(index_refpkg.file_abspath('seq_info')) as fp:
-            r = csv.DictReader(fp)
-            w = csv.DictWriter(seq_info_fp, r.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
-            w.writeheader()
-            rows = [i for i in r if i['tax_id'] in descendants]
-            keep_seq_ids = frozenset(choose_sequence_ids(full_tax, rows))
-            rows = [i for i in rows if i['seqname'] in keep_seq_ids]
-            assert len(rows) == len(keep_seq_ids)
-            w.writerows(rows)
-            seq_info_fp.close()
+        w = csv.DictWriter(seq_info_fp, seqinfo[0].keys(), quoting=csv.QUOTE_NONNUMERIC)
+        w.writeheader()
+        rows = [i for i in seqinfo if i['tax_id'] in descendants]
+        keep_seq_ids = frozenset(choose_sequence_ids(full_tax, rows))
+        rows = [i for i in rows if i['seqname'] in keep_seq_ids]
+        assert len(rows) == len(keep_seq_ids)
+        w.writerows(rows)
+        seq_info_fp.close()
 
         # Align
         sequences = SeqIO.parse(index_refpkg.file_abspath('aln_fasta'), 'fasta')
-        sequences = [i for i in sequences if i.id in keep_seq_ids]
-        print 'Tax id {0}: {1} sequences'.format(tax_id, len(sequences))
+        with tempfile.NamedTemporaryFile() as tf:
+            wrap.esl_sfetch(index_refpkg.file_abspath('aln_fasta'),
+                            keep_seq_ids, tf)
+            # Rewind
+            tf.seek(0)
+            sequences = list(SeqIO.parse(tf, 'fasta'))
+        logging.info("Tax id %s: %d sequences", tax_id, len(sequences))
+
+        if len(set(str(i.seq) for i in sequences)) == 1:
+            logging.warn("Skipping %s: only 1 unique sequence string", tax_id)
+            return None
 
         # No sense in building with one sequence
-        if len(sequences) == 1:
+        if len(sequences) < 2:
+            logging.warn("Skipping: %d sequences.", len(sequences))
             return None
 
         # Cmalign
@@ -135,7 +140,11 @@ def tax_id_refpkg(index_refpkg, tax_id, threads=12):
         rp.update_file('tree', tree_fp.name)
         rp.update_file('seq_info', seq_info_fp.name)
         rp.update_file('taxonomy', tax_fp.name)
-        rp.update_phylo_model('FastTree', stats_fp.name)
+        try:
+            rp.update_phylo_model('FastTree', stats_fp.name)
+        except:
+            print >> sys.stderr, stats_fp.read()
+            raise
         rp.update_file('profile', wrap.CM)
         rp.commit_transaction()
 
