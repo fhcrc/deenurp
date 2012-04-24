@@ -25,12 +25,18 @@ def build_parser(p):
             [default: %(default)d]""")
 
 def action(a):
-    index_rp = build_index_refpkg(a.sequence_file, a.seqinfo_file, a.taxonomy)
+    if not os.path.exists('index.refpkg'):
+        index_rp = build_index_refpkg(a.sequence_file, a.seqinfo_file, a.taxonomy)
+    else:
+        logging.warn('index.refpkg exists. using.')
+        index_rp = Refpkg('index.refpkg', create=False)
 
     with open(index_rp.file_abspath('taxonomy')) as fp:
+        logging.info('loading taxonomy')
         taxonomy = tax.TaxNode.from_taxtable(fp)
 
     with open(a.seqinfo_file) as fp:
+        logging.info("loading seqinfo")
         seqinfo = load_seqinfo(fp)
 
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
