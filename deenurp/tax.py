@@ -6,6 +6,7 @@ class TaxNode(object):
     TaxNode in a taxonomy
     """
     def __init__(self, rank, tax_id, parent=None, sequence_ids=None, children=None, name=None):
+        self.ranks = None
         self.rank = rank
         self.name = name
         self.tax_id = tax_id
@@ -19,6 +20,7 @@ class TaxNode(object):
 
     def add_child(self, child):
         child.parent = self
+        child.ranks = self.ranks
         child.index = self.index
         assert child.tax_id not in self.index
         self.index[child.tax_id] = child
@@ -77,8 +79,7 @@ class TaxNode(object):
         """
         Returns all nodes between this node and the root, including this one.
         """
-        if not self.parent:
-            return [self]
+        if not self.parent: return [self]
         else:
             l = self.parent.lineage()
             l.append(self)
@@ -91,6 +92,41 @@ class TaxNode(object):
     def __iter__(self):
         return self.depth_first_iter()
 
+    def write_taxtable(self, out_fp, **kwargs):
+        """
+        Write a taxtable for this node and all descendants,
+        including the lineage leading to this node.
+        """
+        ranks_represented = frozenset(i.rank for i in self) | \
+                            frozenset(i.rank for i in self.lineage())
+        ranks = [i for i in self.ranks if i in ranks_represented]
+        assert len(ranks_represented) == len(ranks)
+
+        def node_record(node):
+            parent_id = node.parent.tax_id if node.parent else node.tax_id
+            d = {'tax_id': node.tax_id,
+                 'tax_name': node.name,
+                 'parent_id': parent_id,
+                 'rank': node.rank}
+            l = {i.rank: i.tax_id for i in node.lineage()}
+            d.update(l)
+            return d
+
+        def node_iter(node):
+            yield node
+            for child in node.children:
+                for i in node_iter(child):
+                    yield i
+
+        header = ['tax_id', 'parent_id', 'rank', 'tax_name'] + ranks
+        w = csv.DictWriter(out_fp, header, quoting=csv.QUOTE_NONNUMERIC,
+                lineterminator='\n')
+        w.writeheader()
+        # All nodes leading to this one
+        for i in self.lineage()[:-1]:
+            w.writerow(node_record(i))
+        w.writerows(node_record(i) for i in node_iter(self))
+
     @classmethod
     def from_taxtable(cls, taxtable_fp):
         """
@@ -102,6 +138,7 @@ class TaxNode(object):
 
         row = next(rows)
         root = cls(rank=row['rank'], tax_id=row['tax_id'], name=row['tax_name'])
+        root.ranks = headers[4:]
         for row in rows:
             rank, tax_id, name = [row[i] for i in ('rank', 'tax_id', 'tax_name')]
             path = filter(None, row.values()[4:])
