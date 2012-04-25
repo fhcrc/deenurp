@@ -26,7 +26,8 @@ def build_parser(p):
 
 def action(a):
     if not os.path.exists('index.refpkg'):
-        index_rp = build_index_refpkg(a.sequence_file, a.seqinfo_file, a.taxonomy)
+        index_rp = build_index_refpkg(a.sequence_file, a.seqinfo_file, a.taxonomy,
+                index_rank=a.index_rank)
     else:
         logging.warn('index.refpkg exists. using.')
         index_rp = Refpkg('index.refpkg', create=False)
