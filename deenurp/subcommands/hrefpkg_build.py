@@ -94,14 +94,10 @@ def tax_id_refpkg(index_refpkg, tax_id, seqinfo, threads=12):
         # Subset taxonomy
         with open(index_refpkg.file_abspath('taxonomy')) as fp:
             full_tax = tax.TaxNode.from_taxtable(fp)
-            descendants = set(i.tax_id for i in full_tax.get_node(tax_id))
+            n = full_tax.get_node(tax_id)
+            descendants = set(i.tax_id for i in n)
             assert descendants
-            fp.seek(0)
-            r = csv.DictReader(fp)
-            w = csv.DictWriter(tax_fp, r.fieldnames)
-            w.writeheader()
-            rows = (i for i in r if i['tax_id'] in descendants)
-            w.writerows(rows)
+            n.write_taxtable(tax_fp)
             tax_fp.close()
 
         # Subset seq_info
