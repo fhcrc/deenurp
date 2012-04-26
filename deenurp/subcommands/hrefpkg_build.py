@@ -3,6 +3,7 @@ Build a hierarchical set of reference packages
 """
 
 import csv
+import itertools
 import logging
 import os.path
 import random
@@ -15,6 +16,11 @@ from taxtastic.refpkg import Refpkg
 
 from .. import wrap, tax
 
+def comma_set(s):
+    s = s.split(',')
+    s = frozenset(i.strip() for i in s)
+    return s
+
 def build_parser(p):
     p.add_argument('sequence_file', help="""All sequences""")
     p.add_argument('seqinfo_file', help="""Sequence info file""")
@@ -23,6 +29,7 @@ def build_parser(p):
             packages [default: %(default)s]""", default='order')
     p.add_argument('--threads', type=int, default=12, help="""Number of threads
             [default: %(default)d]""")
+    p.add_argument('--only', help="""List of taxids to keep""", type=comma_set)
 
 def action(a):
     if not os.path.exists('index.refpkg'):
@@ -41,12 +48,45 @@ def action(a):
         seqinfo = load_seqinfo(fp)
 
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
-    for i, node in enumerate(nodes):
-        logging.info("%s: %s (%d/%d)", node.tax_id, node.name, i+1, len(nodes))
-        if os.path.exists(node.tax_id + '.refpkg'):
-            logging.warn("Refpkg exists: %s.refpkg. Skipping", node.tax_id)
-            continue
-        tax_id_refpkg(index_rp, node.tax_id, seqinfo)
+    with open('index.csv', 'w') as fp:
+        for i, node in enumerate(nodes):
+            if a.only and node.tax_id not in a.only:
+                logging.info("Skipping %s", node.tax_id)
+                continue
+
+            logging.info("%s: %s (%d/%d)", node.tax_id, node.name, i+1, len(nodes))
+            if os.path.exists(node.tax_id + '.refpkg'):
+                logging.warn("Refpkg exists: %s.refpkg. Skipping", node.tax_id)
+                fp.write('{0},{0}.refpkg\n'.format(node.tax_id))
+                continue
+            r = tax_id_refpkg(index_rp, node.tax_id, seqinfo)
+            if r:
+                fp.write('{0},{0}.refpkg\n'.format(node.tax_id))
+
+def find_nodes(taxonomy, index_rank):
+    """
+    Find nodes to select sequences for
+
+    * Starts at species level. If a node has sequences
+    """
+    def any_sequences_below(node):
+        for i in node:
+            if i.sequence_ids:
+                return True
+        return False
+    def inner(node):
+        if node.rank == 'species' and any_sequences_below(node):
+            yield node
+        else:
+            nodes_below = itertools.chain.from_iterable(inner(i) for i in node.children)
+            try:
+                first = next(nodes_below)
+                for i in itertools.chain([first], nodes_below):
+                    yield i
+            except StopIteration:
+                if any_sequences_below(node) and 'below' not in node.rank:
+                    yield node
+    return inner(taxonomy)
 
 def load_seqinfo(seqinfo_fp):
     r = csv.DictReader(seqinfo_fp)
@@ -66,22 +106,22 @@ def build_index_refpkg(sequence_file, seqinfo_file, taxonomy, dest='index.refpkg
 
     return rp
 
-def choose_sequence_ids(taxonomy, seqinfo_rows, per_species=5):
+def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=5, index_rank='order'):
     """
     Select sequences
     """
     for i in seqinfo_rows:
         taxonomy.get_node(i['tax_id']).sequence_ids.append(i['seqname'])
 
-    species = (i for i in taxonomy if i.rank == 'species')
-    for s in species:
-        spec_seqs = list(s.subtree_sequence_ids())
-        if len(spec_seqs) > per_species:
-            spec_seqs = random.sample(spec_seqs, per_species)
-        for i in spec_seqs:
+    nodes = find_nodes(taxonomy, index_rank)
+    for node in nodes:
+        node_seqs = list(node.subtree_sequence_ids())
+        if len(node_seqs) > per_taxon:
+            node_seqs = random.sample(node_seqs, per_taxon)
+        for i in node_seqs:
             yield i
 
-def tax_id_refpkg(index_refpkg, tax_id, seqinfo, threads=12):
+def tax_id_refpkg(index_refpkg, tax_id, seqinfo, threads=12, index_rank='order'):
     """
     Build a reference package containing all descendants of tax_id from an
     index reference package.
@@ -105,7 +145,8 @@ def tax_id_refpkg(index_refpkg, tax_id, seqinfo, threads=12):
         w = csv.DictWriter(seq_info_fp, seqinfo[0].keys(), quoting=csv.QUOTE_NONNUMERIC)
         w.writeheader()
         rows = [i for i in seqinfo if i['tax_id'] in descendants]
-        keep_seq_ids = frozenset(choose_sequence_ids(full_tax, rows))
+        keep_seq_ids = frozenset(choose_sequence_ids(full_tax, rows,
+                                 index_rank=index_rank))
         rows = [i for i in rows if i['seqname'] in keep_seq_ids]
         assert len(rows) == len(keep_seq_ids)
         w.writerows(rows)
