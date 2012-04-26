@@ -7,7 +7,7 @@ import csv
 
 class TaxNode(object):
     """
-    TaxNode in a taxonomy
+    Taxonomic tree, with optional sequence IDs on nodes
     """
     def __init__(self, rank, tax_id, parent=None, sequence_ids=None, children=None, name=None):
         self.ranks = None
@@ -23,6 +23,9 @@ class TaxNode(object):
             self.index = {self.tax_id: self}
 
     def add_child(self, child):
+        """
+        Add a child to this node
+        """
         child.parent = self
         child.ranks = self.ranks
         child.index = self.index
@@ -31,6 +34,9 @@ class TaxNode(object):
         self.children.append(child)
 
     def remove_child(self, child):
+        """
+        Remove a child from this node
+        """
         assert child in self.children
         self.children.remove(child)
         self.index.pop(child.tax_id)
@@ -57,10 +63,6 @@ class TaxNode(object):
         return not self.children
 
     @property
-    def has_sequences(self):
-        return not self.sequence_ids
-
-    @property
     def is_root(self):
         return self.parent is None
 
@@ -78,7 +80,7 @@ class TaxNode(object):
 
     def depth_first_iter(self):
         """
-        Generate a depth-first navigation of the tree, starting at this node.
+        Iterate over nodes in the tree, returning children before self.
         """
         yield self
         for child in self.children:

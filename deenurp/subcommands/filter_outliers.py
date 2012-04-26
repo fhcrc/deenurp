@@ -25,6 +25,10 @@ def build_parser(p):
     p.add_argument('output_fp', help="""Destination for sequences""",
             type=argparse.FileType('w'))
     p.add_argument('--filter-rank', default=DEFAULT_RANK)
+    p.add_argument('--filtered-seqinfo',
+            help="""Path to write filtered sequence info""",
+            type=argparse.FileType('w'))
+    p.add_argument('--log', help="""Log path""", type=argparse.FileType('w'))
     p.add_argument('--distance-cutoff', type=float, default=0.015,
             help="""Distance cutoff from cluster centroid [default:
             %(default)f]""")
@@ -90,34 +94,47 @@ def action(a):
     # Sequences which are classified above the desired rank should just be kept
     kept_ids = frozenset(sequences_above_rank(taxonomy, a.filter_rank))
 
-    with a.output_fp as fp:
+    if a.log:
+        writer = csv.writer(a.log, lineterminator='\n',
+                quoting=csv.QUOTE_NONNUMERIC)
+        writer.writerow(('tax_id', 'tax_name', 'n', 'kept', 'pruned'))
+        def log_taxid(tax_id, tax_name, n, kept, pruned):
+            writer.writerow((tax_id, tax_name, n, kept, pruned))
+    else:
+        def log_taxid(*args):
+            pass
+
+    with a.output_fp as fp, a.log or wrap.nothing():
         logging.info('Keeping %d sequences classified above %s', len(kept_ids), a.filter_rank)
         wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
 
         # For each filter-rank, filter
         nodes = [i for i in taxonomy if i.rank == a.filter_rank]
-        keep_ids = set()
         for i, node in enumerate(nodes):
             seqs = frozenset(node.subtree_sequence_ids())
             if not seqs:
                 logging.warn("No sequences for %s (%s)", node.tax_id, node.name)
+                log_taxid(node.tax_id, node.name, 0, 0, 0)
                 continue
             elif len(seqs) < 3:
                 logging.warn("Only %d sequences for %s (%s). Keeping.", len(seqs),
                         node.tax_id, node.name)
-                keep_ids |= frozenset(seqs)
+                log_taxid(node.tax_id, node.name, len(seqs), len(seqs), 0)
+                kept_ids |= frozenset(seqs)
                 continue
             with wrap.ntf(prefix='to_filter', suffix='.fasta') as tf:
-                logging.warn("%d sequences for %s (%s). [%d/%d]", len(seqs),
-                        node.tax_id, node.name, i + 1, len(nodes))
                 # Extract sequences
                 wrap.esl_sfetch(a.sequence_file, seqs,
                         tf)
                 tf.flush()
                 prune = frozenset(filter_sequences(tf.name, a.distance_cutoff))
-                logging.info("Pruning %d", len(prune))
                 assert not prune - seqs
-                keep_ids |= seqs - prune
+                kept_ids |= seqs - prune
+                log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
+                          len(prune))
+                logging.info("Pruned %d of %d sequences for %s (%s). [%d/%d]",
+                        len(prune), len(seqs),
+                        node.tax_id, node.name, i + 1, len(nodes))
 
                 # Extract
                 wrap.esl_sfetch(a.sequence_file, seqs - prune, fp)
