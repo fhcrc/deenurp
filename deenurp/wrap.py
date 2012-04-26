@@ -107,7 +107,7 @@ def as_refpkg(sequences, threads=None):
         rp.update_metadata('locus', '')
         rp.update_phylo_model('FastTree', log_fp.name)
         rp.update_file('tree', tree_fp.name)
-        logging.info("Reference package written to %s", rp.path)
+        logging.debug("Reference package written to %s", rp.path)
         yield rp
 
 @contextlib.contextmanager
@@ -131,7 +131,7 @@ def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
         if v:
             cmd.append(k)
 
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE, env=env)
     SeqIO.write(sequences, p.stdin, 'fasta')
     p.stdin.close()
@@ -185,24 +185,26 @@ def voronoi(jplace, leaves, algorithm='pam', posterior_prop=False, point_mass=Tr
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
-def cmalign(sequences, output=None, mpi_args=None):
-    """
-    Run cmalign
-
-    If mpi_args is specified, run via mpirun
-    """
+def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
+        stdout=None):
     if mpi_args is None:
         cmd = ['cmalign']
     else:
         cmd = ['mpirun'] + mpi_args + ['cmalign', '--mpi']
     cmd.extend(['--sub', '-1', '--dna', '--hbanded'])
+    cmd.extend(['-o', output_file, cm, input_file])
+    logging.debug(' '.join(cmd))
+    subprocess.check_call(cmd, stdout=stdout)
+
+def cmalign(sequences, output=None, mpi_args=None, cm=CM):
+    """
+    Run cmalign
+
+    If mpi_args is specified, run via mpirun
+    """
     with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
          tempfile.NamedTemporaryFile(prefix='cmalign', suffix='.sto', dir='.') as tf:
-        cmd.extend(('-o', output or tf.name))
-        cmd.append(CM)
-        cmd.append(fasta)
-        logging.info(' '.join(cmd))
-        subprocess.check_call(cmd, stdout=devnull)
+        cmalign_files(fasta, tf.name, mpi_args=mpi_args, stdout=devnull, cm=cm)
 
         for sequence in SeqIO.parse(output or tf, 'stockholm'):
             yield sequence

@@ -30,6 +30,28 @@ class TaxNode(object):
         self.index[child.tax_id] = child
         self.children.append(child)
 
+    def remove_child(self, child):
+        assert child in self.children
+        self.children.remove(child)
+        self.index.pop(child.tax_id)
+        if child.parent == self:
+            child.parent = None
+        if child.index == self.index:
+            child.index = None
+
+    def prune_unrepresented(self):
+        """
+        Remove taxa without sequences in the subtree below
+        """
+        def below(node):
+            any_below = any(below(child) for child in self.children)
+            if not any_below and not self.children:
+                self.parent.remove_child(self)
+                return False
+            return True
+
+        below(self)
+
     @property
     def is_leaf(self):
         return not self.children

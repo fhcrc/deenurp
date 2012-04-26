@@ -1,4 +1,4 @@
-commands = 'add_reps', 'hrefpkg_build', 'search_sequences', 'select_references', 'tax2tree'
+commands = 'add_reps', 'hrefpkg_build', 'search_sequences', 'select_references', 'tax2tree', 'filter_outliers'
 
 def itermodules(root=__name__):
     for command in commands:
