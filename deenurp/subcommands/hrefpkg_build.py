@@ -35,7 +35,7 @@ def build_parser(p):
     p.add_argument('--seed', type=int, default=1)
 
 def action(a):
-    random.seek(a.seed)
+    random.seed(a.seed)
     if not os.path.exists('index.refpkg'):
         index_rp = build_index_refpkg(a.sequence_file, a.seqinfo_file, a.taxonomy,
                 index_rank=a.index_rank)
