@@ -6,6 +6,7 @@ from deenurp.tax import TaxNode
 class FindNodesTestCase(unittest.TestCase):
     def setUp(self):
         self.taxonomy = TaxNode(rank='root', name='root', tax_id='1')
+        self.taxonomy.ranks = ['root', 'class', 'genus', 'species']
         g1 = TaxNode(rank='genus', name='g1', tax_id='2')
         self.g1 = g1
         g1.sequence_ids = ['s1', 's2']
@@ -23,3 +24,7 @@ class FindNodesTestCase(unittest.TestCase):
     def test_find_nodes(self):
         r = list(hrefpkg_build.find_nodes(self.taxonomy, 'class'))
         self.assertEqual(['g1', 's3'], [i.name for i in r])
+
+    def test_find_nodes_below_rank(self):
+        r = list(hrefpkg_build.find_nodes(self.taxonomy, 'genus'))
+        self.assertEqual(['s3'], [i.name for i in r])

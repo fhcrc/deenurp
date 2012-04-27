@@ -1,5 +1,7 @@
 """
-Build a hierarchical set of reference packages
+Build a hierarchical set of reference packages.
+
+Chooses 5 sequences for each species; or next rank up if species-level sequences are not available.
 """
 
 import csv
@@ -30,8 +32,10 @@ def build_parser(p):
     p.add_argument('--threads', type=int, default=12, help="""Number of threads
             [default: %(default)d]""")
     p.add_argument('--only', help="""List of taxids to keep""", type=comma_set)
+    p.add_argument('--seed', type=int, default=1)
 
 def action(a):
+    random.seek(a.seed)
     if not os.path.exists('index.refpkg'):
         index_rp = build_index_refpkg(a.sequence_file, a.seqinfo_file, a.taxonomy,
                 index_rank=a.index_rank)
@@ -63,28 +67,42 @@ def action(a):
             if r:
                 fp.write('{0},{0}.refpkg\n'.format(node.tax_id))
 
-def find_nodes(taxonomy, index_rank):
+def find_nodes(taxonomy, index_rank, want_rank='species'):
     """
-    Find nodes to select sequences for
-
-    * Starts at species level. If a node has sequences
+    Find nodes to select sequences from, preferring want_rank-level nodes, but
+    moving up a rank if no species-level nodes with sequences exist.
     """
+    ranks = taxonomy.ranks
+    rdict = dict(zip(ranks, xrange(len(ranks))))
+    assert index_rank in rdict
+    assert want_rank in rdict
     def any_sequences_below(node):
         for i in node:
             if i.sequence_ids:
                 return True
         return False
+    def try_next(it):
+        try:
+            return next(it)
+        except StopIteration:
+            return None
     def inner(node):
-        if node.rank == 'species' and any_sequences_below(node):
+        # Prefer nodes at want_rank with sequences
+        if node.rank == want_rank and any_sequences_below(node):
             yield node
         else:
             nodes_below = itertools.chain.from_iterable(inner(i) for i in node.children)
-            try:
-                first = next(nodes_below)
+            first = try_next(nodes_below)
+            if first:
+                # If child taxa have valid sequences, use them
                 for i in itertools.chain([first], nodes_below):
                     yield i
-            except StopIteration:
-                if any_sequences_below(node) and 'below' not in node.rank:
+            else:
+                # If there are sequences here, and it's not a made up rank
+                # ('below_genus, etc), and the rank is more specific than the
+                # index rank, include sequences from the node.
+                if (any_sequences_below(node) and 'below' not in node.rank and
+                        rdict[index_rank] < rdict[node.rank]):
                     yield node
     return inner(taxonomy)
 
