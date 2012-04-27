@@ -36,14 +36,10 @@ def build_parser(p):
 
 def action(a):
     random.seed(a.seed)
-    if not os.path.exists('index.refpkg'):
-        index_rp = build_index_refpkg(a.sequence_file, a.seqinfo_file, a.taxonomy,
-                index_rank=a.index_rank)
-    else:
-        logging.warn('index.refpkg exists. using.')
-        index_rp = Refpkg('index.refpkg', create=False)
+    if os.path.exists('index.refpkg'):
+        raise IOError('index.refpkg exists.')
 
-    with open(index_rp.file_abspath('taxonomy')) as fp:
+    with open(a.taxonomy) as fp:
         logging.info('loading taxonomy')
         taxonomy = tax.TaxNode.from_taxtable(fp)
 
@@ -52,7 +48,13 @@ def action(a):
         seqinfo = load_seqinfo(fp)
 
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
+    hrefpkgs = []
     with open('index.csv', 'w') as fp:
+        def log_hrefpkg(tax_id):
+            path = tax_id + '.refpkg'
+            fp.write('{0},{0}.refpkg\n'.format(tax_id))
+            hrefpkgs.append(path)
+
         for i, node in enumerate(nodes):
             if a.only and node.tax_id not in a.only:
                 logging.info("Skipping %s", node.tax_id)
@@ -61,11 +63,23 @@ def action(a):
             logging.info("%s: %s (%d/%d)", node.tax_id, node.name, i+1, len(nodes))
             if os.path.exists(node.tax_id + '.refpkg'):
                 logging.warn("Refpkg exists: %s.refpkg. Skipping", node.tax_id)
-                fp.write('{0},{0}.refpkg\n'.format(node.tax_id))
+                log_hrefpkg(node.tax_id)
                 continue
-            r = tax_id_refpkg(index_rp, node.tax_id, seqinfo)
+            r = tax_id_refpkg(node.tax_id, taxonomy, seqinfo, a.sequence_file)
             if r:
-                fp.write('{0},{0}.refpkg\n'.format(node.tax_id))
+                log_hrefpkg(node.tax_id)
+
+        # Build index refpkg
+        logging.info("Building index.refpkg")
+        index_rp, sequence_ids = build_index_refpkg(hrefpkgs, a.sequence_file,
+                seqinfo, a.taxonomy, index_rank=a.index_rank)
+
+        # Write unused seqs
+        logging.info("Extracting unused sequences")
+        seqs = (i for i in SeqIO.parse(a.sequence_file, 'fasta')
+                if i.id not in sequence_ids)
+        c = SeqIO.write(seqs, 'not_in_hrefpkgs.fasta', 'fasta')
+        logging.info("%d sequences not in hrefpkgs.", c)
 
 def find_nodes(taxonomy, index_rank, want_rank='species'):
     """
@@ -110,19 +124,46 @@ def load_seqinfo(seqinfo_fp):
     r = csv.DictReader(seqinfo_fp)
     return list(r)
 
-def build_index_refpkg(sequence_file, seqinfo_file, taxonomy, dest='index.refpkg', **meta):
-    rp = Refpkg(dest, create=True)
-    rp.start_transaction()
-    rp.update_file('aln_fasta', sequence_file)
-    rp.update_file('seq_info', seqinfo_file)
-    rp.update_file('taxonomy', taxonomy)
+def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy, dest='index.refpkg', **meta):
+    """
+    Build an index.refpkg from a set of hrefpkgs
+    """
+    def sequence_names(f):
+        with open(f) as fp:
+            r = csv.DictReader(fp)
+            for i in r:
+                yield i['seqname']
 
-    for k, v in meta.items():
-        rp.update_metadata(k, v)
+    hrefpkgs = (Refpkg(i, create=False) for i in hrefpkg_names)
+    seqinfo_files = (i.file_abspath('seq_info') for i in hrefpkgs)
+    sequence_ids = frozenset(i for f in seqinfo_files
+                             for i in sequence_names(f))
 
-    rp.commit_transaction()
+    with wrap.ntf(prefix='aln_fasta', suffix='.fasta') as tf, \
+         wrap.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
+        wrap.esl_sfetch(sequence_file, sequence_ids, tf)
+        tf.close()
 
-    return rp
+        # Seqinfo file
+        r = (i for i in seqinfo if i['seqname'] in sequence_ids)
+        w = csv.DictWriter(seq_info_fp, seqinfo[0].keys(), lineterminator='\n',
+                quoting=csv.QUOTE_NONNUMERIC)
+        w.writeheader()
+        w.writerows(r)
+        seq_info_fp.close()
+
+        rp = Refpkg(dest, create=True)
+        rp.start_transaction()
+        rp.update_file('aln_fasta', tf.name)
+        rp.update_file('seq_info', seq_info_fp.name)
+        rp.update_file('taxonomy', taxonomy)
+
+        for k, v in meta.items():
+            rp.update_metadata(k, v)
+
+        rp.commit_transaction()
+
+    return rp, sequence_ids
 
 def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=5, index_rank='order'):
     """
@@ -139,7 +180,7 @@ def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=5, index_rank='order')
         for i in node_seqs:
             yield i
 
-def tax_id_refpkg(index_refpkg, tax_id, seqinfo, threads=12, index_rank='order'):
+def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_rank='order'):
     """
     Build a reference package containing all descendants of tax_id from an
     index reference package.
@@ -151,29 +192,27 @@ def tax_id_refpkg(index_refpkg, tax_id, seqinfo, threads=12, index_rank='order')
          wrap.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
 
         # Subset taxonomy
-        with open(index_refpkg.file_abspath('taxonomy')) as fp:
-            full_tax = tax.TaxNode.from_taxtable(fp)
-            n = full_tax.get_node(tax_id)
-            descendants = set(i.tax_id for i in n)
-            assert descendants
-            n.write_taxtable(tax_fp)
-            tax_fp.close()
+        n = full_tax.get_node(tax_id)
+        descendants = set(i.tax_id for i in n)
+        assert descendants
+        n.write_taxtable(tax_fp)
+        tax_fp.close()
 
         # Subset seq_info
-        w = csv.DictWriter(seq_info_fp, seqinfo[0].keys(), quoting=csv.QUOTE_NONNUMERIC)
+        w = csv.DictWriter(seq_info_fp, seqinfo[0].keys(),
+                quoting=csv.QUOTE_NONNUMERIC)
         w.writeheader()
         rows = [i for i in seqinfo if i['tax_id'] in descendants]
-        keep_seq_ids = frozenset(choose_sequence_ids(full_tax, rows,
+        sinfo = {i['seqname']: i for i in rows}
+        keep_seq_ids = frozenset(choose_sequence_ids(n, rows,
                                  index_rank=index_rank))
-        rows = [i for i in rows if i['seqname'] in keep_seq_ids]
-        assert len(rows) == len(keep_seq_ids)
+        rows = [sinfo[i] for i in keep_seq_ids]
         w.writerows(rows)
         seq_info_fp.close()
 
-        # Align
-        sequences = SeqIO.parse(index_refpkg.file_abspath('aln_fasta'), 'fasta')
+        # Fetch sequences
         with tempfile.NamedTemporaryFile() as tf:
-            wrap.esl_sfetch(index_refpkg.file_abspath('aln_fasta'),
+            wrap.esl_sfetch(sequence_file,
                             keep_seq_ids, tf)
             # Rewind
             tf.seek(0)
