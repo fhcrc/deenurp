@@ -1,6 +1,7 @@
 """
 Wrappers and context managers
 """
+import collections
 import contextlib
 import csv
 import logging
@@ -246,3 +247,28 @@ def load_tax_maps(fps, has_header=False):
                 raise ValueError("Multiple tax_ids specified for {0}".format(name))
             d[name] = taxid
     return d
+
+
+def dnaclust(fasta_file, similarity=0.99, centers=None, left_gaps_allowed=True,
+         no_overlap=False, approximate=False):
+    """
+    Run DNA clust
+    """
+    Cluster = collections.namedtuple('Cluster', ['center', 'sequences'])
+    cmd = ['dnaclust', '-s', str(similarity), '-i', fasta_file]
+    if no_overlap:
+        cmd.append('--no-overlap')
+    if left_gaps_allowed:
+        cmd.append('-l')
+    if centers:
+        cmd.extend(('-p', centers))
+    if approximate:
+        cmd.append('--approximate-filter')
+
+    with ntf(prefix='dnaclust-') as tf:
+        subprocess.check_call(cmd, stdout=tf)
+        tf.seek(0)
+        results = (i.strip().split() for i in tf)
+        results = (Cluster(i[0], set(i)) for i in results)
+        for i in results:
+            yield i
