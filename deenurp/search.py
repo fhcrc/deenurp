@@ -28,6 +28,13 @@ def dedup_info_to_counts(fp):
         result[i] += float(c)
     return result
 
+def _load_cluster_info(fp, header=True):
+    r = csv.reader(fp)
+    if header:
+        # Skip
+        next(r)
+    return {k:v for k, v in r}
+
 class SingletonDefaultDict(dict):
     """
     Dictionary-like object that returns the same value, regardless of key
@@ -39,8 +46,9 @@ class SingletonDefaultDict(dict):
         return self.val
 
 _PARAMS = dict([('fasta_file', str),
-       ('sequence_database', str),
-       ('cluster_id', float),
+       ('ref_fasta', str),
+       ('ref_meta', str),
+       ('ref_cluster_names', str),
        ('search_id', float),
        ('maxaccepts', int),
        ('maxrejects', int)])
@@ -50,7 +58,8 @@ def _load_params(con):
     cursor.execute('select key, val from params')
     result = {}
     for k, v in cursor:
-        v = _PARAMS[k](v)
+        if v:
+            v = _PARAMS[k](v)
         result[k] = v
     return result
 
@@ -60,188 +69,7 @@ def _table_exists(con, table_name):
 WHERE type = 'table' AND tbl_name = ?""", [table_name])
     return cursor.fetchone() is not None
 
-def _cursor_to_fasta(cursor, output_fp):
-    count = 0
-    for record in cursor:
-        output_fp.write('>{0} {1}\n{2}\n'.format(*record))
-        count += 1
-    return count
-
-def _unsearched_to_fasta(con, output_fp):
-    """
-    Write all sequences from clusters with no hits to a FASTA file
-    """
-    cursor = con.cursor()
-
-    cursor.execute("""SELECT sequence_id, name, residues FROM sequences
-WHERE cluster_id NOT IN (SELECT DISTINCT cluster_id
-                         FROM sequences
-                         INNER JOIN best_hits USING (sequence_id));""")
-    return _cursor_to_fasta(cursor, output_fp)
-
-def _sequences_to_fasta(con, output_fp):
-    cursor = con.cursor()
-    cursor.execute("SELECT sequence_id, name, residues from sequences")
-    return _cursor_to_fasta(cursor, output_fp)
-
-def _desc_weight_to_fasta(con, output_fp):
-    """
-    Sort sequences by descending weight, then length; write to output_fp
-    """
-    cursor = con.cursor()
-    cursor.execute("""SELECT sequence_id, name, residues
-FROM sequences ORDER BY weight DESC, length DESC""")
-    return _cursor_to_fasta(cursor, output_fp)
-
-
-def _cluster(con, sequence_file, quiet=True):
-    """
-    Sort and cluster the sequences from fasta_file, loading results into
-    the database.
-    """
-    cluster_id = _load_params(con)['cluster_id']
-    cursor = con.cursor()
-    with tempfile.NamedTemporaryFile() as ntf, \
-         tempfile.NamedTemporaryFile(suffix='.fasta') as fa:
-        _desc_weight_to_fasta(con, fa)
-        fa.flush()
-        uclust.cluster(fa.name, ntf.name, pct_id=cluster_id,
-                trunclabels=True, quiet=quiet, usersort=True)
-        records = uclust.parse_uclust_out(ntf)
-        records = (i for i in records if i.type in ('H', 'S'))
-
-        # Insert
-        for record in records:
-            # Add a cluster number
-            if record.type == 'S':
-                sql = """INSERT INTO clusters (cluster_id) VALUES (?)"""
-                cursor.execute(sql, [record.cluster_number])
-            sql = """
-            UPDATE sequences SET cluster_id = :1, orig_cluster_id = :1
-            WHERE sequence_id = :2"""
-            cursor.execute(sql, [record.cluster_number, record.query_label])
-            assert cursor.rowcount == 1
-
-# Merging
-def _merge_by_hit(it):
-    """
-    Given an iterable of (best_hit, [cluster_id, [cluster_id...]]) pairs, returns
-    sets of clusters to merge based on shared best_hits.
-    """
-    d = {}
-    for best_hit, cluster_ids in it:
-        s = set(cluster_ids)
-
-        # For each cluster, add any previous clusterings to the working cluster
-        for cluster_id in cluster_ids:
-            if cluster_id in d:
-                s |= d[cluster_id]
-
-        s = frozenset(s)
-        for cluster_id in s:
-            d[cluster_id] = s
-
-    return frozenset(d.values())
-
-def _find_clusters_to_merge(con, max_hits=None):
-    """
-    Find clusters to merge
-
-    con: Database connection
-    max_hits: number of hits to consider in each cluster [default: consider all hits]
-    """
-    cursor = con.cursor()
-    # Generate a temporary table
-    cursor.execute("""
-CREATE TEMPORARY TABLE hits_to_cluster
-AS
-SELECT DISTINCT b.name as best_hit, cluster_id
-FROM best_hits b
-INNER JOIN sequences s USING(sequence_id)
-{0};
-""".format("" if not max_hits else "WHERE hit_idx < ?"),
-    [] if not max_hits else [max_hits])
-    cursor.execute("CREATE INDEX IX_hits_to_cluster_best_hit ON hits_to_cluster(best_hit);")
-
-    try:
-        sql = """
-SELECT cluster_id, best_hit
-FROM hits_to_cluster
-WHERE best_hit IN (SELECT best_hit
-                   FROM hits_to_cluster
-                   GROUP BY best_hit HAVING COUNT(cluster_id) > 1)
-ORDER BY best_hit;
-"""
-        cursor.execute(sql)
-        for g, v in itertools.groupby(cursor, operator.itemgetter(1)):
-            yield g, [i for i, _ in v]
-    finally:
-        cursor.execute("""DROP TABLE hits_to_cluster""")
-
-def _merge_clusters(con):
-    """
-    Merge clusters which share a common best-hit
-    """
-    cmd = """UPDATE sequences
-SET cluster_id = ?
-WHERE cluster_id = ?"""
-
-    mcmd = """INSERT INTO merged_clusters (cluster_id, cluster_count, total_weight)
-SELECT :1, :2, SUM(weight)
-FROM sequences WHERE cluster_id = :1"""
-
-    cursor = con.cursor()
-    to_merge = _find_clusters_to_merge(con, 1)
-    merged = _merge_by_hit(to_merge)
-    for merge_group in merged:
-        first = min(merge_group)
-        logging.info("Merging %d clusters to #%d", len(merge_group), first)
-        rows = ((first, i) for i in merge_group if i != first)
-        cursor.executemany(cmd, rows)
-
-        # Aggregate cluster metadata
-        cursor.execute(mcmd, [first, len(merge_group)])
-
-    # Add any unmerged clusters
-    cursor.execute("""INSERT INTO merged_clusters (cluster_id, cluster_count, total_weight)
-SELECT cluster_id, 1, SUM(weight)
-FROM sequences
-WHERE cluster_id NOT IN (SELECT cluster_id FROM merged_clusters)
-GROUP BY cluster_id""")
-
-def _search_all(con, sequence_databases, quiet=True):
-    """
-    Search all sequences against sequence_databases, loading the results
-    into best_hits.
-
-    sequence_databases are searched in order. Any sequence without a best hit
-    in sequence_database[i-1] is searched in sequence_database[i].
-    """
-    cursor = con.cursor()
-    count = 0
-    # USEARCH everything
-    for sequence_database, meta in sequence_databases:
-        with _ntf(prefix='seqs', suffix='.fasta') as seq_fp:
-
-            # Add a reference database
-            cursor.execute("""INSERT INTO refs (file_path, meta_path) VALUES (?, ?)""",
-                    [sequence_database, meta])
-            ref_id = cursor.lastrowid
-
-            # Search against all databases, for now
-            #u_count = _unsearched_to_fasta(con, seq_fp)
-            u_count = _sequences_to_fasta(con, seq_fp)
-
-            logging.info("%d sequences to search against %s", u_count, sequence_database)
-            if u_count == 0:
-                return 0
-
-            seq_fp.flush()
-            count += _search(con, seq_fp.name, ref_id, quiet=quiet)
-
-    return count
-
-def _search(con, sequence_file, ref_id, quiet=True):
+def _search(con, quiet=True):
     """
     Search the sequences in a file against a reference database
     """
@@ -249,10 +77,33 @@ def _search(con, sequence_file, ref_id, quiet=True):
 
     cursor = con.cursor()
     count = 0
-    ref_name = cursor.execute("SELECT file_path FROM refs WHERE ref_id = ?",
-            [ref_id]).fetchone()[0]
+    ref_name = p['ref_fasta']
+    with open(p['ref_cluster_names']) as fp:
+        cluster_info = _load_cluster_info(fp)
+
+    hit_cache = {}
+    def add_hit(hit_name):
+        ins = "INSERT INTO ref_seqs(name, cluster_name) VALUES (?, ?)"
+        try:
+            return hit_cache[hit_name]
+        except KeyError:
+            cluster = cluster_info[hit_name]
+            cursor.execute(ins, [hit_name, cluster])
+            hit_cache[hit_name] = cursor.lastrowid
+            return cursor.lastrowid
+
+    seq_id_cache = {}
+    def get_seq_id(name):
+        try:
+            return seq_id_cache[name]
+        except KeyError:
+            cursor.execute('SELECT sequence_id FROM sequences WHERE name = ?', [name])
+            v = cursor.fetchone()[0]
+            seq_id_cache[name] = v
+            return v
+
     with _ntf(prefix='usearch') as uc_fp:
-        uclust.search(ref_name, sequence_file, uc_fp.name, pct_id=0.9,
+        uclust.search(ref_name, p['fasta_file'], uc_fp.name, pct_id=0.9,
                 trunclabels=True, maxaccepts=p['maxaccepts'],
                 maxrejects=p['maxrejects'], quiet=quiet)
 
@@ -262,15 +113,15 @@ def _search(con, sequence_file, ref_id, quiet=True):
         by_seq = uclust.hits_by_sequence(records)
 
         sql = """
-INSERT INTO best_hits (sequence_id, hit_idx, name, pct_id, ref_id)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
+VALUES (?, ?, ?, ?)
 """
-
         for _, hits in by_seq:
-            records = ((h.query_label, i, h.target_label, h.pct_id, ref_id)
-                       for i, h in enumerate(hits))
-            cursor.executemany(sql, records)
-            count += cursor.rowcount
+            for i, h in enumerate(hits):
+                # Hit id
+                hit_id = add_hit(h.target_label)
+                cursor.execute(sql, [get_seq_id(h.query_label), i, hit_id, h.pct_id])
+                count += 1
 
     return count
 
@@ -281,18 +132,18 @@ def _load_sequences(con, sequence_file, weights=None):
     if weights is None:
         weights = SingletonDefaultDict(1.0)
 
-    sql = """INSERT INTO sequences (name, residues, length, weight)
-VALUES (?, ?, ?, ?)"""
+    sql = """INSERT INTO sequences (name, length, weight)
+VALUES (?, ?, ?)"""
 
     sequences = SeqIO.parse(sequence_file, 'fasta')
-    records = ((i.id, str(i.seq), len(i), weights[i.id])
+    records = ((i.id, len(i), weights[i.id])
                for i in sequences)
     cursor = con.cursor()
     cursor.executemany(sql, records)
     return cursor.rowcount
 
-def _create_tables(con, maxaccepts=1, maxrejects=8, cluster_id=0.99,
-        search_id=0.99, quiet=True):
+def _create_tables(con, ref_fasta, ref_meta, ref_cluster_names, fasta_file,
+        maxaccepts=1, maxrejects=8, search_id=0.99, quiet=True):
     cursor = con.cursor()
     cursor.executescript(SCHEMA)
     # Save parameters
@@ -364,63 +215,45 @@ ORDER BY bh.ref_id, bh.hit_idx, s.weight DESC, s.length DESC"""
         l = list(itertools.islice(r, 0, hits_per_cluster))
         return l
 
-
 # Database schema
 SCHEMA = """
-CREATE TABLE clusters (
-  cluster_id INTEGER PRIMARY KEY AUTOINCREMENT
-);
-
-CREATE TABLE merged_clusters (
-  cluster_id INTEGER PRIMARY KEY REFERENCES clusters(cluster_id),
-  cluster_count INTEGER,
-  total_weight FLOAT
-);
-
 CREATE TABLE sequences (
   sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
   name VARCHAR,
-  residues VARCHAR,
   length INT,
-  weight FLOAT,
-  cluster_id INTEGER REFERENCES clusters(cluster_id),
-  orig_cluster_id INTEGER REFERENCES clusters(cluster_id)
+  weight FLOAT
 );
 
 CREATE UNIQUE INDEX ix_sequences_name ON sequences(name);
-CREATE INDEX ix_sequences_cluster_id ON sequences(cluster_id);
 
-CREATE TABLE refs (
+CREATE TABLE ref_seqs (
   ref_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  file_path VARCHAR,
-  meta_path VARCHAR
+  name VARCHAR UNIQUE,
+  cluster_name VARCHAR
 );
+
+CREATE INDEX ix_ref_seqs_cluster_name ON ref_seqs(cluster_name);
 
 CREATE TABLE best_hits (
   hit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ref_id INTEGER REFERENCES ref_seqs(ref_id) ON DELETE CASCADE,
   sequence_id INTEGER REFERENCES sequences(sequence_id) ON DELETE CASCADE,
   hit_idx INT,
-  name VARCHAR,
-  pct_id FLOAT,
-  ref_id INT REFERENCES refs(ref_id) NOT NULL
+  pct_id FLOAT
 );
 
 CREATE INDEX ix_best_hits_sequence_id ON best_hits(sequence_id);
+CREATE INDEX ix_best_hits_ref_id ON best_hits(ref_id);
 
 CREATE TABLE params (
   key VARCHAR PRIMARY KEY,
   val VARCHAR
 );
-
-CREATE VIEW cluster_hits AS
-SELECT s.cluster_id, bh.name AS best_hit
-FROM best_hits bh
-INNER JOIN sequences s USING (sequence_id)
-GROUP BY s.cluster_id, bh.name;
 """
 
-def create_database(con, fasta_file, reference_candidates, weights=None,
-        maxaccepts=1, maxrejects=8, cluster_id=0.99, search_id=0.99,
+
+def create_database(con, fasta_file, ref_fasta, ref_meta, ref_cluster_info, weights=None,
+        maxaccepts=1, maxrejects=8, search_id=0.99,
         quiet=True):
     """
     Create a database of sequences searched against a sequence database for
@@ -428,9 +261,6 @@ def create_database(con, fasta_file, reference_candidates, weights=None,
 
     con: Database connection
     fasta_file: query sequences
-    reference_candidates: Iterable of (file name, metadata file)s to be searched for candidate
-        reference sequences, ordered by decreasing preference. Any cluster with a
-        hit in a previous database is not searched in subsequent databases.
     """
     con.row_factory = sqlite3.Row
 
@@ -440,21 +270,16 @@ def create_database(con, fasta_file, reference_candidates, weights=None,
 
     with con:
         _create_tables(con, maxaccepts=maxaccepts, maxrejects=maxrejects,
-                cluster_id=cluster_id, search_id=search_id, quiet=quiet)
+                search_id=search_id, quiet=quiet, ref_fasta=ref_fasta,
+                ref_meta=ref_meta, ref_cluster_names=ref_cluster_info,
+                fasta_file=fasta_file)
 
-    with con:
         seq_count = _load_sequences(con, fasta_file, weights=weights)
         logging.info("Inserted %d sequences", seq_count)
 
-        logging.info("Clustering")
-        _cluster(con, fasta_file, quiet=quiet)
-
-        logging.info("Searching")
-        _search_all(con, reference_candidates, quiet=quiet)
-
     with con:
-        logging.info("Merging clusters with common best-hits")
-        _merge_clusters(con)
+        logging.info("Searching")
+        _search(con, quiet=quiet)
 
 def open_database(con):
     """
