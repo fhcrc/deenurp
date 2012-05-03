@@ -249,8 +249,16 @@ CREATE TABLE params (
   key VARCHAR PRIMARY KEY,
   val VARCHAR
 );
-"""
 
+CREATE VIEW vw_cluster_weights AS
+SELECT cluster_name, SUM(weight) AS total_weight FROM
+(SELECT DISTINCT s.sequence_id, s.weight, ref_seqs.cluster_name
+ FROM sequences s
+     INNER JOIN best_hits USING (sequence_id)
+     INNER JOIN ref_seqs USING (ref_id)
+ WHERE best_hits.hit_idx = 0) q
+GROUP BY cluster_name;
+"""
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, ref_cluster_info, weights=None,
         maxaccepts=1, maxrejects=8, search_id=0.99,
