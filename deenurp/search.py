@@ -4,6 +4,7 @@ Tools for building a reference set
 import collections
 import csv
 import logging
+import operator
 import sqlite3
 import tempfile
 
@@ -13,6 +14,8 @@ from Bio import SeqIO
 _ntf = tempfile.NamedTemporaryFile
 
 from .util import SingletonDefaultDict, memoize
+
+SELECT_THRESHOLD = 0.2
 
 # Utility stuff
 def dedup_info_to_counts(fp):
@@ -64,7 +67,19 @@ def _table_exists(con, table_name):
 WHERE type = 'table' AND tbl_name = ?""", [table_name])
     return cursor.fetchone() is not None
 
-def _search(con, quiet=True):
+def select_hits(hits_by_seq, threshold=SELECT_THRESHOLD):
+    """
+    Select all hits for each sequence within ``threshold`` of the best percent id
+    """
+    for seq, hits in hits_by_seq:
+        hits = list(hits)
+        hits.sort(key=operator.attrgetter('pct_id'), reverse=True)
+        result = [hits[0]]
+        best_pct_id = hits[0].pct_id
+        result.extend(i for i in hits[1:] if best_pct_id - i.pct_id < threshold)
+        yield seq, result
+
+def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD):
     """
     Search the sequences in a file against a reference database
     """
@@ -97,6 +112,7 @@ def _search(con, quiet=True):
         records = (i for i in records
                    if i.type == 'H' and i.pct_id >= p['search_id'] * 100.0)
         by_seq = uclust.hits_by_sequence(records)
+        by_seq = select_hits(by_seq)
 
         sql = """
 INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
@@ -176,13 +192,12 @@ SELECT cluster_name, SUM(weight) AS total_weight FROM
 (SELECT DISTINCT s.sequence_id, s.weight, ref_seqs.cluster_name
  FROM sequences s
      INNER JOIN best_hits USING (sequence_id)
-     INNER JOIN ref_seqs USING (ref_id)
- WHERE best_hits.hit_idx = 0) q
+     INNER JOIN ref_seqs USING (ref_id)) q
 GROUP BY cluster_name;
 """
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, ref_cluster_info, weights=None,
-        maxaccepts=1, maxrejects=8, search_id=0.99,
+        maxaccepts=1, maxrejects=8, search_id=0.99, select_threshold=SELECT_THRESHOLD,
         quiet=True):
     """
     Create a database of sequences searched against a sequence database for
@@ -208,4 +223,4 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, ref_cluster_info, weig
 
     with con:
         logging.info("Searching")
-        _search(con, quiet=quiet)
+        _search(con, quiet=quiet, select_threshold=select_threshold)
