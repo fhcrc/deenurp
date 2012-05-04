@@ -3,16 +3,12 @@ Tools for building a reference set
 """
 import collections
 import csv
-import itertools
 import logging
-import operator
 import sqlite3
 import tempfile
 
 from romperroom import uclust
 from Bio import SeqIO
-
-from . import wrap
 
 _ntf = tempfile.NamedTemporaryFile
 
@@ -53,7 +49,7 @@ _PARAMS = dict([('fasta_file', str),
        ('maxaccepts', int),
        ('maxrejects', int)])
 
-def _load_params(con):
+def load_params(con):
     cursor = con.cursor()
     cursor.execute('select key, val from params')
     result = {}
@@ -73,7 +69,7 @@ def _search(con, quiet=True):
     """
     Search the sequences in a file against a reference database
     """
-    p = _load_params(con)
+    p = load_params(con)
 
     cursor = con.cursor()
     count = 0
@@ -152,69 +148,6 @@ def _create_tables(con, ref_fasta, ref_meta, ref_cluster_names, fasta_file,
 
 Cluster = collections.namedtuple('Cluster', ['cluster_id', 'count', 'weight'])
 
-class SearchedSequences(object):
-    def __init__(self, con):
-        self.con = con
-        if not _table_exists(con, 'params'):
-            raise ValueError("Missing table: 'params'")
-        self.params = _load_params(con)
-
-    def total_weight(self):
-        cursor = self.con.cursor()
-        return cursor.execute("SELECT SUM(weight) FROM sequences").fetchone()[0]
-
-    def get_cluster(self, cluster_id):
-        """
-        Returns a Cluster object
-        """
-        cursor = self.con.cursor()
-        cursor.execute("""SELECT cluster_id, cluster_count, total_weight
-FROM merged_clusters WHERE cluster_id = ?""", [cluster_id])
-        result = cursor.fetchone()
-        if not result:
-            raise KeyError(cluster_id)
-        return Cluster(*result)
-
-    def hits_by_cluster(self, hits_per_cluster=30, cluster_factor=1,
-            max_per_seq=1000):
-        """
-        Generates an iterable of hits per cluster.
-
-        Each item consists of:
-        (cluster_number, cluster_prop, cluster_seqs, cluster_hits)
-        """
-        cursor = self.con.cursor()
-        cursor.execute("""SELECT cluster_id, cluster_count FROM merged_clusters""")
-        for cluster_id, count in cursor:
-            select_count = hits_per_cluster + cluster_factor * (count - 1)
-            # Find sequences
-            yield (cluster_id, self._sequences_in_cluster(cluster_id),
-                self._hits_in_cluster(cluster_id,
-                    select_count, max_per_seq))
-
-    def _sequences_in_cluster(self, cluster_id):
-        cursor = self.con.cursor()
-        cursor.execute("""SELECT s.sequence_id, s.name, s.weight, s.residues
-FROM sequences s
-WHERE s.cluster_id = ?""", [cluster_id])
-        return [dict(zip(i.keys(), i)) for i in cursor]
-
-    def _hits_in_cluster(self, cluster_id, hits_per_cluster=30, max_per_seq=1000):
-        cursor = self.con.cursor()
-        hit_sql = """
-SELECT bh.name as best_hit_name, bh.ref_id
-FROM best_hits bh
-INNER JOIN sequences s USING(sequence_id)
-WHERE s.cluster_id = ? AND bh.hit_idx < ?
-ORDER BY bh.ref_id, bh.hit_idx, s.weight DESC, s.length DESC"""
-        cursor.execute(hit_sql, [cluster_id, max_per_seq])
-        r = (dict(zip(i.keys(), i)) for i in cursor)
-
-        # Choose the top `hits_per_cluster` distinct hits.
-        r = wrap.unique(r, operator.itemgetter('best_hit_name'))
-        l = list(itertools.islice(r, 0, hits_per_cluster))
-        return l
-
 # Database schema
 SCHEMA = """
 CREATE TABLE sequences (
@@ -288,10 +221,3 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, ref_cluster_info, weig
     with con:
         logging.info("Searching")
         _search(con, quiet=quiet)
-
-def open_database(con):
-    """
-    Open con as a SearchSequences object
-    """
-    con.row_factory = sqlite3.Row
-    return SearchedSequences(con)
