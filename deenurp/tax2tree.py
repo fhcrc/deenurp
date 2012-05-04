@@ -4,7 +4,7 @@ import os
 
 from t2t import nlevel
 
-from . import wrap
+from . import util
 from .tax import TaxNode
 
 
@@ -86,7 +86,7 @@ def tax2tree(refpkg, output_fp):
     """
     Run tax2tree on a reference package lacking names
     """
-    with wrap.ntf() as tf, wrap.ntf() as output:
+    with util.ntf() as tf, util.ntf() as output:
         output.close()
         consensus = output.name + '-consensus-strings'
         generate_tax2tree_map(refpkg, tf)

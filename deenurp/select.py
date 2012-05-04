@@ -13,7 +13,8 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from . import search
-from .wrap import cmalign, as_refpkg, as_fasta, tempdir, redupfile_of_seqs, \
+from .util import as_fasta, tempdir
+from .wrap import cmalign, as_refpkg, redupfile_of_seqs, \
                   voronoi, guppy_redup, pplacer, esl_sfetch
 
 DEFAULT_THREADS = 12

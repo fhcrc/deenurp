@@ -41,18 +41,3 @@ class VorotreeTestCase(unittest.TestCase):
     def test_pam(self):
         self.do_test('pam')
 
-class UniqueTestCase(unittest.TestCase):
-    def test_nokey(self):
-        l = [1, 2, 3, 1, 2, 4, 6, 7, 5, 1]
-        expected = [1, 2, 3, 4, 6, 7, 5]
-        actual = list(wrap.unique(l))
-        self.assertEqual(expected, actual)
-
-    def test_key(self):
-        keys = ('n', 's')
-        v = [(1, 'test'), (2, 'test'), (2, 'other')]
-        l = [dict(zip(keys, i)) for i in v]
-        expected1 = [{'n': 1, 's': 'test'},
-                    {'n': 2, 's': 'test'}]
-        actual1 = wrap.unique(l, key=operator.itemgetter('n'))
-        self.assertEqual(expected1, list(actual1))

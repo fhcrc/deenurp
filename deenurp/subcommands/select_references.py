@@ -11,7 +11,7 @@ import sqlite3
 
 from Bio import SeqIO
 
-from .. import search, select, wrap
+from .. import search, select, util
 
 def meta_writer(fp):
     writer = csv.writer(fp, lineterminator='\n')
@@ -78,7 +78,7 @@ def extract_meta(ids, search_db, out_fp):
         w.writerows(rows)
 
 def action(args):
-    with wrap.tempcopy(args.search_db) as search_path:
+    with util.tempcopy(args.search_db) as search_path:
         search_db = sqlite3.connect(search_path)
         with contextlib.closing(search_db):
             sequences = select.choose_references(search_db,
@@ -88,8 +88,8 @@ def action(args):
 
             with args.output as fp:
                 # Unique IDs
-                sequences = wrap.unique(sequences, key=operator.attrgetter('id'))
-                sequences = wrap.unique(sequences, key=lambda s: str(s.seq))
+                sequences = util.unique(sequences, key=operator.attrgetter('id'))
+                sequences = util.unique(sequences, key=lambda s: str(s.seq))
                 if args.output_meta:
                     sequences = meta_writer(args.output_meta)(sequences)
                 sequences = track_attr('id', sequences)

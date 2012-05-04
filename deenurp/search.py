@@ -3,7 +3,6 @@ Tools for building a reference set
 """
 import collections
 import csv
-import functools
 import logging
 import sqlite3
 import tempfile
@@ -12,6 +11,8 @@ from romperroom import uclust
 from Bio import SeqIO
 
 _ntf = tempfile.NamedTemporaryFile
+
+from .util import SingletonDefaultDict, memoize
 
 # Utility stuff
 def dedup_info_to_counts(fp):
@@ -31,16 +32,6 @@ def _load_cluster_info(fp, header=True):
         # Skip
         next(r)
     return {k:v for k, v in r}
-
-class SingletonDefaultDict(dict):
-    """
-    Dictionary-like object that returns the same value, regardless of key
-    """
-    def __init__(self, val=None):
-        self.val = val
-
-    def __getitem__(self, key):
-        return self.val
 
 # Parameters stores in the `params` table, with types
 _PARAMS = dict([('fasta_file', str),
@@ -72,17 +63,6 @@ def _table_exists(con, table_name):
     cursor.execute("""SELECT tbl_name FROM sqlite_master
 WHERE type = 'table' AND tbl_name = ?""", [table_name])
     return cursor.fetchone() is not None
-
-def memoize(fn):
-    cache = {}
-    @functools.wraps(fn)
-    def inner(*args):
-        try:
-            return cache[args]
-        except KeyError:
-            result = fn(*args)
-            cache[args] = result
-    return inner
 
 def _search(con, quiet=True):
     """
@@ -155,8 +135,6 @@ def _create_tables(con, ref_fasta, ref_meta, ref_cluster_names, fasta_file,
     # Save parameters
     rows = [(k, locals().get(k)) for k in _PARAMS.keys()]
     cursor.executemany("INSERT INTO params VALUES (?, ?)", rows)
-
-Cluster = collections.namedtuple('Cluster', ['cluster_id', 'count', 'weight'])
 
 # Database schema
 SCHEMA = """

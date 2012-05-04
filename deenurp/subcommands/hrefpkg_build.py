@@ -16,7 +16,7 @@ import tempfile
 from Bio import SeqIO
 from taxtastic.refpkg import Refpkg
 
-from .. import wrap, tax
+from .. import wrap, tax, util
 
 def comma_set(s):
     s = s.split(',')
@@ -139,8 +139,8 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy, dest='in
     sequence_ids = frozenset(i for f in seqinfo_files
                              for i in sequence_names(f))
 
-    with wrap.ntf(prefix='aln_fasta', suffix='.fasta') as tf, \
-         wrap.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
+    with util.ntf(prefix='aln_fasta', suffix='.fasta') as tf, \
+         util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
         wrap.esl_sfetch(sequence_file, sequence_ids, tf)
         tf.close()
 
@@ -185,11 +185,11 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_ra
     Build a reference package containing all descendants of tax_id from an
     index reference package.
     """
-    with wrap.ntf(prefix='taxonomy', suffix='.csv') as tax_fp, \
-         wrap.ntf(prefix='aln_sto', suffix='.sto') as sto_fp, \
-         wrap.ntf(prefix='tree', suffix='.tre') as tree_fp, \
-         wrap.ntf(prefix='tree', suffix='.stats') as stats_fp, \
-         wrap.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
+    with util.ntf(prefix='taxonomy', suffix='.csv') as tax_fp, \
+         util.ntf(prefix='aln_sto', suffix='.sto') as sto_fp, \
+         util.ntf(prefix='tree', suffix='.tre') as tree_fp, \
+         util.ntf(prefix='tree', suffix='.stats') as stats_fp, \
+         util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
 
         # Subset taxonomy
         n = full_tax.get_node(tax_id)

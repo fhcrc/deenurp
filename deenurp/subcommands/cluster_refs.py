@@ -9,7 +9,7 @@ import shutil
 from Bio import SeqIO
 from romperroom import uclust
 
-from .. import tax, wrap
+from .. import tax, wrap, util
 
 def build_parser(p):
     p.add_argument('named_sequence_file', help="""Named sequences""")
@@ -26,7 +26,7 @@ def build_parser(p):
 
 def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
         threshold=0.995):
-    with wrap.ntf(suffix='.uc', prefix='to_cluster') as tf:
+    with util.ntf(suffix='.uc', prefix='to_cluster') as tf:
         # Search with uclust
         uclust.search(named_sequence_file, to_cluster, tf.name,
                 pct_id=threshold, search_pct_id=0.90, trunclabels=True)
@@ -95,8 +95,8 @@ def action(a):
 
         # Write sequences clustered above species level, unnamed sequences to
         # file
-        with wrap.ntf(prefix='to_cluster', suffix='.fasta') as tf, \
-                wrap.ntf(prefix='unnamed_to_cluster', suffix='.fasta') as unnamed_fp:
+        with util.ntf(prefix='to_cluster', suffix='.fasta') as tf, \
+                util.ntf(prefix='unnamed_to_cluster', suffix='.fasta') as unnamed_fp:
             wrap.esl_sfetch(a.named_sequence_file, above_rank_seqs, tf)
             if a.unnamed_sequences:
                 with open(a.unnamed_sequences) as fp:
