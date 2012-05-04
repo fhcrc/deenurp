@@ -1,3 +1,4 @@
+import os.path
 import operator
 import unittest
 
@@ -30,3 +31,16 @@ class MemoizeTestCase(unittest.TestCase):
         expected = d.pop('test')
 
         self.assertEqual(expected, m('test'))
+
+class MaybeTempFileTestCase(unittest.TestCase):
+    def test_tempfile(self):
+        with util.maybe_tempfile(prefix='tmp') as tf:
+            self.assertFalse(tf.closed)
+            self.assertTrue(os.path.basename(tf.name).startswith('tmp'))
+        self.assertTrue(tf.closed)
+        self.assertFalse(os.path.exists(tf.name))
+
+    def test_obj(self):
+        o = object()
+        with util.maybe_tempfile(o, prefix='tmp') as tf:
+            self.assertEqual(o, tf)

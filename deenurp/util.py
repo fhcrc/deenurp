@@ -105,3 +105,15 @@ def as_fasta(sequences, **kwargs):
         tf.flush()
         tf.close()
         yield tf.name
+
+@contextlib.contextmanager
+def maybe_tempfile(obj=None, **kwargs):
+    """
+    Returns a tempfile for the duration of the contextmanager if obj is not
+    provided, otherwise returns obj.
+    """
+    if obj is not None:
+        yield obj
+    else:
+        with ntf(**kwargs) as tf:
+            yield tf
