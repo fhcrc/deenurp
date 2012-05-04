@@ -3,6 +3,7 @@ Tools for building a reference set
 """
 import collections
 import csv
+import functools
 import logging
 import sqlite3
 import tempfile
@@ -41,6 +42,7 @@ class SingletonDefaultDict(dict):
     def __getitem__(self, key):
         return self.val
 
+# Parameters stores in the `params` table, with types
 _PARAMS = dict([('fasta_file', str),
        ('ref_fasta', str),
        ('ref_meta', str),
@@ -50,6 +52,9 @@ _PARAMS = dict([('fasta_file', str),
        ('maxrejects', int)])
 
 def load_params(con):
+    """
+    Load parameters from the ``params`` table
+    """
     cursor = con.cursor()
     cursor.execute('select key, val from params')
     result = {}
@@ -60,10 +65,24 @@ def load_params(con):
     return result
 
 def _table_exists(con, table_name):
+    """
+    Returns whether or not ``table_name`` exists in ``con``
+    """
     cursor = con.cursor()
     cursor.execute("""SELECT tbl_name FROM sqlite_master
 WHERE type = 'table' AND tbl_name = ?""", [table_name])
     return cursor.fetchone() is not None
+
+def memoize(fn):
+    cache = {}
+    @functools.wraps(fn)
+    def inner(*args):
+        try:
+            return cache[args]
+        except KeyError:
+            result = fn(*args)
+            cache[args] = result
+    return inner
 
 def _search(con, quiet=True):
     """
@@ -77,26 +96,17 @@ def _search(con, quiet=True):
     with open(p['ref_cluster_names']) as fp:
         cluster_info = _load_cluster_info(fp)
 
-    hit_cache = {}
+    @memoize
     def add_hit(hit_name):
         ins = "INSERT INTO ref_seqs(name, cluster_name) VALUES (?, ?)"
-        try:
-            return hit_cache[hit_name]
-        except KeyError:
-            cluster = cluster_info[hit_name]
-            cursor.execute(ins, [hit_name, cluster])
-            hit_cache[hit_name] = cursor.lastrowid
-            return cursor.lastrowid
+        cluster = cluster_info[hit_name]
+        cursor.execute(ins, [hit_name, cluster])
+        return cursor.lastrowid
 
-    seq_id_cache = {}
+    @memoize
     def get_seq_id(name):
-        try:
-            return seq_id_cache[name]
-        except KeyError:
-            cursor.execute('SELECT sequence_id FROM sequences WHERE name = ?', [name])
-            v = cursor.fetchone()[0]
-            seq_id_cache[name] = v
-            return v
+        cursor.execute('SELECT sequence_id FROM sequences WHERE name = ?', [name])
+        return cursor.fetchone()[0]
 
     with _ntf(prefix='usearch') as uc_fp:
         uclust.search(ref_name, p['fasta_file'], uc_fp.name, pct_id=0.9,

@@ -22,7 +22,7 @@ def build_parser(p):
             help="""[default: %(default)d]""")
     uc.add_argument('--maxrejects', default=40, type=int,
             help="""[default: %(default)d]""")
-    uc.add_argument('--search-identity', default=0.99, type=float,
+    uc.add_argument('--search-identity', default=0.97, type=float,
             help="""Clustering identity level [default: %(default).2f]""")
 
 def action(args):
