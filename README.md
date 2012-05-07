@@ -4,43 +4,45 @@ Similarity-search based reference sequence selection
 
 ## Running
 
-The `refset` package under the current directory provides to subcommands, accessed via the script `refset.py`:
+The `refset` package under the current directory provides to subcommands,
+accessed via the script `refset.py`, or the command `refset` if installed.
 
-### `refset.py search-sequences`
+### `refset filter-outliers`
 
-Searches a set of sequences against a one or more FASTA files containing possible reference sequences.
+Removes sequences from a reference database that are more than a specified
+distance from the centroid of their tax id.
 
-This subcommand does the following:
+### `refset hrefpkg-build`
 
-1. Clusters at a user specified identity
-1. For each sequence database provided, searches all sequences (*not* cluster
-   seeds) from clusters which don't have any hits. If any sequence within the
-   cluster has a hit, sequences from the cluster are not searched against
-   following databases.
-1. Merges clusters which share a best_hit sequence
-1. Saves the sequences and results in a sqlite database
+Builds a set of hierarchical reference packages.
 
-### `refset.py select-references`
+### `refset cluster-refs`
 
-Given the output of `search-sequences`, `select-references` attempts to find an
-optimal set of reference sequences.
+Cluster reference sequences, first by tax-id at a specified rank (default:
+species), then by similarity for unnamed sequences or sequences not classified
+to the desired rank.  Serves as input to `search-sequences`.
 
-1. For each sequence cluster, select a user-specified number of candidate
-   references, preferring hits to highly weighted sequences.
-1. Align the query sequences and reference candidates with cmalign
-1. Use FastTree to make a tree of the reference sequences
-1. Place the query sequences on the tree
-1. Choose a specified number with `rppr voronoi`
+### `refset search-sequences`
 
-Sequences from the first reference file given to `search-sequences` (e.g.,
-named sequences) are preferred.
+Searches a set of sequences against a FASTA file containing possible reference sequences.
 
-### `refset.py add-reps`
+This subcommand does searches sequences against a reference FASTA file, saving the results and some metadata to a sqlite database for use in `select-references`
+
+### `refset select-references`
+
+Given the output of `search-sequences`, `select-references` attempts to find a
+good set of reference sequences.
+
+For each reference cluster  with a minimal amount of sequences having best hits
+to the cluster, (see `cluster-refs`), selects a set number of sequences to
+serve as references.
+
+### `refset add-reps`
 
 Fetches sequences from a sequence file which match the taxtable for a reference
 set at a given rank. Useful for adding type strains.
 
-### `refset.py tax2tree`
+### `refset tax2tree`
 
 Runs the `tax2tree` program on a reference package, updating the `seq_info`
 file.
