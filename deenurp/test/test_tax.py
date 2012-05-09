@@ -2,7 +2,7 @@ from cStringIO import StringIO
 import os.path
 import unittest
 
-from deenurp import tax2tree
+from deenurp import tax
 
 DN = os.path.dirname(__file__)
 
@@ -12,7 +12,7 @@ def data_path(*args):
 class NodeTestCase(unittest.TestCase):
     def setUp(self):
         with open(data_path('test_taxtable.csv')) as fp:
-            self.root = tax2tree.TaxNode.from_taxtable(fp)
+            self.root = tax.TaxNode.from_taxtable(fp)
 
     def test_index(self):
         self.assertEqual(self.root, self.root.get_node('1'))

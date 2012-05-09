@@ -11,7 +11,7 @@ import subprocess
 
 from Bio import SeqIO
 
-from .. import wrap, tax
+from .. import wrap, tax, util
 
 DEFAULT_RANK = 'species'
 RSCRIPT_PATH = os.path.join(os.path.dirname(__file__),
@@ -63,14 +63,14 @@ def run_r_find_outliers(sequence_file, cutoff):
     """
     Run the R script find_outliers.R
     """
-    with wrap.ntf(prefix='prune-') as tf:
+    with util.ntf(prefix='prune-') as tf:
         cmd = [RSCRIPT_PATH, sequence_file, str(cutoff), tf.name]
         subprocess.check_call(cmd)
         return [i.strip() for i in tf]
 
 def filter_sequences(sequence_file, cutoff, threads=12):
-    with wrap.ntf(prefix='cmalign', suffix='.sto') as a_sto, \
-         wrap.ntf(prefix='cmalign', suffix='.fasta') as a_fasta, \
+    with util.ntf(prefix='cmalign', suffix='.sto') as a_sto, \
+         util.ntf(prefix='cmalign', suffix='.fasta') as a_fasta, \
          open(os.devnull) as devnull:
         # Align
         wrap.cmalign_files(sequence_file, a_sto.name,
@@ -104,7 +104,7 @@ def action(a):
         def log_taxid(*args):
             pass
 
-    with a.output_fp as fp, a.log or wrap.nothing():
+    with a.output_fp as fp, a.log or util.nothing():
         logging.info('Keeping %d sequences classified above %s', len(kept_ids), a.filter_rank)
         wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
 
@@ -122,7 +122,7 @@ def action(a):
                 log_taxid(node.tax_id, node.name, len(seqs), len(seqs), 0)
                 kept_ids |= frozenset(seqs)
                 continue
-            with wrap.ntf(prefix='to_filter', suffix='.fasta') as tf:
+            with util.ntf(prefix='to_filter', suffix='.fasta') as tf:
                 # Extract sequences
                 wrap.esl_sfetch(a.sequence_file, seqs,
                         tf)

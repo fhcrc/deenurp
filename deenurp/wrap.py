@@ -1,92 +1,24 @@
 """
 Wrappers and context managers
 """
+import collections
 import contextlib
 import csv
 import logging
 import os
 import os.path
-import shutil
 import subprocess
 import tempfile
 
 from Bio import SeqIO
 from taxtastic.refpkg import Refpkg
 
+from .util import as_fasta, ntf, tempdir, nothing
+
 def data_path(*args):
     return os.path.join(os.path.dirname(__file__), 'data', *args)
 
 CM = data_path('bacteria16S_508_mod5.cm')
-
-def unique(iterable, key=lambda x: x):
-    """
-    Choose unique elements from iterable, using the value returned by `key` to
-    determine uniqueness.
-    """
-    s = set()
-    for i in iterable:
-        k = key(i)
-        if k not in s:
-            s.add(k)
-            yield i
-
-@contextlib.contextmanager
-def nothing(obj=None):
-    """
-    The least interesting context manager.
-    """
-    yield obj
-
-@contextlib.contextmanager
-def ntf(**kwargs):
-    """
-    Near-clone of tempfile.NamedTemporaryFile, but the file is deleted when the
-    context manager exits, rather than when it's closed.
-    """
-    kwargs['delete'] = False
-    tf = tempfile.NamedTemporaryFile(**kwargs)
-    try:
-        with tf:
-            yield tf
-    finally:
-        os.unlink(tf.name)
-
-@contextlib.contextmanager
-def tempcopy(path, **kwargs):
-    prefix, suffix = os.path.splitext(os.path.basename(path))
-    a = {'prefix': prefix, 'suffix': suffix}
-    a.update(kwargs)
-    with open(path) as fp, ntf(**a) as tf:
-        shutil.copyfileobj(fp, tf)
-        tf.close()
-        yield tf.name
-
-@contextlib.contextmanager
-def tempdir(**kwargs):
-    """
-    Create a temporary directory for the duration of the context manager, removing
-    on exit.
-    """
-    td = tempfile.mkdtemp(**kwargs)
-    def p(*args):
-        return os.path.join(td, *args)
-    try:
-        yield p
-    finally:
-        shutil.rmtree(td)
-
-@contextlib.contextmanager
-def as_fasta(sequences, **kwargs):
-    """
-    Write sequences to a temporary FASTA file. returns the name
-    """
-    if 'suffix' not in kwargs:
-        kwargs['suffix'] = '.fasta'
-    with ntf(**kwargs) as tf:
-        SeqIO.write(sequences, tf, 'fasta')
-        tf.flush()
-        tf.close()
-        yield tf.name
 
 @contextlib.contextmanager
 def as_refpkg(sequences, threads=None):
@@ -246,3 +178,28 @@ def load_tax_maps(fps, has_header=False):
                 raise ValueError("Multiple tax_ids specified for {0}".format(name))
             d[name] = taxid
     return d
+
+
+def dnaclust(fasta_file, similarity=0.99, centers=None, left_gaps_allowed=True,
+         no_overlap=False, approximate=False):
+    """
+    Run DNA clust
+    """
+    Cluster = collections.namedtuple('Cluster', ['center', 'sequences'])
+    cmd = ['dnaclust', '-s', str(similarity), '-i', fasta_file]
+    if no_overlap:
+        cmd.append('--no-overlap')
+    if left_gaps_allowed:
+        cmd.append('-l')
+    if centers:
+        cmd.extend(('-p', centers))
+    if approximate:
+        cmd.append('--approximate-filter')
+
+    with ntf(prefix='dnaclust-') as tf:
+        subprocess.check_call(cmd, stdout=tf)
+        tf.seek(0)
+        results = (i.strip().split() for i in tf)
+        results = (Cluster(i[0], set(i)) for i in results)
+        for i in results:
+            yield i
