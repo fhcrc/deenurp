@@ -229,7 +229,9 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_ra
             return None
 
         # Cmalign
-        aligned = wrap.cmalign(sequences, output=sto_fp.name, mpi_args=['-np', str(threads)])
+        aligned = wrap.cmalign(sequences, output=sto_fp, mpi_args=['-np', str(threads)])
+        aligned = list(aligned)
+        assert aligned
         # Tree
         wrap.fasttree(aligned, stats_fp.name, tree_fp, threads=threads, gtr=True)
         tree_fp.close()

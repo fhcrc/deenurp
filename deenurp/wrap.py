@@ -13,7 +13,7 @@ import tempfile
 from Bio import SeqIO
 from taxtastic.refpkg import Refpkg
 
-from .util import as_fasta, ntf, tempdir, nothing
+from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile
 
 def data_path(*args):
     return os.path.join(os.path.dirname(__file__), 'data', *args)
@@ -65,7 +65,8 @@ def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
 
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE, env=env)
-    SeqIO.write(sequences, p.stdin, 'fasta')
+    count = SeqIO.write(sequences, p.stdin, 'fasta')
+    assert count
     p.stdin.close()
     p.wait()
     if not p.returncode == 0:
@@ -135,10 +136,10 @@ def cmalign(sequences, output=None, mpi_args=None, cm=CM):
     If mpi_args is specified, run via mpirun
     """
     with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
-         tempfile.NamedTemporaryFile(prefix='cmalign', suffix='.sto', dir='.') as tf:
+         maybe_tempfile(output, prefix='cmalign', suffix='.sto', dir='.') as tf:
         cmalign_files(fasta, tf.name, mpi_args=mpi_args, stdout=devnull, cm=cm)
 
-        for sequence in SeqIO.parse(output or tf, 'stockholm'):
+        for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
 
 def esl_sfetch(sequence_file, name_iter, output_fp):
