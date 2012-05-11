@@ -70,7 +70,7 @@ def action(a):
                 log_hrefpkg(node.tax_id)
 
         # Build index refpkg
-        logging.info("Building index.refpkg")
+        logging.info('Building index.refpkg')
         index_rp, sequence_ids = build_index_refpkg(hrefpkgs, a.sequence_file,
                 seqinfo, a.taxonomy, index_rank=a.index_rank)
 
@@ -157,6 +157,7 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy, dest='in
         rp.update_file('aln_fasta', tf.name)
         rp.update_file('seq_info', seq_info_fp.name)
         rp.update_file('taxonomy', taxonomy)
+        rp.update_file('profile', wrap.CM)
 
         for k, v in meta.items():
             rp.update_metadata(k, v)
