@@ -12,6 +12,10 @@ accessed via the script `refset.py`, or the command `refset` if installed.
 Removes sequences from a reference database that are more than a specified
 distance from the centroid of their tax id.
 
+### `refset expand-named`
+
+Expands poorly-represented names in a sequence file by similarity search
+
 ### `refset hrefpkg-build`
 
 Builds a set of hierarchical reference packages.
