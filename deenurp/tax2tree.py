@@ -3,9 +3,9 @@ import logging
 import os
 
 from t2t import nlevel
+from taxtastic.taxtable import TaxNode
 
 from . import util
-from .tax import TaxNode
 
 
 TAX2TREE_RANKS = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus',

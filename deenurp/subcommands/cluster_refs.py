@@ -8,8 +8,9 @@ import shutil
 
 from Bio import SeqIO
 from romperroom import uclust
+from taxtastic.taxtable import TaxNode
 
-from .. import tax, wrap, util
+from .. import wrap, util
 
 def build_parser(p):
     p.add_argument('named_sequence_file', help="""Named sequences""")
@@ -62,15 +63,13 @@ def action(a):
     # Load taxtable
     with a.taxtable as fp:
         logging.info('Loading taxonomy')
-        taxonomy = tax.TaxNode.from_taxtable(fp)
+        taxonomy = TaxNode.from_taxtable(fp)
     with a.seqinfo_file as fp:
         logging.info('Loading seqinfo')
+        taxonomy.populate_from_seqinfo(fp)
+        fp.seek(0)
         r = csv.DictReader(fp)
         seqinfo = {i['seqname']: i for i in r}
-
-    # Add sequences to taxonomy
-    for i in seqinfo.values():
-        taxonomy.get_node(i['tax_id']).sequence_ids.append(i['seqname'])
 
     # Write clustering information for sequences with cluster_rank-level
     # classifications

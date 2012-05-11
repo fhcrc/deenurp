@@ -8,7 +8,6 @@ import logging
 import os
 import os.path
 import subprocess
-import tempfile
 
 from Bio import SeqIO
 from taxtastic.refpkg import Refpkg

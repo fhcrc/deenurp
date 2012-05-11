@@ -10,8 +10,9 @@ import os.path
 import subprocess
 
 from Bio import SeqIO
+from taxtastic.taxtable import TaxNode
 
-from .. import wrap, tax, util
+from .. import wrap, util
 
 DEFAULT_RANK = 'species'
 RSCRIPT_PATH = os.path.join(os.path.dirname(__file__),
@@ -33,14 +34,6 @@ def build_parser(p):
             help="""Distance cutoff from cluster centroid [default:
             %(default)f]""")
     p.add_argument('--threads', type=int, default=12)
-
-def load_seqinfo_into_tax(seqinfo_fp, taxonomy):
-    r = csv.DictReader(seqinfo_fp)
-    c = 0
-    for i in r:
-        taxonomy.get_node(i['tax_id']).sequence_ids.append(i['seqname'])
-        c += 1
-    return c
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
     """
@@ -83,13 +76,13 @@ def filter_sequences(sequence_file, cutoff, threads=12):
 def action(a):
     # Load taxonomy
     with a.taxonomy as fp:
-        taxonomy = tax.TaxNode.from_taxtable(fp)
+        taxonomy = TaxNode.from_taxtable(fp)
         logging.info('Loaded taxonomy')
 
     # Load sequences into taxonomy
     with a.seqinfo_file as fp:
-        count = load_seqinfo_into_tax(fp, taxonomy)
-        logging.info('Added %d sequences', count)
+        taxonomy.populate_from_seqinfo(fp)
+        logging.info('Added %d sequences', sum(1 for i in taxonomy.subtree_sequence_ids()))
 
     # Sequences which are classified above the desired rank should just be kept
     kept_ids = frozenset(sequences_above_rank(taxonomy, a.filter_rank))

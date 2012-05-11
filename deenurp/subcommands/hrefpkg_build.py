@@ -15,8 +15,9 @@ import tempfile
 
 from Bio import SeqIO
 from taxtastic.refpkg import Refpkg
+from taxtastic.taxtable import TaxNode
 
-from .. import wrap, tax, util
+from .. import wrap, util
 
 def comma_set(s):
     s = s.split(',')
@@ -41,7 +42,7 @@ def action(a):
 
     with open(a.taxonomy) as fp:
         logging.info('loading taxonomy')
-        taxonomy = tax.TaxNode.from_taxtable(fp)
+        taxonomy = TaxNode.from_taxtable(fp)
 
     with open(a.seqinfo_file) as fp:
         logging.info("loading seqinfo")
@@ -171,7 +172,7 @@ def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=5, index_rank='order')
     Select sequences
     """
     for i in seqinfo_rows:
-        taxonomy.get_node(i['tax_id']).sequence_ids.append(i['seqname'])
+        taxonomy.get_node(i['tax_id']).sequence_ids.add(i['seqname'])
 
     nodes = find_nodes(taxonomy, index_rank)
     for node in nodes:
