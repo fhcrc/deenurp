@@ -69,7 +69,7 @@ def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
     p.stdin.close()
     p.wait()
     if not p.returncode == 0:
-        raise subprocess.CalledProcessError(p.returncode)
+        raise subprocess.CalledProcessError(p.returncode, cmd)
 
 def guppy_redup(placefile, redup_file, output):
     cmd = ['guppy', 'redup', '-m', placefile, '-d', redup_file, '-o', output]
