@@ -18,7 +18,6 @@ def build_parser(p):
     p.add_argument('taxtable', help="""Taxtable""", type=argparse.FileType('r'))
     p.add_argument('sequence_out', type=argparse.FileType('w'))
     p.add_argument('seqinfo_out', type=argparse.FileType('w'))
-    p.add_argument('cluster_info_out', type=argparse.FileType('w'))
     p.add_argument('--cluster-rank', help="""Rank to cluster sequences
             [default: %(default)s]""", default='species')
     p.add_argument('-u', '--unnamed-sequences', help="""Path to unnamed sequence file""")
@@ -34,13 +33,6 @@ def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
         records = uclust.parse_uclust_out(tf)
         hits = (i.query_label for i in records if i.type == 'H')
         return frozenset(hits)
-
-def cluster_info_writer(fp):
-    w = csv.writer(fp, quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')
-    w.writerow(('seqname', 'cluster'))
-    def write_cluster_info(sequence_id, cluster_id):
-        w.writerow((sequence_id, cluster_id))
-    return write_cluster_info
 
 def taxonomic_clustered(taxonomy, cluster_rank):
     """
@@ -74,12 +66,9 @@ def action(a):
     # Write clustering information for sequences with cluster_rank-level
     # classifications
     done = set()
-    with a.sequence_out, a.cluster_info_out as cinfo_out:
-        w = cluster_info_writer(cinfo_out)
+    with a.sequence_out:
         for tax_id, sequences in taxonomic_clustered(taxonomy, a.cluster_rank):
             done |= sequences
-            for s in sequences:
-                w(s, tax_id)
 
         # Fetch sequences
         logging.info('Fetching %d %s-level sequences', len(done), a.cluster_rank)
@@ -121,16 +110,28 @@ def action(a):
             shutil.copyfileobj(unnamed_fp, a.sequence_out)
             unnamed_fp.close()
 
+            cluster_ids = {}
             # Cluster remaining sequences into OTUs
             for i, cluster_seqs in enumerate(identify_otus_unnamed(unnamed_fp.name, a.cluster_id)):
                 done |= cluster_seqs
                 otu = 'otu_{0}'.format(i)
                 for sequence in cluster_seqs:
-                    w(sequence, otu)
+                    cluster_ids[sequence] = otu
 
     with a.seqinfo_out as fp:
+        def add_cluster(i):
+            """Add a cluster identifier to sequence metadata"""
+            if 'tax_id' in i:
+                i['cluster'] = i['tax_id']
+            else:
+                i['cluster'] = cluster_ids[i['seqname']]
+            return i
         seqinfo_records = (seqinfo.get(i, {'seqname': i}) for i in done)
-        w = csv.DictWriter(fp, seqinfo.values()[0].keys(),
+        seqinfo_records = (add_cluster(i) for i in seqinfo_records)
+
+        fields = list(seqinfo.values()[0].keys())
+        fields.append('cluster')
+        w = csv.DictWriter(fp, fields,
                 quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')
         w.writeheader()
         w.writerows(seqinfo_records)
