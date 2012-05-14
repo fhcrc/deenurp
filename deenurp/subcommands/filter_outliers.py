@@ -114,6 +114,7 @@ def action(a):
                         node.tax_id, node.name)
                 log_taxid(node.tax_id, node.name, len(seqs), len(seqs), 0)
                 kept_ids |= frozenset(seqs)
+                wrap.esl_sfetch(a.sequence_file, seqs, fp)
                 continue
             with util.ntf(prefix='to_filter', suffix='.fasta') as tf:
                 # Extract sequences
@@ -132,5 +133,11 @@ def action(a):
                 # Extract
                 wrap.esl_sfetch(a.sequence_file, seqs - prune, fp)
 
-        # Extract all hits
-        #wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
+    # Filter seqinfo
+    with open(a.seqinfo_file.name) as fp:
+        r = csv.DictReader(fp)
+        rows = (i for i in r if i['seqname'] in kept_ids)
+        with a.filtered_seqinfo as ofp:
+            w = csv.DictWriter(ofp, r.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
+            w.writeheader()
+            w.writerows(rows)
