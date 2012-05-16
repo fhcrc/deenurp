@@ -106,7 +106,7 @@ def choose_references(deenurp_db, refs_per_cluster=5,
     fasta_file = params['fasta_file']
     ref_fasta = params['ref_fasta']
     total_weight = get_total_weight(deenurp_db)
-    cluster_members = fetch_cluster_members(params['ref_cluster_names'])
+    cluster_members = fetch_cluster_members(params['ref_meta'])
 
     # Iterate over clusters
     cursor = deenurp_db.cursor()

@@ -29,18 +29,14 @@ def dedup_info_to_counts(fp):
         result[i] += float(c)
     return result
 
-def _load_cluster_info(fp, header=True):
-    r = csv.reader(fp)
-    if header:
-        # Skip
-        next(r)
-    return {k:v for k, v in r}
+def _load_cluster_info(fp):
+    r = csv.DictReader(fp)
+    return {i['seqname']: i['cluster'] for i in r}
 
 # Parameters stores in the `params` table, with types
 _PARAMS = dict([('fasta_file', str),
        ('ref_fasta', str),
        ('ref_meta', str),
-       ('ref_cluster_names', str),
        ('search_id', float),
        ('maxaccepts', int),
        ('maxrejects', int)])
@@ -88,7 +84,7 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD):
     cursor = con.cursor()
     count = 0
     ref_name = p['ref_fasta']
-    with open(p['ref_cluster_names']) as fp:
+    with open(p['ref_meta']) as fp:
         cluster_info = _load_cluster_info(fp)
 
     @memoize
@@ -144,7 +140,7 @@ VALUES (?, ?, ?)"""
     cursor.executemany(sql, records)
     return cursor.rowcount
 
-def _create_tables(con, ref_fasta, ref_meta, ref_cluster_names, fasta_file,
+def _create_tables(con, ref_fasta, ref_meta, fasta_file,
         maxaccepts=1, maxrejects=8, search_id=0.99, quiet=True):
     cursor = con.cursor()
     cursor.executescript(SCHEMA)
@@ -196,7 +192,7 @@ SELECT cluster_name, SUM(weight) AS total_weight FROM
 GROUP BY cluster_name;
 """
 
-def create_database(con, fasta_file, ref_fasta, ref_meta, ref_cluster_info, weights=None,
+def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
         maxaccepts=1, maxrejects=8, search_id=0.99, select_threshold=SELECT_THRESHOLD,
         quiet=True):
     """
@@ -215,8 +211,7 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, ref_cluster_info, weig
     with con:
         _create_tables(con, maxaccepts=maxaccepts, maxrejects=maxrejects,
                 search_id=search_id, quiet=quiet, ref_fasta=ref_fasta,
-                ref_meta=ref_meta, ref_cluster_names=ref_cluster_info,
-                fasta_file=fasta_file)
+                ref_meta=ref_meta, fasta_file=fasta_file)
 
         seq_count = _load_sequences(con, fasta_file, weights=weights)
         logging.info("Inserted %d sequences", seq_count)
