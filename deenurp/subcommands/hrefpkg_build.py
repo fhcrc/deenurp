@@ -1,9 +1,11 @@
 """
 Build a hierarchical set of reference packages.
 
-Chooses 5 sequences for each species; or next rank up if species-level sequences are not available.
+Chooses 5 sequences for each species; or next rank up if species-level
+sequences are not available.
 """
 
+import argparse
 import csv
 import itertools
 import logging
@@ -33,6 +35,18 @@ def build_parser(p):
     p.add_argument('--threads', type=int, default=12, help="""Number of threads
             [default: %(default)d]""")
     p.add_argument('--only', help="""List of taxids to keep""", type=comma_set)
+    prune_group = p.add_argument_group('Generate pruned reference packages',
+            """Generate reference packages containing partial coverage at
+            a taxon. For validation.""")
+    prune_group.add_argument('--prune-below-rank', help="""Rank above which to
+            prune PRUNE_PROP taxa at [default: no pruning]""")
+    prune_group.add_argument('--prune-rank', help="""Rank at which to prune
+            PRUNE_PROP taxa""")
+    prune_group.add_argument('--prune-log', type=argparse.FileType('w'),
+            help="""Optional path to write pruned tax_ids""")
+    prune_group.add_argument('--prune-proportion', type=float, default=0.5,
+        metavar='PRUNE_PROP', help="""Proportion of sequences to prune
+        [default: %(default)f]""")
     p.add_argument('--seed', type=int, default=1)
 
 def action(a):
@@ -47,6 +61,13 @@ def action(a):
     with open(a.seqinfo_file) as fp:
         logging.info("loading seqinfo")
         seqinfo = load_seqinfo(fp)
+
+    if a.prune_below_rank is not None or a.prune_rank is not None:
+        if not a.prune_below_rank or not a.prune_rank:
+            raise ValueError("--prune-below-rank and --prune-rank must be specified together")
+        with a.prune_log or util.nothing():
+            prune_taxonomy(taxonomy, a.prune_below_rank, a.prune_rank,
+                    a.prune_proportion, prune_log=a.prune_log)
 
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
     hrefpkgs = []
@@ -66,7 +87,8 @@ def action(a):
                 logging.warn("Refpkg exists: %s.refpkg. Skipping", node.tax_id)
                 log_hrefpkg(node.tax_id)
                 continue
-            r = tax_id_refpkg(node.tax_id, taxonomy, seqinfo, a.sequence_file)
+            r = tax_id_refpkg(node.tax_id, taxonomy, seqinfo, a.sequence_file,
+                    threads=a.threads)
             if r:
                 log_hrefpkg(node.tax_id)
 
@@ -114,7 +136,7 @@ def find_nodes(taxonomy, index_rank, want_rank='species'):
                     yield i
             else:
                 # If there are sequences here, and it's not a made up rank
-                # ('below_genus, etc), and the rank is more specific than the
+                # ('below_genus', etc), and the rank is more specific than the
                 # index rank, include sequences from the node.
                 if (any_sequences_below(node) and 'below' not in node.rank and
                         rdict[index_rank] < rdict[node.rank]):
@@ -125,7 +147,8 @@ def load_seqinfo(seqinfo_fp):
     r = csv.DictReader(seqinfo_fp)
     return list(r)
 
-def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy, dest='index.refpkg', **meta):
+def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
+        dest='index.refpkg', **meta):
     """
     Build an index.refpkg from a set of hrefpkgs
     """
@@ -254,3 +277,22 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_ra
         rp.commit_transaction()
 
         return rp
+
+def prune_taxonomy(taxonomy, prune_below_rank, prune_rank, prune_prop, prune_log=None):
+    """
+    Trim a taxonomy of ``prune_prop`` proportion of the nodes with rank
+    ``prune_rank`` below each node of rank ``prune_below_rank``
+    """
+    nodes = (i for i in taxonomy if i.rank == prune_below_rank)
+
+    for node in nodes:
+        children = [i for i in node if i.rank == prune_rank]
+        child_count = len(children)
+        prune_count = int(prune_prop * child_count)
+        logging.info("Pruning %d/%d from %s-%s", prune_count, child_count,
+                node.tax_id, node.name)
+        prune = random.sample(children, prune_count)
+        for p in prune:
+            if prune_log:
+                print >> prune_log, p.tax_id
+            p.parent.remove_child(p)
