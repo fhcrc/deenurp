@@ -38,6 +38,16 @@ def as_refpkg(sequences, threads=None):
         rp.update_metadata('locus', '')
         rp.update_phylo_model('FastTree', log_fp.name)
         rp.update_file('tree', tree_fp.name)
+
+        # FASTA and Stockholm alignment
+        with ntf(suffix='.fasta') as f:
+            SeqIO.write(sequences, f, 'fasta')
+            f.close()
+            rp.update_file('aln_fasta', f.name)
+        with ntf(suffix='.sto') as f:
+            SeqIO.write(sequences, f, 'stockholm')
+            f.close()
+            rp.update_file('aln_sto', f.name)
         logging.debug("Reference package written to %s", rp.path)
         yield rp
 
