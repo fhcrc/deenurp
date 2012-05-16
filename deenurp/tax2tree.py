@@ -46,7 +46,7 @@ def parse_tax2tree_out(fp):
         lineage = filter(None, lineage)
         yield sequence, lineage[-1] if lineage else None
 
-def update_taxids(refpkg, tax2tree_dict, output_fp):
+def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True):
     with open(refpkg.file_abspath('taxonomy')) as fp:
         tax_root = TaxNode.from_taxtable(fp)
     def lineage_ids(tax_id):
@@ -76,13 +76,16 @@ def update_taxids(refpkg, tax2tree_dict, output_fp):
                 else:
                     orig_name, orig_rank = '', ''
 
+
                 logging.info('%s changed from "%s" (%s) to "%s" (%s)',
                         i['seqname'], orig_name, orig_rank, new_name, new_rank)
-
-                i['tax_id'] = n
+                if allow_rename or not i['tax_id']:
+                    i['tax_id'] = n
+                else:
+                    logging.info("Not applied.")
             w.writerow(i)
 
-def tax2tree(refpkg, output_fp):
+def tax2tree(refpkg, output_fp, allow_rename=True):
     """
     Run tax2tree on a reference package lacking names
     """
@@ -97,6 +100,6 @@ def tax2tree(refpkg, output_fp):
         try:
             with open(consensus) as fp:
                 d = dict(parse_tax2tree_out(fp))
-                update_taxids(refpkg, d, output_fp)
+                update_taxids(refpkg, d, output_fp, allow_rename=allow_rename)
         finally:
             os.remove(consensus)
