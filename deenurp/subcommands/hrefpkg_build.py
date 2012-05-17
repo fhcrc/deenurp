@@ -6,6 +6,7 @@ sequences are not available.
 """
 
 import argparse
+import copy
 import csv
 import itertools
 import logging
@@ -35,19 +36,41 @@ def build_parser(p):
     p.add_argument('--threads', type=int, default=12, help="""Number of threads
             [default: %(default)d]""")
     p.add_argument('--only', help="""List of taxids to keep""", type=comma_set)
-    prune_group = p.add_argument_group('Generate pruned reference packages',
+    partition_group = p.add_argument_group('Generate partitiond reference packages',
             """Generate reference packages containing partial coverage at
             a taxon. For validation.""")
-    prune_group.add_argument('--prune-below-rank', help="""Rank above which to
-            prune PRUNE_PROP taxa at [default: no pruning]""")
-    prune_group.add_argument('--prune-rank', help="""Rank at which to prune
-            PRUNE_PROP taxa""")
-    prune_group.add_argument('--prune-log', type=argparse.FileType('w'),
-            help="""Optional path to write pruned tax_ids""")
-    prune_group.add_argument('--prune-proportion', type=float, default=0.5,
-        metavar='PRUNE_PROP', help="""Proportion of sequences to prune
+    partition_group.add_argument('--partition-below-rank', help="""Rank above which to
+            partition PARTITION_PROP taxa at [default: no pruning]""")
+    partition_group.add_argument('--partition-rank', help="""Rank at which to partition
+            PARTITION_PROP taxa""")
+    partition_group.add_argument('--partition-log', type=argparse.FileType('w'),
+            help="""Optional path to write partitiond tax_ids""")
+    partition_group.add_argument('--partition-proportion', type=float, default=0.5,
+        metavar='PARTITION_PROP', help="""Proportion of sequences to partition
         [default: %(default)f]""")
     p.add_argument('--seed', type=int, default=1)
+
+def partition_hrefpkg(a, taxonomy):
+    """
+    Partition a taxonomy into two non-overlapping taxonomies.
+    """
+    with a.partition_log or util.nothing():
+        p1, p2 = partition_taxonomy(taxonomy, a.partition_below_rank,
+                a.partition_rank, a.partition_proportion,
+                partition_log=a.partition_log)
+    for i, p in enumerate((p1, p2)):
+        i = str(i + 1)
+        args = copy.deepcopy(a)
+        args.partition_below_rank = None
+        args.partition_rank = None
+        assert not os.path.isdir(i)
+        os.mkdir(i)
+        with util.cd(i), util.ntf(prefix='taxonomy-') as tf:
+            p.write_taxtable(tf)
+            tf.close()
+            args.taxonomy = tf.name
+            logging.info("Building hrefpkg %s in %s", i, os.getcwd())
+            action(args)
 
 def action(a):
     random.seed(a.seed)
@@ -58,17 +81,17 @@ def action(a):
         logging.info('loading taxonomy')
         taxonomy = TaxNode.from_taxtable(fp)
 
+    # If partitioning, partition with current args, return
+    if a.partition_below_rank is not None or a.partition_rank is not None:
+        if not a.partition_below_rank or not a.partition_rank:
+            raise ValueError("--partition-below-rank and --partition-rank must be specified together")
+        return partition_hrefpkg(a, taxonomy)
+
     with open(a.seqinfo_file) as fp:
         logging.info("loading seqinfo")
         seqinfo = load_seqinfo(fp)
 
-    if a.prune_below_rank is not None or a.prune_rank is not None:
-        if not a.prune_below_rank or not a.prune_rank:
-            raise ValueError("--prune-below-rank and --prune-rank must be specified together")
-        with a.prune_log or util.nothing():
-            prune_taxonomy(taxonomy, a.prune_below_rank, a.prune_rank,
-                    a.prune_proportion, prune_log=a.prune_log)
-
+    # Build an hrefpkg
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
     hrefpkgs = []
     with open('index.csv', 'w') as fp:
@@ -278,21 +301,51 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_ra
 
         return rp
 
-def prune_taxonomy(taxonomy, prune_below_rank, prune_rank, prune_prop, prune_log=None):
+def partition_taxonomy(taxonomy, partition_below_rank, partition_rank, partition_prop, partition_log=None):
     """
-    Trim a taxonomy of ``prune_prop`` proportion of the nodes with rank
-    ``prune_rank`` below each node of rank ``prune_below_rank``
+    Trim a taxonomy of ``partition_prop`` proportion of the nodes with rank
+    ``partition_rank`` below each node of rank ``partition_below_rank``
     """
-    nodes = (i for i in taxonomy if i.rank == prune_below_rank)
+    # Copy taxonomies for partitioning
+    p1 = copy.deepcopy(taxonomy)
+    p2 = copy.deepcopy(taxonomy)
+    nodes = (i for i in p1 if i.rank == partition_below_rank)
+
+    # Log
+    if partition_log:
+        writer = csv.writer(partition_log, lineterminator='\n', quoting=csv.QUOTE_NONNUMERIC)
+        writer.writerow(('parent', 'child', 'prune'))
+        def w(parent, node, partition):
+            writer.writerow((parent, node, partition))
+    else:
+        def w(*args):
+            pass
 
     for node in nodes:
-        children = [i for i in node if i.rank == prune_rank]
+        children = [i for i in node if i.rank == partition_rank]
         child_count = len(children)
-        prune_count = int(prune_prop * child_count)
-        logging.info("Pruning %d/%d from %s-%s", prune_count, child_count,
+        partition_count = int(partition_prop * child_count)
+        logging.info("Pruning %d/%d from %s-%s", partition_count, child_count,
                 node.tax_id, node.name)
-        prune = random.sample(children, prune_count)
-        for p in prune:
-            if prune_log:
-                print >> prune_log, p.tax_id
-            p.parent.remove_child(p)
+        prune = set(random.sample(range(len(children)), partition_count))
+
+        # Lists of taxa to prune from the individual partitions
+        p1_prune = [n.tax_id for i, n in enumerate(children) if i in prune]
+        p2_prune = [n.tax_id for i, n in enumerate(children) if i not in prune]
+        all_taxa = set(i.tax_id for i in children)
+        for i, (to_prune, t) in enumerate([(p1_prune, p1), (p2_prune, p2)]):
+            for j in to_prune:
+                p = t.get_node(j)
+                p.parent.remove_child(p)
+            for j in all_taxa - set(to_prune):
+                w(node.tax_id, j, i)
+
+        # Checks
+        for i in p1_prune:
+            assert i in p2.index
+            assert i not in p1.index
+        for i in p2_prune:
+            assert i in p1.index
+            assert i not in p2.index
+
+    return p1, p2
