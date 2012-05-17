@@ -4,6 +4,7 @@ Utility functions
 
 import contextlib
 import functools
+import os
 import os.path
 import shutil
 import tempfile
@@ -117,3 +118,16 @@ def maybe_tempfile(obj=None, **kwargs):
     else:
         with ntf(**kwargs) as tf:
             yield tf
+
+@contextlib.contextmanager
+def cd(path):
+    """
+    Change directory to `path` for the duration of the context manager
+    """
+    curdir = os.getcwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(curdir)
+
