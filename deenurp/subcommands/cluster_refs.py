@@ -51,6 +51,8 @@ def identify_otus_unnamed(seq_file, cluster_similarity):
 
     Identify sequences in OTUs at the given cluster similarity;
     """
+    logging.info('Running DNAclust on unnamed sequences at %f',
+            cluster_similarity)
     for cluster in wrap.dnaclust(seq_file, similarity=cluster_similarity):
         yield cluster.sequences
 
