@@ -28,10 +28,13 @@ def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
         threshold=0.995):
     with util.ntf(suffix='.uc', prefix='to_cluster') as tf:
         # Search with uclust
-        uclust.search(named_sequence_file, to_cluster, tf.name,
-                pct_id=threshold, search_pct_id=0.90, trunclabels=True)
+        uclust.search(named_sequence_file, to_cluster, tf.name, pct_id=0.90,
+                trunclabels=True)
+        # Uclust.search renames to tf, need a new handle.
         records = uclust.parse_uclust_out(tf)
-        hits = (i.query_label for i in records if i.type == 'H')
+        hits = (i.query_label for i in records
+                if i.type == 'H' and i.pct_id >= threshold * 100.0)
+
         return frozenset(hits)
 
 def taxonomic_clustered(taxonomy, cluster_rank):
