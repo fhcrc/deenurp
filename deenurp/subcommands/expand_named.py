@@ -51,14 +51,18 @@ def find_underrepresented(tax_root, min_at_rank=5, rank='species'):
 def uclust_search(query, db, **kwargs):
     with util.ntf(prefix='uclust') as tf:
         uclust.search(db, query, tf.name, **kwargs)
-        for i in uclust.parse_uclust_out(tf):
-            if i.type == 'H':
-                yield i
+        lines = (i for i in tf if i.startswith('H'))
+        for i in uclust.parse_uclust_out(lines):
+            yield i
 
 def action(a):
     with a.taxonomy as fp:
         taxonomy = TaxNode.from_taxtable(fp)
     with a.seqinfo_file as fp:
+        # List of sequences
+        r = csv.DictReader(fp)
+        current_seqs = frozenset(i['seqname'] for i in r)
+        fp.seek(0)
         taxonomy.populate_from_seqinfo(fp)
 
     # Find sequences from underrepresented taxids to search
@@ -98,12 +102,17 @@ def action(a):
                        for i in r
                        if seq_group[i.target_label] == hit_group[i.query_label])
 
+        overlap = frozenset(update_hits) & current_seqs
+        if overlap:
+            logging.warn('%d sequences already present in corpus: %s',
+                    len(overlap), ', '.join(overlap))
+
         # Add sequences
         with open(a.output + '.fasta', 'w') as ofp:
             with open(a.sequence_file) as fp:
                 shutil.copyfileobj(fp, ofp)
             try:
-                wrap.esl_sfetch(hits_fp.name, update_hits, ofp)
+                wrap.esl_sfetch(hits_fp.name, frozenset(update_hits) - current_seqs, ofp)
             finally:
                 os.remove(hits_fp.name + '.ssi')
 
@@ -113,7 +122,7 @@ def action(a):
             fn = list(r.fieldnames) + ['inferred_tax_id']
             w = csv.DictWriter(ofp, fn, lineterminator='\n', quoting=csv.QUOTE_NONNUMERIC)
             w.writeheader()
-            w.writerows(r)
+            w.writerows(i for i in r if i['seqname'] not in overlap)
             if 'cluster' in fn:
                 rows = ({'seqname': k, 'tax_id': v, 'inferred_tax_id': 'yes', 'cluster': v}
                         for k, v in update_hits.items())

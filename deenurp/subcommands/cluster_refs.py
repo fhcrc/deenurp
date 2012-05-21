@@ -21,8 +21,10 @@ def build_parser(p):
     p.add_argument('--cluster-rank', help="""Rank to cluster sequences
             [default: %(default)s]""", default='species')
     p.add_argument('-u', '--unnamed-sequences', help="""Path to unnamed sequence file""")
-    p.add_argument('-r', '--redundant-cluster-id', default=0.995, type=float)
-    p.add_argument('-i', '--cluster-id', default=0.985, type=float)
+    p.add_argument('-r', '--redundant-cluster-id', default=0.990, type=float,
+            help="""Percent ID at which to remove redundant sequences.
+            [default: %(default).3f]""")
+    p.add_argument('-i', '--cluster-id', default=0.985, type=float, help="""Cluster ID [default: %(default).3f]""")
 
 def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
         threshold=0.995):
