@@ -182,9 +182,17 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
                 yield i['seqname']
 
     hrefpkgs = (Refpkg(i, create=False) for i in hrefpkg_names)
-    seqinfo_files = (i.file_abspath('seq_info') for i in hrefpkgs)
-    sequence_ids = frozenset(i for f in seqinfo_files
-                             for i in sequence_names(f))
+    seqinfo_files = (i.open_resource('seq_info') for i in hrefpkgs)
+
+    # Add seqinfo
+    for f in seqinfo_files:
+        with f:
+            taxonomy.populate_from_seqinfo(f)
+
+    # Remove lineages without sequences
+    taxonomy.prune_unprepresented()
+
+    sequence_ids = frozenset(taxonomy.subtree_sequence_ids())
 
     with util.ntf(prefix='aln_fasta', suffix='.fasta') as tf, \
          util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
