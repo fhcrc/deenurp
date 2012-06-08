@@ -122,7 +122,7 @@ def action(a):
         # Build index refpkg
         logging.info('Building index.refpkg')
         index_rp, sequence_ids = build_index_refpkg(hrefpkgs, a.sequence_file,
-                seqinfo, a.taxonomy, index_rank=a.index_rank)
+                seqinfo, taxonomy, index_rank=a.index_rank)
 
         # Write unused seqs
         logging.info("Extracting unused sequences")
@@ -194,12 +194,13 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
             taxonomy.populate_from_seqinfo(f)
 
     # Remove lineages without sequences
-    taxonomy.prune_unprepresented()
+    taxonomy.prune_unrepresented()
 
     sequence_ids = frozenset(taxonomy.subtree_sequence_ids())
 
     with util.ntf(prefix='aln_fasta', suffix='.fasta') as tf, \
-         util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
+         util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp, \
+         util.ntf(prefix='taxonomy', suffix='.csv') as tax_fp:
         wrap.esl_sfetch(sequence_file, sequence_ids, tf)
         tf.close()
 
@@ -211,11 +212,14 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
         w.writerows(r)
         seq_info_fp.close()
 
+        taxonomy.write_taxtable(tax_fp)
+        tax_fp.close()
+
         rp = Refpkg(dest, create=True)
         rp.start_transaction()
         rp.update_file('aln_fasta', tf.name)
         rp.update_file('seq_info', seq_info_fp.name)
-        rp.update_file('taxonomy', taxonomy)
+        rp.update_file('taxonomy', tax_fp.name)
         rp.update_file('profile', wrap.CM)
 
         for k, v in meta.items():
