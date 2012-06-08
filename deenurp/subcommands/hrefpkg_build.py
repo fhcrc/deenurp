@@ -22,6 +22,8 @@ from taxtastic.taxtable import TaxNode
 
 from .. import wrap, util
 
+PER_TAXON = 5
+
 def comma_set(s):
     s = s.split(',')
     s = frozenset(i.strip() for i in s)
@@ -94,7 +96,9 @@ def action(a):
     # Build an hrefpkg
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
     hrefpkgs = []
-    with open('index.csv', 'w') as fp:
+    with open('index.csv', 'w') as fp, \
+         open('train.fasta', 'w') as train_fp, \
+         open('test.fasta', 'w') as test_fp:
         def log_hrefpkg(tax_id):
             path = tax_id + '.refpkg'
             fp.write('{0},{0}.refpkg\n'.format(tax_id))
@@ -111,7 +115,7 @@ def action(a):
                 log_hrefpkg(node.tax_id)
                 continue
             r = tax_id_refpkg(node.tax_id, taxonomy, seqinfo, a.sequence_file,
-                    threads=a.threads)
+                    threads=a.threads, test_file=test_fp, train_file=train_fp)
             if r:
                 log_hrefpkg(node.tax_id)
 
@@ -221,7 +225,7 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
 
     return rp, sequence_ids
 
-def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=5, index_rank='order'):
+def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=PER_TAXON, index_rank='order'):
     """
     Select sequences
     """
@@ -232,11 +236,11 @@ def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=5, index_rank='order')
     for node in nodes:
         node_seqs = list(node.subtree_sequence_ids())
         if len(node_seqs) > per_taxon:
-            node_seqs = random.sample(node_seqs, per_taxon)
-        for i in node_seqs:
-            yield i
+            random.shuffle(node_seqs)
+        yield node_seqs[:per_taxon], node_seqs[per_taxon:]
 
-def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_rank='order'):
+def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
+        index_rank='order', train_file=None, test_file=None):
     """
     Build a reference package containing all descendants of tax_id from an
     index reference package.
@@ -260,8 +264,21 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_ra
         w.writeheader()
         rows = [i for i in seqinfo if i['tax_id'] in descendants]
         sinfo = {i['seqname']: i for i in rows}
-        keep_seq_ids = frozenset(choose_sequence_ids(n, rows,
-                                 index_rank=index_rank))
+
+        # Choose sequences, divide into train and test sets
+        chosen = choose_sequence_ids(n, rows, index_rank=index_rank)
+        keep_seq_ids = set()
+        train_seq_ids = set()
+        test_seq_ids = set()
+
+        for keep, rest in chosen:
+            keep_seq_ids |= frozenset(keep)
+            l = len(rest)
+            if l >= 2 * PER_TAXON:
+                train_seq_ids |= frozenset(rest[:l / 2])
+                test_seq_ids |= frozenset(rest[l / 2:])
+
+        # Not picked
         rows = [sinfo[i] for i in keep_seq_ids]
         w.writerows(rows)
         seq_info_fp.close()
@@ -283,6 +300,14 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12, index_ra
         if len(sequences) < 2:
             logging.warn("Skipping: %d sequences.", len(sequences))
             return None
+
+        # Extract training & test seqs
+        if train_file:
+            logging.info("%d training sequences", len(train_seq_ids))
+            wrap.esl_sfetch(sequence_file, train_seq_ids, train_file)
+        if test_file:
+            logging.info("%d test sequences", len(test_seq_ids))
+            wrap.esl_sfetch(sequence_file, test_seq_ids, test_file)
 
         # Cmalign
         aligned = wrap.cmalign(sequences, output=sto_fp, mpi_args=['-np', str(threads)])
