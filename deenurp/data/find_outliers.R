@@ -20,5 +20,11 @@ if (nrow(a) == 2) {
 } else {
   prune <- findOutliers(dm, cutoff=cutoff)
   to.prune <- colnames(dm)[prune]
+
+  # If all but medoid pruned, all should be pruned
+  if (length(to.prune) == ncol(dm) - 1) {
+    to.prune <- colnames(dm)
+  }
+
   cat(paste(to.prune, collapse='\n'), file=prune_out)
 }
