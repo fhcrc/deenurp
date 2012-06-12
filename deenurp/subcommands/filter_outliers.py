@@ -109,13 +109,10 @@ def action(a):
                 logging.warn("No sequences for %s (%s)", node.tax_id, node.name)
                 log_taxid(node.tax_id, node.name, 0, 0, 0)
                 continue
-            elif len(seqs) < 3:
-                logging.warn("Only %d sequences for %s (%s). Keeping.", len(seqs),
-                        node.tax_id, node.name)
-                log_taxid(node.tax_id, node.name, len(seqs), len(seqs), 0)
-                kept_ids |= frozenset(seqs)
-                wrap.esl_sfetch(a.sequence_file, seqs, fp)
+            elif len(seqs) == 1:
+                logging.warn('Only 1 sequence for %s (%s). Dropping', node.tax_id, node.name)
                 continue
+
             with util.ntf(prefix='to_filter', suffix='.fasta') as tf:
                 # Extract sequences
                 wrap.esl_sfetch(a.sequence_file, seqs,

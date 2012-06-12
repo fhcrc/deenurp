@@ -12,6 +12,13 @@ prune_out <- args[3]
 
 a <- read.dna(alignment, format='fasta')
 dm <- dist.dna(a, pairwise.deletion=TRUE, as.matrix=TRUE)
-prune <- findOutliers(dm, cutoff=cutoff)
-to.prune <- colnames(dm)[prune]
-cat(paste(to.prune, collapse='\n'), file=prune_out)
+
+# Special handling for 2 sequences
+if (nrow(a) == 2) {
+  if (dm[1] > cutoff)
+    cat(paste(colnames(dm), collapse='\n'), file=prune_out)
+} else {
+  prune <- findOutliers(dm, cutoff=cutoff)
+  to.prune <- colnames(dm)[prune]
+  cat(paste(to.prune, collapse='\n'), file=prune_out)
+}
