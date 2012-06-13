@@ -179,6 +179,12 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
     """
     Build an index.refpkg from a set of hrefpkgs
     """
+
+    # Clear taxonomy
+    taxonomy = copy.deepcopy(taxonomy)
+    for node in taxonomy:
+        node.sequence_ids = set()
+
     def sequence_names(f):
         with open(f) as fp:
             r = csv.DictReader(fp)
@@ -282,7 +288,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
                 train_seq_ids |= frozenset(rest[:l / 2])
                 test_seq_ids |= frozenset(rest[l / 2:])
 
-        # Not picked
+        # Picked
         rows = [sinfo[i] for i in keep_seq_ids]
         w.writerows(rows)
         seq_info_fp.close()
