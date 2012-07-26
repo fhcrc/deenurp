@@ -15,7 +15,7 @@ from Bio.SeqRecord import SeqRecord
 from . import search
 from .util import as_fasta, tempdir
 from .wrap import cmalign, as_refpkg, redupfile_of_seqs, \
-                  voronoi, guppy_redup, pplacer, esl_sfetch
+                  rppr_min_adcl, guppy_redup, pplacer, esl_sfetch
 
 DEFAULT_THREADS = 12
 CLUSTER_THRESHOLD = 0.998
@@ -58,7 +58,7 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
         jplace = pplacer(rp.path, fasta, out_dir=placedir(), threads=threads)
         # Redup
         guppy_redup(jplace, redup_path, placedir('redup.jplace'))
-        prune_leaves = set(voronoi(placedir('redup.jplace'), keep_leaves))
+        prune_leaves = set(rppr_min_adcl(placedir('redup.jplace'), keep_leaves))
 
     result = frozenset(i.id for i in ref_seqs) - prune_leaves
 

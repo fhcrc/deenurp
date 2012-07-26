@@ -110,12 +110,12 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
 
     return jplace
 
-def voronoi(jplace, leaves, algorithm='pam', posterior_prop=False, point_mass=True,
+def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prop=False, point_mass=True,
         always_include=None):
     """
-    Run rppr voronoi on the given jplace file, cutting to the given number of leaves
+    Run rppr min_adcl on the given jplace file, cutting to the given number of leaves
     """
-    cmd = ['rppr', 'voronoi', '--algorithm', algorithm, jplace, '--leaves',
+    cmd = ['rppr', 'min_adcl', '--algorithm', algorithm, jplace, '--leaves',
            str(leaves)]
     if point_mass:
         cmd.append('--point-mass')
