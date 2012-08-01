@@ -257,6 +257,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
     """
     with util.ntf(prefix='taxonomy', suffix='.csv') as tax_fp, \
          util.ntf(prefix='aln_sto', suffix='.sto') as sto_fp, \
+         util.ntf(prefix='aln_fasta', suffix='.fasta') as fasta_fp, \
          util.ntf(prefix='tree', suffix='.tre') as tree_fp, \
          util.ntf(prefix='tree', suffix='.stats') as stats_fp, \
          util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
@@ -327,10 +328,13 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
         wrap.fasttree(aligned, stats_fp.name, tree_fp, threads=threads, gtr=True)
         tree_fp.close()
         sto_fp.close()
+        SeqIO.write(aligned, fasta_fp, 'fasta')
+        fasta_fp.close()
 
         rp = Refpkg(tax_id + '.refpkg')
         rp.start_transaction()
         rp.update_file('aln_sto', sto_fp.name)
+        rp.update_file('aln_fasta', fasta_fp.name)
         rp.update_file('tree', tree_fp.name)
         rp.update_file('seq_info', seq_info_fp.name)
         rp.update_file('taxonomy', tax_fp.name)
