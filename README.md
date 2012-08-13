@@ -1,3 +1,16 @@
+# Installation
+
+First, install binary dependencies:
+
+* uclust
+* easel tools
+* cmalign
+* pplacer
+* tax2tree (and pycogent)
+* BioPython
+* FastTree
+* dnaclust (switch to uclust?)
+
 # De-novo reference set creation
 
 Similarity-search based reference sequence selection
@@ -67,3 +80,4 @@ the `seq_info` file in the reference package.
 
 # TODO
 * Fix loneliness
+
