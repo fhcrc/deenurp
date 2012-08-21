@@ -83,6 +83,8 @@ def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True):
                     i['tax_id'] = n
                 else:
                     logging.info("Not applied.")
+            elif n is None:
+                logging.warn("no taxonomy for %s", i['seqname'])
             w.writerow(i)
 
 def tax2tree(refpkg, output_fp, allow_rename=True):
