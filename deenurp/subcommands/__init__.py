@@ -5,6 +5,7 @@ commands = ('add_reps',
             'tax2tree',
             'filter_outliers',
             'rdp_extract_genbank',
+            'rdp_sequence_filter',
             'cluster_refs',
             'expand_named')
 
