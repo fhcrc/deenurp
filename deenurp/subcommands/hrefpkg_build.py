@@ -344,8 +344,8 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
             print >> sys.stderr, stats_fp.read()
             raise
         rp.update_file('profile', wrap.CM)
-        rp.reroot()
         rp.commit_transaction()
+        rp.reroot()
 
         return rp
 
