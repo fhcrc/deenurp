@@ -61,6 +61,13 @@ def count_ambiguous(seq):
     s = frozenset('ACGT')
     return sum(i not in s for i in seq)
 
+def is_type(record):
+    #r = any('strain' in a.qualifiers for a in record.features)
+    tp = '(T)' in record.id
+    if tp and not any('strain' in a.qualifiers for a in record.features):
+        raise ValueError(record.format('genbank'))
+    return tp
+
 def build_parser(p):
     p.add_argument('infile', help="""Input file, gzipped""")
     p.add_argument('database', help="""Path to taxonomy database""")
@@ -89,10 +96,14 @@ def action(a):
         writer = csv.writer(out_fp, lineterminator='\n',
                 quoting=csv.QUOTE_MINIMAL)
         if a.header:
-            writer.writerow(('seqname', 'tax_id', 'description', 'length', 'ambig_count'))
+            writer.writerow(('seqname', 'tax_id', 'accession', 'description',
+                'length', 'ambig_count', 'is_type', 'rdp_lineage'))
         for record, tax_id in taxa :
-            row = (record.name, tax_id, record.description,
-                    len(record), count_ambiguous(str(record.seq)))
+            accession = record.id
+            row = (record.name, tax_id, accession, record.description,
+                    len(record), count_ambiguous(str(record.seq)),
+                    str(is_type(record)).upper(),
+                    ';'.join(record.annotations.get('taxonomy', [])).replace('"', ''))
             writer.writerow(row)
             SeqIO.write([transform_id(record)], fasta_fp, 'fasta')
 
