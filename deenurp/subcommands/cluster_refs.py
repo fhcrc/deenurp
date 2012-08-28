@@ -21,6 +21,8 @@ def build_parser(p):
     p.add_argument('--cluster-rank', help="""Rank to cluster sequences
             [default: %(default)s]""", default='species')
     p.add_argument('-u', '--unnamed-sequences', help="""Path to unnamed sequence file""")
+    p.add_argument('-m', '--unnamed-sequence-meta', help="""Path to unnamed
+            sequence file sequence info""", type=argparse.FileType('r'))
     p.add_argument('-r', '--redundant-cluster-id', default=0.990, type=float,
             help="""Percent ID at which to remove redundant sequences.
             [default: %(default).3f]""")
@@ -69,6 +71,13 @@ def action(a):
         fp.seek(0)
         r = csv.DictReader(fp)
         seqinfo = {i['seqname']: i for i in r}
+    if a.unnamed_sequence_meta:
+        with a.unnamed_sequence_meta as fp:
+            r = csv.DictReader(fp)
+            unnamed_seqinfo = {i['seqname']: i for i in r}
+        assert not set(unnamed_seqinfo) & set(seqinfo)
+        seqinfo.update(unnamed_seqinfo)
+
 
     # Write clustering information for sequences with cluster_rank-level
     # classifications
@@ -128,7 +137,7 @@ def action(a):
     with a.seqinfo_out as fp:
         def add_cluster(i):
             """Add a cluster identifier to sequence metadata"""
-            if 'tax_id' in i:
+            if i.get('tax_id'):
                 i['cluster'] = i['tax_id']
             else:
                 i['cluster'] = cluster_ids[i['seqname']]
