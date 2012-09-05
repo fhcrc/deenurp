@@ -9,7 +9,6 @@ First, install binary dependencies:
 * tax2tree (and pycogent)
 * BioPython
 * FastTree
-* dnaclust (switch to uclust?)
 
 # De-novo reference set creation
 

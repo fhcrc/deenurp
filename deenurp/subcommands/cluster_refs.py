@@ -55,10 +55,15 @@ def identify_otus_unnamed(seq_file, cluster_similarity):
 
     Identify sequences in OTUs at the given cluster similarity;
     """
-    logging.info('Running DNAclust on unnamed sequences at %f',
+    logging.info('Running UCLUST on unnamed sequences at %f',
             cluster_similarity)
-    for cluster in wrap.dnaclust(seq_file, similarity=cluster_similarity):
-        yield cluster.sequences
+    with util.ntf(prefix='uclust') as tf:
+        # Sort and cluster
+        uclust.sort_and_cluster(seq_file, tf.name, pct_id=cluster_similarity,
+                quiet=True)
+        clusters = uclust.sequences_by_cluster(uclust.parse_uclust_out(tf))
+        for _, sequences in clusters:
+            yield [i.query_label for i in sequences]
 
 def action(a):
     # Load taxtable
