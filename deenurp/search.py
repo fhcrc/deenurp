@@ -108,7 +108,7 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD):
         records = (i for i in records
                    if i.type == 'H' and i.pct_id >= p['search_id'] * 100.0)
         by_seq = uclust.hits_by_sequence(records)
-        by_seq = select_hits(by_seq)
+        by_seq = select_hits(by_seq, select_threshold)
 
         sql = """
 INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
