@@ -1,13 +1,15 @@
 """
 Run tax2tree on a reference package, updating the seq_info file
 """
+from functools import partial
+
 from taxtastic import refpkg
 
 from .. import tax2tree, util
 
 def build_parser(p):
     p.add_argument('refpkg', help="""Reference package""",
-            metavar='refpkg', type=refpkg.Refpkg)
+            metavar='refpkg', type=partial(refpkg.Refpkg, create=False))
     g = p.add_mutually_exclusive_group()
     g.add_argument('--allow-rename', action='store_true', default=True,
             help="""Allow sequences to be renamed [default: %(default)s]""")

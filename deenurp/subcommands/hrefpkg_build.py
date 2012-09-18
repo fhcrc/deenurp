@@ -331,7 +331,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
         SeqIO.write(aligned, fasta_fp, 'fasta')
         fasta_fp.close()
 
-        rp = Refpkg(tax_id + '.refpkg')
+        rp = Refpkg(tax_id + '.refpkg', create=True)
         rp.start_transaction()
         rp.update_file('aln_sto', sto_fp.name)
         rp.update_file('aln_fasta', fasta_fp.name)

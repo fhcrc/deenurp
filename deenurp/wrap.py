@@ -34,7 +34,7 @@ def as_refpkg(sequences, threads=None):
         fasttree(sequences, log_fp.name, tree_fp, gtr=True, threads=threads)
         tree_fp.close()
 
-        rp = Refpkg(refpkg_dir('temp.refpkg'))
+        rp = Refpkg(refpkg_dir('temp.refpkg'), create=True)
         rp.update_metadata('locus', '')
         rp.update_phylo_model('FastTree', log_fp.name)
         rp.update_file('tree', tree_fp.name)
