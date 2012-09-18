@@ -9,7 +9,7 @@ First, install binary dependencies:
 * tax2tree (and pycogent)
 * BioPython
 * FastTree
-* R (and ape)
+* R (and ape, BioConductor, and clstUtils)
 
 # De-novo reference set creation
 
