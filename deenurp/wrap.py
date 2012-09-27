@@ -10,9 +10,11 @@ import os.path
 import subprocess
 
 from Bio import SeqIO
+import peasel
 from taxtastic.refpkg import Refpkg
 
 from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile
+
 
 def data_path(*args):
     return os.path.join(os.path.dirname(__file__), 'data', *args)
@@ -158,19 +160,10 @@ def esl_sfetch(sequence_file, name_iter, output_fp):
     """
     if not os.path.exists(sequence_file + '.ssi'):
         logging.info("No index exists for %s. creating.", sequence_file)
-        subprocess.check_call(['esl-sfetch', '--index', sequence_file])
-    cmd = ['esl-sfetch', '-f', sequence_file, '-']
-    logging.debug(' '.join(cmd))
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=output_fp)
-    count = 0
-    for name in name_iter:
-        p.stdin.write('{0}\n'.format(name))
-        count += 1
-    p.stdin.close()
-    p.wait()
-    if not p.returncode == 0:
-        raise subprocess.CalledProcessError(p.returncode, cmd)
-
+        peasel.create_ssi(sequence_file)
+    index = peasel.open_ssi(sequence_file)
+    sequences = (index[i] for i in name_iter)
+    count = peasel.write_fasta(sequences, output_fp)
     return count
 
 def load_tax_maps(fps, has_header=False):

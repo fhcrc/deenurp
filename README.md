@@ -3,20 +3,18 @@
 First, install binary dependencies:
 
 * Python 2.7
-* pip, for installing python dependencies (http://www.pip-installer.org/en/latest/index.html)
-* Python dependencies
-
-    - numpy (`pip install numpy`)
-    - pycogent (`pip install cogent`)
-    - tax2tree (`pip install http://downloads.sourceforge.net/project/tax2tree/tax2tree-v1.0.tar.gz`)
-    - BioPython (`pip install biopython`)
-
+    - pip, for installing python dependencies (http://www.pip-installer.org/en/latest/index.html)
+    - Python packages:
+        + Run `pip install PACKAGE` for every PACKAGE listed in requirements.txt
 * uclust 1.1
-* easel tools (Distributed with infernal)
 * Infernal version 1.0.2, with MPI (http://infernal.janelia.org/)
 * pplacer (http://matsen.fhcrc.org/pplacer)
 * FastTree (http://www.microbesonline.org/fasttree/)
 * R (and ape, BioConductor, and clstUtils)
+
+Finally, install:
+
+    python setup.py install
 
 # De-novo reference set creation
 
