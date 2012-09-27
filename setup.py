@@ -48,4 +48,5 @@ setup(name='deenurp',
       entry_points={'console_scripts': {'deenurp = deenurp.scripts.deenurp:main'}},
       install_requires=install_requires,
       cmdclass={'audit': run_audit},
+      test_suite='deenurp.test.suite',
       packages=find_packages())

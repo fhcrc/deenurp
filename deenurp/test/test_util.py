@@ -44,3 +44,11 @@ class MaybeTempFileTestCase(unittest.TestCase):
         o = object()
         with util.maybe_tempfile(o, prefix='tmp') as tf:
             self.assertEqual(o, tf)
+
+def suite():
+    s = unittest.TestSuite()
+    classes = [MaybeTempFileTestCase, MemoizeTestCase, UniqueTestCase]
+    for cls in classes:
+        s.addTests(unittest.makeSuite(cls))
+
+    return s

@@ -45,3 +45,11 @@ class SelectHitsTestCase(unittest.TestCase):
                       TestHit('seq1', 't1', 99.8)]),
             ('seq2', [TestHit('seq2', 't6', 98.4)])],
             r)
+
+def suite():
+    s = unittest.TestSuite()
+    classes = [SelectHitsTestCase, DedupInfoToCountsTestCase]
+    for cls in classes:
+        s.addTests(unittest.makeSuite(cls))
+
+    return s

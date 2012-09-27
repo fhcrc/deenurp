@@ -40,3 +40,10 @@ class VorotreeTestCase(unittest.TestCase):
     def test_pam(self):
         self.do_test('pam')
 
+def suite():
+    s = unittest.TestSuite()
+    classes = [CmAlignTestCase, VorotreeTestCase]
+    for cls in classes:
+        s.addTests(unittest.makeSuite(cls))
+
+    return s
