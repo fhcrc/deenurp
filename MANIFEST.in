@@ -1,0 +1,4 @@
+include requirements.txt
+include README.txt
+include deenurp/data/*
+include deenurp/test/data/*
