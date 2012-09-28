@@ -23,8 +23,9 @@ def build_parser(p):
             help="""[default: %(default)d]""")
     uc.add_argument('--search-identity', default=0.97, type=float,
             help="""Clustering identity level [default: %(default).2f]""")
-    uc.add_argument('--select-threshold', help="""Select hits within %(metavar)s
-            of best hit pct_id [default: %(default).2f]""", default=0.5, metavar='THRESHOLD')
+    uc.add_argument('--select-threshold', help="""Select hits within
+            %(metavar)s of best hit pct_id [default: %(default).2f]""",
+            default=search.SELECT_THRESHOLD, metavar='THRESHOLD')
 
 def action(args):
     con = sqlite3.connect(args.output)

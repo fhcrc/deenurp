@@ -15,7 +15,7 @@ _ntf = tempfile.NamedTemporaryFile
 
 from .util import SingletonDefaultDict, memoize
 
-SELECT_THRESHOLD = 0.2
+SELECT_THRESHOLD = 0.05
 
 # Utility stuff
 def dedup_info_to_counts(fp):
