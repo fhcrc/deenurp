@@ -13,7 +13,7 @@ from sqlalchemy.sql import select, and_
 from taxtastic.taxonomy import Taxonomy
 from taxtastic import ncbi
 
-from deenurp.util import Counter
+from deenurp.util import Counter, memoize
 
 def tax_of_genbank(gb):
     """
@@ -36,20 +36,31 @@ def is_classified_fn(taxonomy):
     Creates a function which classifies tax_ids as classified or unclassified,
     based on presence in taxonomy and names.is_classified.
     """
-    # Store results
-    cache = {}
-    n = taxonomy.names
-    def inner(tax_id):
-        if tax_id in cache:
-            return cache[tax_id]
+    names = taxonomy.names
+    nodes = taxonomy.nodes
+    @memoize
+    def fetch_tax_id(tax_id):
+        s = select([names.c.tax_id, names.c.is_classified, nodes.c.parent_id, nodes.c.rank],
+                and_(names.c.tax_id == tax_id, names.c.is_primary == True,
+                     nodes.c.tax_id == names.c.tax_id))
+        res = s.execute().fetchone()
+        return res
+
+    @memoize
+    def is_classified(tax_id):
+        res = fetch_tax_id(tax_id)
+        if not res:
+            return False
+
+        tax_id, is_class, parent_id, rank = res
+        if rank == 'species':
+            return is_class
         else:
-            s = select([n.c.tax_id, n.c.is_classified],
-                    and_(n.c.tax_id == tax_id, n.c.is_primary == True))
-            res = s.execute().fetchone()
-            res = res[1] if res else False
-            cache[tax_id] = res
-            return res
-    return inner
+            if tax_id == parent_id:
+                return False
+            return is_classified(parent_id)
+
+    return is_classified
 
 def transform_id(rec):
     old_id = rec.id
