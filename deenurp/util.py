@@ -8,6 +8,7 @@ import os
 import os.path
 import shutil
 import sys
+import time
 import tempfile
 
 from Bio import SeqIO
@@ -17,24 +18,29 @@ class Counter(object):
     Count objects processed in iterable. By default, progress is written to
     stderr every 1000 items.
     """
-    def __init__(self, iterable, stream=sys.stderr, report_every=1000,
+    def __init__(self, iterable, stream=sys.stderr, report_every=0.3,
             prefix=''):
         self._it = iter(iterable)
         self.count = 0
         self.stream = stream
         self.report_every = report_every
         self.prefix = prefix
+        self.start = time.clock()
+        self.last = 0
 
     def _report(self):
         if self.stream:
-            self.stream.write('{0}{1}\r'.format(self.prefix, self.count))
+            self.stream.write('{0}{1:15d} [{2:10.2f}s]\r'.format(self.prefix,
+                self.count, time.clock() - self.start))
 
     def __iter__(self):
         for i in self._it:
             yield i
             self.count += 1
-            if self.count % self.report_every == 0:
+            now = time.clock()
+            if now - self.last > self.report_every:
                 self._report()
+                self.last = now
 
 class SingletonDefaultDict(dict):
     """
