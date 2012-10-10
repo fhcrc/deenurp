@@ -60,7 +60,7 @@ def identify_otus_unnamed(seq_file, cluster_similarity):
     with util.ntf(prefix='uclust') as tf:
         # Sort and cluster
         uclust.sort_and_cluster(seq_file, tf.name, pct_id=cluster_similarity,
-                quiet=True)
+                trunclabels=True, quiet=True)
         clusters = uclust.sequences_by_cluster(uclust.parse_uclust_out(tf))
         for _, sequences in clusters:
             yield [i.query_label for i in sequences]
@@ -89,7 +89,7 @@ def action(a):
     done = set()
     with a.sequence_out:
         for tax_id, sequences in taxonomic_clustered(taxonomy, a.cluster_rank):
-            done |= sequences
+            done |= set(sequences)
 
         # Fetch sequences
         logging.info('Fetching %d %s-level sequences', len(done), a.cluster_rank)
@@ -134,7 +134,7 @@ def action(a):
             cluster_ids = {}
             # Cluster remaining sequences into OTUs
             for i, cluster_seqs in enumerate(identify_otus_unnamed(unnamed_fp.name, a.cluster_id)):
-                done |= cluster_seqs
+                done |= set(cluster_seqs)
                 otu = 'otu_{0}'.format(i)
                 for sequence in cluster_seqs:
                     cluster_ids[sequence] = otu
