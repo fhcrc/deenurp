@@ -40,11 +40,10 @@ class SelectHitsTestCase(unittest.TestCase):
 
     def test_basic(self):
         r = list(search.select_hits(self.items))
-        self.assertEqual([
-            ('seq1', [TestHit('seq1', 't2', 99.9),
-                      TestHit('seq1', 't1', 99.8)]),
-            ('seq2', [TestHit('seq2', 't6', 98.4)])],
-            r)
+        expected = [
+            ('seq1', [TestHit('seq1', 't2', 99.9)]),
+            ('seq2', [TestHit('seq2', 't6', 98.4)])]
+        self.assertItemsEqual(expected, r)
 
 def suite():
     s = unittest.TestSuite()
