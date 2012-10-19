@@ -7,7 +7,7 @@ import logging
 import shutil
 
 from Bio import SeqIO
-from romperroom import uclust
+from deenurp import uclust
 from taxtastic.taxtable import TaxNode
 
 from .. import wrap, util

@@ -12,7 +12,7 @@ import logging
 import os
 import shutil
 
-from romperroom import uclust
+from deenurp import uclust
 from taxtastic.taxtable import TaxNode
 
 from .. import wrap, util

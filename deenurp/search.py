@@ -8,7 +8,7 @@ import operator
 import sqlite3
 import tempfile
 
-from romperroom import uclust
+from deenurp import uclust
 from Bio import SeqIO
 
 _ntf = tempfile.NamedTemporaryFile
