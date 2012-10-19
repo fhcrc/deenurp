@@ -1,3 +1,10 @@
+DeeNuRP
+=======
+
+De-novo Reference Package Pipeline
+
+Under development.
+
 Installation
 ============
 
