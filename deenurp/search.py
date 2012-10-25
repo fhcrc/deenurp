@@ -29,15 +29,16 @@ def dedup_info_to_counts(fp):
         result[i] += float(c)
     return result
 
-def _load_cluster_info(fp):
+def _load_cluster_info(fp, group_field='cluster'):
     r = csv.DictReader(fp)
-    return {i['seqname']: i['cluster'] for i in r}
+    return {i['seqname']: i[group_field] for i in r}
 
 # Parameters stores in the `params` table, with types
 _PARAMS = dict([('fasta_file', str),
        ('ref_fasta', str),
        ('ref_meta', str),
        ('search_id', float),
+       ('group_field', str),
        ('maxaccepts', int),
        ('maxrejects', int)])
 
@@ -85,7 +86,7 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD):
     count = 0
     ref_name = p['ref_fasta']
     with open(p['ref_meta']) as fp:
-        cluster_info = _load_cluster_info(fp)
+        cluster_info = _load_cluster_info(fp, p['group_field'])
 
     @memoize
     def add_hit(hit_name):
@@ -141,7 +142,8 @@ VALUES (?, ?, ?)"""
     return cursor.rowcount
 
 def _create_tables(con, ref_fasta, ref_meta, fasta_file,
-        maxaccepts=1, maxrejects=8, search_id=0.99, quiet=True):
+        maxaccepts=1, maxrejects=8, search_id=0.99, quiet=True,
+        group_field='cluster'):
     cursor = con.cursor()
     cursor.executescript(SCHEMA)
     # Save parameters
@@ -194,7 +196,7 @@ GROUP BY cluster_name;
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
         maxaccepts=1, maxrejects=8, search_id=0.99, select_threshold=SELECT_THRESHOLD,
-        quiet=True):
+        quiet=True, group_field='cluster'):
     """
     Create a database of sequences searched against a sequence database for
     reference set creation.
@@ -211,7 +213,7 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
     with con:
         _create_tables(con, maxaccepts=maxaccepts, maxrejects=maxrejects,
                 search_id=search_id, quiet=quiet, ref_fasta=ref_fasta,
-                ref_meta=ref_meta, fasta_file=fasta_file)
+                ref_meta=ref_meta, fasta_file=fasta_file, group_field=group_field)
 
         seq_count = _load_sequences(con, fasta_file, weights=weights)
         logging.info("Inserted %d sequences", seq_count)

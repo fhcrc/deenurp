@@ -66,12 +66,12 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
 
     return result
 
-def fetch_cluster_members(cluster_info_file):
+def fetch_cluster_members(cluster_info_file, group_field):
     d = collections.defaultdict(list)
     with open(cluster_info_file) as fp:
         r = csv.DictReader(fp)
         for i in r:
-            d[i['cluster']].append(i['seqname'])
+            d[i[group_field]].append(i['seqname'])
     return d
 
 def cluster_hit_seqs(con, cluster_name):
@@ -106,7 +106,7 @@ def choose_references(deenurp_db, refs_per_cluster=5,
     fasta_file = params['fasta_file']
     ref_fasta = params['ref_fasta']
     total_weight = get_total_weight(deenurp_db)
-    cluster_members = fetch_cluster_members(params['ref_meta'])
+    cluster_members = fetch_cluster_members(params['ref_meta'], params['group_field'])
 
     # Iterate over clusters
     cursor = deenurp_db.cursor()

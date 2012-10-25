@@ -16,6 +16,9 @@ def build_parser(p):
     p.add_argument('ref_meta', help="""Reference sequence metadata""")
     p.add_argument('--weights', help="""Weights, in a `guppy dedup
             -m`-compatible dedup file""", type=argparse.FileType('r'))
+    p.add_argument('--group-field', help="""Column to indicate group
+            membership for a reference sequence (e.g., OTU; NCBI taxon id)
+            [default: %(default)s]""", default='cluster')
     uc = p.add_argument_group('UCLUST')
     uc.add_argument('--maxaccepts', default=5, type=int,
             help="""[default: %(default)d]""")
@@ -38,4 +41,5 @@ def action(args):
             ref_meta=args.ref_meta,
             weights=weights, maxaccepts=args.maxaccepts,
             maxrejects=args.maxrejects, search_id=args.search_identity,
-            quiet=args.verbosity == 0, select_threshold=args.select_threshold)
+            quiet=args.verbosity == 0, select_threshold=args.select_threshold,
+            group_field=args.group_field)
