@@ -117,7 +117,8 @@ def choose_references(deenurp_db, refs_per_cluster=5,
     for cluster_name, cluster_weight in cursor:
         cluster_seq_names = dict(cluster_hit_seqs(deenurp_db, cluster_name))
         cluster_refs = esl_sfetch_seqs(ref_fasta, cluster_members[cluster_name])
-        query_seqs = esl_sfetch_seqs(fasta_file, cluster_seq_names)
+        # cluster_hit_seqs returns unicode: convert to string.
+        query_seqs = esl_sfetch_seqs(fasta_file, (str(i) for i in cluster_seq_names))
         for i in query_seqs:
             i.annotations['weight'] = cluster_seq_names[i.id]
 
