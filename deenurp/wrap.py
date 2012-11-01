@@ -153,17 +153,24 @@ def cmalign(sequences, output=None, mpi_args=None, cm=CM):
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
 
-def esl_sfetch(sequence_file, name_iter, output_fp):
+def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):
     """
     Fetch sequences named in name_iter from sequence_file, indexing if
     necessary, writing to output_fp.
+
+    If ``use_temp`` is True, a temporary index is created and used.
     """
-    if not os.path.exists(sequence_file + '.ssi'):
-        logging.info("No index exists for %s. creating.", sequence_file)
-        peasel.create_ssi(sequence_file)
-    index = peasel.open_ssi(sequence_file)
-    sequences = (index[i] for i in name_iter)
-    count = peasel.write_fasta(sequences, output_fp)
+    if not use_temp:
+        if not os.path.exists(sequence_file + '.ssi'):
+            logging.info("No index exists for %s. creating.", sequence_file)
+            peasel.create_ssi(sequence_file)
+        index = peasel.open_ssi(sequence_file)
+        sequences = (index[i] for i in name_iter)
+        count = peasel.write_fasta(sequences, output_fp)
+    else:
+        with peasel.temp_ssi(sequence_file) as index:
+            sequences = (index[i] for i in name_iter)
+            count = peasel.write_fasta(sequences, output_fp)
     return count
 
 def load_tax_maps(fps, has_header=False):
