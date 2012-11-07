@@ -73,11 +73,11 @@ def count_ambiguous(seq):
     return sum(i not in s for i in seq)
 
 def is_type(record):
-    #r = any('strain' in a.qualifiers for a in record.features)
-    tp = '(T)' in record.id
-    if tp and not any('strain' in a.qualifiers for a in record.features):
-        raise ValueError(record.format('genbank'))
-    return tp
+    """
+    Returns a boolean indicating whether a sequence is a member of a type strain,
+    as indicated by the presence of the string '(T)' within the record description.
+    """
+    return '(T)' in record.description
 
 def build_parser(p):
     p.add_argument('infile', help="""Input file, gzipped""")
