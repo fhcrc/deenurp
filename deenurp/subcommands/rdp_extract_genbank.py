@@ -36,13 +36,11 @@ def is_classified_fn(taxonomy):
     Creates a function which classifies tax_ids as classified or unclassified,
     based on presence in taxonomy and names.is_classified.
     """
-    names = taxonomy.names
     nodes = taxonomy.nodes
     @memoize
     def fetch_tax_id(tax_id):
-        s = select([names.c.tax_id, names.c.is_classified, nodes.c.parent_id, nodes.c.rank],
-                and_(names.c.tax_id == tax_id, names.c.is_primary == True,
-                     nodes.c.tax_id == names.c.tax_id))
+        s = select([nodes.c.tax_id, nodes.c.is_valid, nodes.c.parent_id, nodes.c.rank])\
+                .where(nodes.c.tax_id == tax_id)
         res = s.execute().fetchone()
         return res
 
