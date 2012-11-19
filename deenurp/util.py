@@ -2,8 +2,10 @@
 Utility functions
 """
 
+import bz2
 import contextlib
 import functools
+import gzip
 import os
 import os.path
 import shutil
@@ -162,3 +164,15 @@ def cd(path):
     finally:
         os.chdir(curdir)
 
+def maybe_zipped_file_factory(mode='r'):
+    """
+    Returns a function that behaves similarly to ``open(...)``,
+    but opens compressed files for certain matching extensions, currently
+    ``.bz2`` is treated as bzip2-compression, and ``.gz`` is treated as gzip.
+    """
+    exts = {'.bz2': bz2.BZ2File,
+            '.gz': gzip.open}
+    def maybe_zipped_file(s):
+        ext = os.path.splitext(s)[1]
+        return exts.get(ext, open)(s, mode=mode)
+    return maybe_zipped_file
