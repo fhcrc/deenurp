@@ -176,3 +176,18 @@ def file_opener(mode='r'):
         ext = os.path.splitext(s)[1]
         return exts.get(ext, open)(s, mode=mode)
     return open_file
+
+def which(executable_name, dirs=None):
+    """
+    Find an executable in dirs.
+    If ``dirs`` is not specified, searches $PATH
+    """
+    if not dirs:
+        dirs = os.environ['PATH'].split(os.pathsep)
+    search_paths = (os.path.join(p, executable_name) for p in dirs)
+    executable_paths = (i for i in search_paths
+                        if os.path.exists(i) and os.access(i, os.EX_OK))
+    try:
+        return next(executable_paths)
+    except StopIteration:
+        return None

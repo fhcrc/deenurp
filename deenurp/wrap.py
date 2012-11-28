@@ -14,7 +14,7 @@ from Bio import SeqIO
 import peasel
 from taxtastic.refpkg import Refpkg
 
-from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile
+from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -68,7 +68,12 @@ def redupfile_of_seqs(sequences, **kwargs):
 
 def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
         gamma=False, threads=None, prefix=None):
+
     executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
+    if executable == 'FastTreeMP' and not which('FastTreeMP'):
+        executable = 'FastTree'
+        logging.warn("Multithreaded FastTreeMP not found. Using FastTree")
+
     env = os.environ.copy()
     if threads:
         env['OMP_NUM_THREADS'] = str(threads)
@@ -132,16 +137,30 @@ def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prop=False, point_m
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
+def _cmalign_has_mpi():
+    """
+    Returns whether cmalign was compiled with MPI support
+    """
+    o = subprocess.check_output(['cmalign', '-h'])
+    return '--mpi' in o
+
 def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
         stdout=None):
-    if mpi_args is None:
-        cmd = ['cmalign']
-    else:
+    has_mpi = _cmalign_has_mpi()
+    if (mpi_args is not None) and not has_mpi:
+        logging.warn('MPI arguments %s passed to cmalign_files, '
+                'but cmalign does not appear to have MPI support. '
+                'Running without MPI.',
+                mpi_args)
+    if mpi_args is not None and has_mpi:
         cmd = ['mpirun'] + mpi_args + ['cmalign', '--mpi']
+    else:
+        cmd = ['cmalign']
     cmd.extend(['--sub', '-1', '--dna', '--hbanded'])
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
     subprocess.check_call(cmd, stdout=stdout)
+
 
 def cmalign(sequences, output=None, mpi_args=None, cm=CM):
     """
