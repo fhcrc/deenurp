@@ -164,7 +164,7 @@ def cd(path):
     finally:
         os.chdir(curdir)
 
-def maybe_zipped_file_factory(mode='r'):
+def file_opener(mode='r'):
     """
     Returns a function that behaves similarly to ``open(...)``,
     but opens compressed files for certain matching extensions, currently
@@ -172,7 +172,7 @@ def maybe_zipped_file_factory(mode='r'):
     """
     exts = {'.bz2': bz2.BZ2File,
             '.gz': gzip.open}
-    def maybe_zipped_file(s):
+    def open_file(s):
         ext = os.path.splitext(s)[1]
         return exts.get(ext, open)(s, mode=mode)
-    return maybe_zipped_file
+    return open_file

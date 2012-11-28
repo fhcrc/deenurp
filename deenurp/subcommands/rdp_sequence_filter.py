@@ -7,15 +7,15 @@ import logging
 
 from Bio import SeqIO
 
-from deenurp.util import Counter, maybe_zipped_file_factory
+from deenurp.util import Counter, file_opener
 
 def count_ambiguous(seq):
     s = frozenset('ACGT')
     return sum(i not in s for i in seq)
 
 def build_parser(p):
-    p.add_argument('fasta_file', help="""sequence file""", type=maybe_zipped_file_factory('r'))
-    p.add_argument('seqinfo_file', help="""Sequence metadata""", type=maybe_zipped_file_factory('r'))
+    p.add_argument('fasta_file', help="""sequence file""", type=file_opener('r'))
+    p.add_argument('seqinfo_file', help="""Sequence metadata""", type=file_opener('r'))
     p.add_argument('named_base')
     p.add_argument('unnamed_base')
 

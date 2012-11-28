@@ -13,7 +13,7 @@ from sqlalchemy.sql import select
 from taxtastic.taxonomy import Taxonomy
 from taxtastic import ncbi
 
-from deenurp.util import Counter, memoize, maybe_zipped_file_factory
+from deenurp.util import Counter, memoize, file_opener
 
 def tax_of_genbank(gb):
     """
@@ -80,7 +80,7 @@ def is_type(record):
 def build_parser(p):
     p.add_argument('infile', help="""Input file, gzipped""")
     p.add_argument('database', help="""Path to taxonomy database""")
-    p.add_argument('fasta_out', type=maybe_zipped_file_factory('w'),
+    p.add_argument('fasta_out', type=file_opener('w'),
             help="""Path to write sequences in FASTA format. Specify '.gz' or
             '.bz2' extension to compress.""")
     p.add_argument('output', metavar='tax_out', type=argparse.FileType('w'),

@@ -60,7 +60,8 @@ def _table_exists(con, table_name):
     Returns whether or not ``table_name`` exists in ``con``
     """
     cursor = con.cursor()
-    cursor.execute("""SELECT tbl_name FROM sqlite_master
+    cursor.execute("""SELECT tbl_name
+FROM sqlite_master
 WHERE type = 'table' AND tbl_name = ?""", [table_name])
     return cursor.fetchone() is not None
 
