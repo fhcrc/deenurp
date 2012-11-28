@@ -6,7 +6,6 @@ import argparse
 import contextlib
 import csv
 import operator
-import shlex
 import sqlite3
 
 from Bio import SeqIO

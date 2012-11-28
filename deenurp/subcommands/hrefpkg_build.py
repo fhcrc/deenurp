@@ -16,6 +16,7 @@ import random
 import sys
 import tempfile
 
+from concurrent import futures
 
 from Bio import SeqIO
 from taxtastic.refpkg import Refpkg
@@ -101,9 +102,11 @@ def action(a):
     # Build an hrefpkg
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
     hrefpkgs = []
+    futs = {}
     with open(j('index.csv'), 'w') as fp, \
          open(j('train.fasta'), 'w') as train_fp, \
-         open(j('test.fasta'), 'w') as test_fp:
+         open(j('test.fasta'), 'w') as test_fp, \
+         futures.ThreadPoolExecutor(a.threads) as executor:
         def log_hrefpkg(tax_id):
             path = j(tax_id + '.refpkg')
             fp.write('{0},{0}.refpkg\n'.format(tax_id))
@@ -114,16 +117,25 @@ def action(a):
                 logging.info("Skipping %s", node.tax_id)
                 continue
 
-            logging.info("%s: %s (%d/%d)", node.tax_id, node.name, i+1, len(nodes))
             if os.path.exists(j(node.tax_id + '.refpkg')):
                 logging.warn("Refpkg exists: %s.refpkg. Skipping", node.tax_id)
                 log_hrefpkg(node.tax_id)
                 continue
-            r = tax_id_refpkg(node.tax_id, taxonomy, seqinfo, a.sequence_file,
-                    output_dir=a.output_dir, threads=a.threads,
-                    test_file=test_fp, train_file=train_fp)
-            if r:
-                log_hrefpkg(node.tax_id)
+
+            f = executor.submit(tax_id_refpkg, node.tax_id, taxonomy, seqinfo,
+                    a.sequence_file, output_dir=a.output_dir, test_file=test_fp,
+                    train_file=train_fp)
+            futs[f] = node.tax_id, node.name
+
+        while futs:
+            done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
+            for f in done:
+                tax_id, name = futs.pop(f)
+                r = f.result()
+                if r:
+                    logging.info("Finished refpkg for %s (%s) [%d remaining]", name, tax_id, len(pending))
+                    log_hrefpkg(tax_id)
+            assert len(futs) == len(pending)
 
         # Build index refpkg
         logging.info('Building index.refpkg')
@@ -256,7 +268,7 @@ def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=PER_TAXON, index_rank=
             random.shuffle(node_seqs)
         yield node_seqs[:per_taxon], node_seqs[per_taxon:]
 
-def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
+def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
         output_dir='.',
         index_rank='order', train_file=None, test_file=None):
     """
@@ -329,11 +341,11 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
             wrap.esl_sfetch(sequence_file, test_seq_ids, test_file)
 
         # Cmalign
-        aligned = wrap.cmalign(sequences, output=sto_fp, mpi_args=['-np', str(threads)])
+        aligned = wrap.cmalign(sequences, output=sto_fp, mpi_args=None)
         aligned = list(aligned)
         assert aligned
         # Tree
-        wrap.fasttree(aligned, stats_fp.name, tree_fp, threads=threads, gtr=True)
+        wrap.fasttree(aligned, stats_fp.name, tree_fp, threads=1, gtr=True)
         tree_fp.close()
         sto_fp.close()
         SeqIO.write(aligned, fasta_fp, 'fasta')
@@ -355,7 +367,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
         rp.commit_transaction()
         rp.reroot()
 
-        return rp
+        return rp.path
 
 def partition_taxonomy(taxonomy, partition_below_rank, partition_rank, partition_prop, partition_log=None):
     """
