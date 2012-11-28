@@ -29,7 +29,9 @@ def meta_writer(fp):
 
 class track_attr(object):
     """
-    Track every value seen in ``attr`` in an iterable
+    Track every unique value seen in ``attr`` in an iterable
+
+    Results are stored in ``seen``
     """
     def __init__(self, attr, iterable):
         self.attr = attr
@@ -48,7 +50,7 @@ def build_parser(p):
     mpi_group = p.add_argument_group('Number of processors')
     mpi_group.add_argument('--threads', help="""Number of threads [default:
             %(default)d]""", type=int, default=6)
-    mpi_group.add_argument('--mpi-args', type=shlex.split, default=[])
+    mpi_group.add_argument('--mpi-args', type=shlex.split, default=None)
 
     selection_options = p.add_argument_group('Selection Options')
     selection_options.add_argument('--refs-per-cluster', type=int, default=5,
