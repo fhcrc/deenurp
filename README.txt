@@ -18,9 +18,11 @@ First, install binary dependencies:
         + Run ``pip install PACKAGE`` for every PACKAGE listed in requirements.txt
 
 * uclust 1.1
-* Infernal version 1.0.2, **built with MPI** (http://infernal.janelia.org/)
+* Infernal version 1.0.2, (http://infernal.janelia.org/)
+  Note: If compiled with MPI, ``cmalign`` can be run with multiple cores.
 * pplacer suite (http://matsen.fhcrc.org/pplacer)
-* **Multithreaded** FastTree (``FastTreeMP``) (http://www.microbesonline.org/fasttree/#Install)
+* FastTree 2 (http://www.microbesonline.org/fasttree/#Install)
+  Note: If available, the multithreaded version of FastTree, ``FastTreeMP`` will be used.
 * R
 
     - Package ``ape``:: 
@@ -57,18 +59,18 @@ Creating a sequence set for refpkg building
 -------------------------------------------
 
 ``deenurp filter-outliers``
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Removes sequences from a reference database that are more than a specified
 distance from the centroid of their tax id.
 
 ``deenurp expand-named``
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Expands poorly-represented names in a sequence file by similarity search
 
 ``deenurp cluster-refs``
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Cluster reference sequences, first by tax-id at a specified rank (default:
 species), then by similarity for unnamed sequences or sequences not classified
@@ -78,12 +80,12 @@ Selecting sequences for a reference package
 -------------------------------------------
 
 ``deenurp hrefpkg-build``
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Builds a set of hierarchical reference packages.
 
 ``deenurp search-sequences``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Searches a set of sequences against a FASTA file containing possible reference sequences.
 
@@ -92,7 +94,7 @@ the results and some metadata to a sqlite database for use in
 ``select-references``
 
 ``deenurp select-references``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Given the output of ``search-sequences``, ``select-references`` attempts to find a
 good set of reference sequences.
@@ -102,13 +104,13 @@ to the cluster, (see ``cluster-refs``), selects a set number of sequences to
 serve as references.
 
 ``deenurp add-reps``
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 Fetches sequences from a sequence file which match the taxtable for a reference
 set at a given rank. Useful for adding type strains.
 
 ``deenurp tax2tree``
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 Runs the ``tax2tree`` program on a reference package, updating the ``seq_info``
 file.
