@@ -4,6 +4,7 @@ Wrappers and context managers
 import collections
 import contextlib
 import csv
+import functools
 import logging
 import os
 import os.path
@@ -15,20 +16,22 @@ from taxtastic.refpkg import Refpkg
 
 from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile
 
+"""Path to item in data directory"""
+data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
 
-def data_path(*args):
-    return os.path.join(os.path.dirname(__file__), 'data', *args)
-
+"""16S bacterial covariance model"""
 CM = data_path('bacteria16S_508_mod5.cm')
 
 @contextlib.contextmanager
 def as_refpkg(sequences, threads=None):
     """
-    Build a tree from sequences, generate a temporary reference package
+    Context manager yielding a temporary reference package for a collection of aligned sequences.
+
+    Builds a tree with FastTree, creates a reference package, yields.
     """
     sequences = list(sequences)
-    with ntf(prefix='fast', suffix='.log') as log_fp, \
-         ntf(prefix='fast', suffix='.tre') as tree_fp, \
+    with ntf(prefix='fasttree-', suffix='.log') as log_fp, \
+         ntf(prefix='fasttree-', suffix='.tre') as tree_fp, \
          tempdir(prefix='refpkg') as refpkg_dir:
 
         log_fp.close()
