@@ -23,7 +23,7 @@ data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
 CM = data_path('bacteria16S_508_mod5.cm')
 
 @contextlib.contextmanager
-def as_refpkg(sequences, threads=None):
+def as_refpkg(sequences, name='temp.refpkg', threads=None):
     """
     Context manager yielding a temporary reference package for a collection of aligned sequences.
 
@@ -39,7 +39,7 @@ def as_refpkg(sequences, threads=None):
         fasttree(sequences, log_fp.name, tree_fp, gtr=True, threads=threads)
         tree_fp.close()
 
-        rp = Refpkg(refpkg_dir('temp.refpkg'), create=True)
+        rp = Refpkg(refpkg_dir(name), create=True)
         rp.update_metadata('locus', '')
         rp.update_phylo_model('FastTree', log_fp.name)
         rp.update_file('tree', tree_fp.name)
