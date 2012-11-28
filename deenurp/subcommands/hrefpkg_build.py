@@ -8,6 +8,7 @@ sequences are not available.
 import argparse
 import copy
 import csv
+import functools
 import itertools
 import logging
 import os.path
@@ -38,6 +39,7 @@ def build_parser(p):
     p.add_argument('--threads', type=int, default=12, help="""Number of threads
             [default: %(default)d]""")
     p.add_argument('--only', help="""List of taxids to keep""", type=comma_set)
+    p.add_argument('--output-dir', default='.')
     partition_group = p.add_argument_group('Generate partitiond reference packages',
             """Generate reference packages containing partial coverage at
             a taxon. For validation.""")
@@ -76,7 +78,10 @@ def partition_hrefpkg(a, taxonomy):
 
 def action(a):
     random.seed(a.seed)
-    if os.path.exists('index.refpkg'):
+    j = functools.partial(os.path.join, a.output_dir)
+    if not os.path.isdir(j()):
+        raise IOError('Does not exist: {0}'.format(j()))
+    if os.path.exists(j('index.refpkg')):
         raise IOError('index.refpkg exists.')
 
     with open(a.taxonomy) as fp:
@@ -96,11 +101,11 @@ def action(a):
     # Build an hrefpkg
     nodes = [i for i in taxonomy if i.rank == a.index_rank]
     hrefpkgs = []
-    with open('index.csv', 'w') as fp, \
-         open('train.fasta', 'w') as train_fp, \
-         open('test.fasta', 'w') as test_fp:
+    with open(j('index.csv'), 'w') as fp, \
+         open(j('train.fasta'), 'w') as train_fp, \
+         open(j('test.fasta'), 'w') as test_fp:
         def log_hrefpkg(tax_id):
-            path = tax_id + '.refpkg'
+            path = j(tax_id + '.refpkg')
             fp.write('{0},{0}.refpkg\n'.format(tax_id))
             hrefpkgs.append(path)
 
@@ -110,25 +115,27 @@ def action(a):
                 continue
 
             logging.info("%s: %s (%d/%d)", node.tax_id, node.name, i+1, len(nodes))
-            if os.path.exists(node.tax_id + '.refpkg'):
+            if os.path.exists(j(node.tax_id + '.refpkg')):
                 logging.warn("Refpkg exists: %s.refpkg. Skipping", node.tax_id)
                 log_hrefpkg(node.tax_id)
                 continue
             r = tax_id_refpkg(node.tax_id, taxonomy, seqinfo, a.sequence_file,
-                    threads=a.threads, test_file=test_fp, train_file=train_fp)
+                    output_dir=a.output_dir, threads=a.threads,
+                    test_file=test_fp, train_file=train_fp)
             if r:
                 log_hrefpkg(node.tax_id)
 
         # Build index refpkg
         logging.info('Building index.refpkg')
         index_rp, sequence_ids = build_index_refpkg(hrefpkgs, a.sequence_file,
-                seqinfo, taxonomy, index_rank=a.index_rank)
+                seqinfo, taxonomy, dest=j('index.refpkg'),
+                index_rank=a.index_rank)
 
         # Write unused seqs
         logging.info("Extracting unused sequences")
         seqs = (i for i in SeqIO.parse(a.sequence_file, 'fasta')
                 if i.id not in sequence_ids)
-        c = SeqIO.write(seqs, 'not_in_hrefpkgs.fasta', 'fasta')
+        c = SeqIO.write(seqs, j('not_in_hrefpkgs.fasta'), 'fasta')
         logging.info("%d sequences not in hrefpkgs.", c)
 
 def find_nodes(taxonomy, index_rank, want_rank='species'):
@@ -174,7 +181,7 @@ def load_seqinfo(seqinfo_fp):
     r = csv.DictReader(seqinfo_fp)
     return list(r)
 
-def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
+def build_index_refpkg(hrefpkg_paths, sequence_file, seqinfo, taxonomy,
         dest='index.refpkg', **meta):
     """
     Build an index.refpkg from a set of hrefpkgs
@@ -191,7 +198,7 @@ def build_index_refpkg(hrefpkg_names, sequence_file, seqinfo, taxonomy,
             for i in r:
                 yield i['seqname']
 
-    hrefpkgs = (Refpkg(i, create=False) for i in hrefpkg_names)
+    hrefpkgs = (Refpkg(i, create=False) for i in hrefpkg_paths)
     seqinfo_files = (i.open_resource('seq_info') for i in hrefpkgs)
 
     # Add seqinfo
@@ -250,6 +257,7 @@ def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=PER_TAXON, index_rank=
         yield node_seqs[:per_taxon], node_seqs[per_taxon:]
 
 def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
+        output_dir='.',
         index_rank='order', train_file=None, test_file=None):
     """
     Build a reference package containing all descendants of tax_id from an
@@ -331,7 +339,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, threads=12,
         SeqIO.write(aligned, fasta_fp, 'fasta')
         fasta_fp.close()
 
-        rp = Refpkg(tax_id + '.refpkg', create=True)
+        rp = Refpkg(os.path.join(output_dir, tax_id + '.refpkg'), create=True)
         rp.start_transaction()
         rp.update_file('aln_sto', sto_fp.name)
         rp.update_file('aln_fasta', fasta_fp.name)
