@@ -85,10 +85,13 @@ def action(a):
 
 
     # Write clustering information for sequences with cluster_rank-level
-    # classifications
+    # classificatios
     done = set()
+    cluster_ids = {}
     with a.sequence_out:
         for tax_id, sequences in taxonomic_clustered(taxonomy, a.cluster_rank):
+            for sequence in sequences:
+                cluster_ids[sequence] = tax_id
             done |= set(sequences)
 
         # Fetch sequences
@@ -131,7 +134,6 @@ def action(a):
             shutil.copyfileobj(unnamed_fp, a.sequence_out)
             unnamed_fp.close()
 
-            cluster_ids = {}
             # Cluster remaining sequences into OTUs
             for i, cluster_seqs in enumerate(identify_otus_unnamed(unnamed_fp.name, a.cluster_id)):
                 done |= set(cluster_seqs)
@@ -142,10 +144,7 @@ def action(a):
     with a.seqinfo_out as fp:
         def add_cluster(i):
             """Add a cluster identifier to sequence metadata"""
-            if i.get('tax_id'):
-                i['cluster'] = i['tax_id']
-            else:
-                i['cluster'] = cluster_ids[i['seqname']]
+            i['cluster'] = cluster_ids[i['seqname']]
             return i
         seqinfo_records = (seqinfo.get(i, {'seqname': i}) for i in done)
         seqinfo_records = (add_cluster(i) for i in seqinfo_records)
