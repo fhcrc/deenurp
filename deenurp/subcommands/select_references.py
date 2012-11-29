@@ -15,14 +15,15 @@ from .. import search, select, util
 
 def meta_writer(fp):
     writer = csv.writer(fp, lineterminator='\n')
-    writer.writerow(('seqname', 'cluster_id', 'weight_prop'))
+    writer.writerow(('seqname', 'cluster_id', 'max_weight', 'mean_weight'))
 
     def inner(sequences):
         with fp:
             for sequence in sequences:
                 writer.writerow((sequence.id,
                     sequence.annotations['cluster_name'],
-                    sequence.annotations['weight_prop']))
+                    sequence.annotations['max_weight'],
+                    sequence.annotations['mean_weight']))
                 yield sequence
 
     return inner

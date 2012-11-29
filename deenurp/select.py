@@ -5,6 +5,7 @@ import collections
 import csv
 import itertools
 import logging
+import operator
 import tempfile
 
 from Bio import SeqIO
@@ -75,15 +76,34 @@ def fetch_cluster_members(cluster_info_file, group_field):
             d[i[group_field]].append(i['seqname'])
     return d
 
-def cluster_hit_seqs(con, cluster_name):
-    sql = '''SELECT DISTINCT sequences.name, weight
+def get_sample_weights(con, sequence_names):
+    """
+    Map from sample -> total weight for all samples associated with
+    sequence_names
+    """
+    weights = collections.defaultdict(float)
+    cursor = con.cursor()
+    for sequence in sequence_names:
+        sql = """SELECT samples.name AS sample_name, weight
+        FROM sequences s
+        INNER JOIN sequences_samples ss USING (sequence_id)
+        INNER JOIN samples USING (sample_id)
+        WHERE s.name = ?"""
+        cursor.execute(sql, [sequence])
+        sample, weight = cursor.fetchone()
+        weights[sample] += weight
+    return weights
+
+def sequences_hitting_cluster(con, cluster_name):
+    sql = """SELECT DISTINCT sequences.name
         FROM sequences
         INNER JOIN best_hits USING (sequence_id)
         INNER JOIN ref_seqs USING(ref_id)
-        WHERE cluster_name = ?'''
+        WHERE cluster_name = ?
+        ORDER BY sequences.name"""
     cursor = con.cursor()
     cursor.execute(sql, [cluster_name])
-    return list(cursor)
+    return [name for name, in cursor]
 
 def esl_sfetch_seqs(sequence_file, sequence_names, **kwargs):
     with tempfile.NamedTemporaryFile(prefix='esl', suffix='.fasta') as tf:
@@ -91,11 +111,14 @@ def esl_sfetch_seqs(sequence_file, sequence_names, **kwargs):
         tf.seek(0)
         return list(SeqIO.parse(tf, 'fasta'))
 
-def get_total_weight(con):
-    sql = 'SELECT SUM(weight) FROM sequences'
+def get_total_weight_per_sample(con):
+    sql = """SELECT name, SUM(weight) AS weight
+    FROM sequences_samples
+      INNER JOIN samples USING (sample_id)
+    GROUP BY name"""
     cursor = con.cursor()
     cursor.execute(sql)
-    return cursor.fetchone()[0]
+    return dict(cursor)
 
 def choose_references(deenurp_db, refs_per_cluster=5,
         threads=DEFAULT_THREADS, min_cluster_prop=0.0, mpi_args=None):
@@ -106,35 +129,39 @@ def choose_references(deenurp_db, refs_per_cluster=5,
     params = search.load_params(deenurp_db)
     fasta_file = params['fasta_file']
     ref_fasta = params['ref_fasta']
-    total_weight = get_total_weight(deenurp_db)
+    sample_total_weights = get_total_weight_per_sample(deenurp_db)
     cluster_members = fetch_cluster_members(params['ref_meta'], params['group_field'])
 
     # Iterate over clusters
     cursor = deenurp_db.cursor()
-    cursor.execute('''SELECT cluster_name, total_weight
+    cursor.execute("""SELECT cluster_name, total_weight
             FROM vw_cluster_weights
-            ORDER BY total_weight DESC''')
+            ORDER BY total_weight DESC""")
 
     for cluster_name, cluster_weight in cursor:
-        cluster_seq_names = dict(cluster_hit_seqs(deenurp_db, cluster_name))
+        cluster_seq_names = sequences_hitting_cluster(deenurp_db, cluster_name)
+        sample_weights = get_sample_weights(deenurp_db, cluster_seq_names)
+        norm_sw = {k: v / sample_total_weights[k] for k, v in sample_weights.items()}
+        #min_norm_weight = min(norm_sw.items(), operator.itemgetter(1))
+        max_sample, max_weight = max(norm_sw.items(), key=operator.itemgetter(1))
+
+        logging.info('Cluster %s: Max hit by %s: %.3f%%, %d hits', cluster_name,
+                max_sample, max_weight * 100, len(cluster_seq_names))
+
         cluster_refs = esl_sfetch_seqs(ref_fasta, cluster_members[cluster_name])
-        # cluster_hit_seqs returns unicode: convert to string.
+        # sequences_hitting_cluster returns unicode: convert to string.
         query_seqs = esl_sfetch_seqs(fasta_file, (str(i) for i in cluster_seq_names),
                 use_temp=True)
-        for i in query_seqs:
-            i.annotations['weight'] = cluster_seq_names[i.id]
 
-        if cluster_weight / total_weight < min_cluster_prop:
-            logging.info("Skipping cluster %s. Total weight: %.3f%%",
-                    cluster_name, cluster_weight / total_weight * 100)
-            break
+        if max_weight < min_cluster_prop:
+            logging.info("Skipping.")
+            continue
 
-        logging.info('Cluster %s: %.3f%%, %d hits', cluster_name,
-                cluster_weight / total_weight * 100, len(cluster_seq_names))
         ref_names = select_sequences_for_cluster(cluster_refs, query_seqs, mpi_args=mpi_args,
                 keep_leaves=refs_per_cluster, threads=threads)
         refs = (i for i in cluster_refs if i.id in ref_names)
         for ref in refs:
             ref.annotations.update({'cluster_name': cluster_name,
-                'weight_prop': cluster_weight/total_weight})
+                'max_weight': max_weight,
+                'mean_weight': sum(norm_sw.values())/len(norm_sw)})
             yield ref
