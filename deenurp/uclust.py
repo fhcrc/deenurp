@@ -60,7 +60,7 @@ def _check_call(cmd, **kwargs):
     ``subprocess.check_call``
     """
     cmd = map(str, cmd)
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     subprocess.check_call(cmd, **kwargs)
 
 
@@ -198,8 +198,8 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
                 records = (i for i in records if i.type != 'H' or i.pct_id >= id_cutoff)
                 w.writerows(records)
 
-def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID,
-        quiet=False, usersort=False, trunclabels=False):
+def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
+        usersort=False, trunclabels=False, wordcountreject=True):
     """
     Cluster de novo
     """
@@ -207,6 +207,8 @@ def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID,
             '--input', sequence_file,
             '--uc', output,
             '--id', str(pct_id)]
+    if not wordcountreject:
+        cmd.append('--nowordcountreject')
     if quiet:
         cmd.append('--quiet')
     if usersort:

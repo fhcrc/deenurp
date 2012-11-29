@@ -5,14 +5,13 @@ import collections
 import csv
 import itertools
 import logging
-import subprocess
 import tempfile
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from . import search
+from . import search, uclust
 from .util import as_fasta, tempdir
 from .wrap import cmalign, as_refpkg, redupfile_of_seqs, \
                   rppr_min_adcl, guppy_redup, pplacer, esl_sfetch
@@ -26,15 +25,17 @@ def seqrecord(name, residues, **annotations):
     return sr
 
 def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
-    with as_fasta(sequences) as fp, tempfile.NamedTemporaryFile() as ntf:
-        cmd = ['usearch', '-cluster', fp, '-seedsout', ntf.name, '-id',
-                str(threshold),
-                '-usersort',
-                '-quiet', '-nowordcountreject']
-        subprocess.check_call(cmd)
-        r = frozenset(i.id for i in SeqIO.parse(ntf, 'fasta'))
-    logging.info("Clustered %d to %d", len(sequences), len(r))
-    return [i for i in sequences if i.id in r]
+    """
+    Cluster ``sequences`` at ``threshold``, returning seeds.
+    """
+    with as_fasta(sequences) as fasta_name, tempfile.NamedTemporaryFile(prefix='uc-') as ntf:
+        uclust.sort_and_cluster(fasta_name, ntf.name, pct_id=threshold,
+                quiet=True, wordcountreject=False)
+        ntf.seek(0)
+        r = list(uclust.cluster_seeds(fasta_name, ntf))
+
+    logging.debug("Clustered %d to %d", len(sequences), len(r))
+    return r
 
 def select_sequences_for_cluster(ref_seqs, query_seqs, keep_leaves=5,
         threads=DEFAULT_THREADS, mpi_args=None):
