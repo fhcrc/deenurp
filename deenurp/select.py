@@ -142,11 +142,10 @@ def choose_references(deenurp_db, refs_per_cluster=5,
         cluster_seq_names = sequences_hitting_cluster(deenurp_db, cluster_name)
         sample_weights = get_sample_weights(deenurp_db, cluster_seq_names)
         norm_sw = {k: v / sample_total_weights[k] for k, v in sample_weights.items()}
-        #min_norm_weight = min(norm_sw.items(), operator.itemgetter(1))
         max_sample, max_weight = max(norm_sw.items(), key=operator.itemgetter(1))
 
-        logging.info('Cluster %s: Max hit by %s: %.3f%%, %d hits', cluster_name,
-                max_sample, max_weight * 100, len(cluster_seq_names))
+        logging.info('Cluster %s: Max hit by %s: %.3f%%, %d hits',
+                cluster_name, max_sample, max_weight * 100, len(cluster_seq_names))
 
         cluster_refs = esl_sfetch_seqs(ref_fasta, cluster_members[cluster_name])
         # sequences_hitting_cluster returns unicode: convert to string.
