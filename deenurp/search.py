@@ -90,9 +90,8 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD):
         cluster_info = _load_cluster_info(fp, p['group_field'])
 
     @memoize
-    def add_hit(hit_name):
+    def add_hit(hit_name, clusterj):
         ins = "INSERT INTO ref_seqs(name, cluster_name) VALUES (?, ?)"
-        cluster = cluster_info[hit_name]
         cursor.execute(ins, [hit_name, cluster])
         return cursor.lastrowid
 
@@ -117,9 +116,16 @@ INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
 VALUES (?, ?, ?, ?)
 """
         for _, hits in by_seq:
+            seen_clusters = set()
             for i, h in enumerate(hits):
+                cluster = cluster_info[h.target_label]
+                if cluster in seen_clusters:
+                    continue
+                else:
+                    seen_clusters.add(cluster)
+
                 # Hit id
-                hit_id = add_hit(h.target_label)
+                hit_id = add_hit(h.target_label, cluster)
                 cursor.execute(sql, [get_seq_id(h.query_label), i, hit_id, h.pct_id])
                 count += 1
 
