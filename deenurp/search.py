@@ -3,6 +3,7 @@ Tools for building a reference set
 """
 import collections
 import csv
+import functools
 import logging
 import operator
 import sqlite3
@@ -18,16 +19,29 @@ from .util import SingletonDefaultDict, memoize
 SELECT_THRESHOLD = 0.05
 
 # Utility stuff
-def dedup_info_to_counts(fp):
+def dedup_info_to_counts(fp, specimen_map=None):
     """
     Convert a guppy dedup file (seqid1, seqid2, count) into a dictionary
-    mapping from seqid1->total count
+    mapping {seqid:{specimen:count}}
     """
-    result = collections.defaultdict(float)
+    if specimen_map is None:
+        specimen_map = collections.defaultdict(str)
+    result = collections.defaultdict(functools.partial(collections.defaultdict, float))
     rows = csv.reader(fp)
-    for i, _, c in rows:
-        result[i] += float(c)
+    for i, j, c in rows:
+        result[i][specimen_map[j]] += float(c)
     return result
+
+def load_specimen_map(fp, header=False):
+    """
+    Load a pplacer-compatible specimen map
+
+    Returns a dict mapping from {sequence:specimen}
+    """
+    r = csv.reader(fp)
+    if header:
+        next(r)
+    return dict(r)
 
 def _load_cluster_info(fp, group_field='cluster'):
     r = csv.DictReader(fp)
@@ -136,17 +150,34 @@ def _load_sequences(con, sequence_file, weights=None):
     Load sequences from sequence_file into database
     """
     if weights is None:
-        weights = SingletonDefaultDict(1.0)
-
-    sql = """INSERT INTO sequences (name, length, weight)
-VALUES (?, ?, ?)"""
+        weights = SingletonDefaultDict({'default': 1.0})
+    seq_count = 0;
+    @memoize
+    def get_sample_id(sample_name):
+        cursor = con.cursor()
+        cursor.execute("""SELECT sample_id FROM samples WHERE name = ?""", [sample_name])
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            cursor.execute("""INSERT INTO samples (name) VALUES (?)""", [sample_name])
+            return cursor.lastrowid
 
     sequences = SeqIO.parse(sequence_file, 'fasta')
-    records = ((i.id, len(i), weights[i.id])
-               for i in sequences)
     cursor = con.cursor()
-    cursor.executemany(sql, records)
-    return cursor.rowcount
+    sequence_insert_sql = """INSERT INTO sequences (name, length)
+VALUES (?, ?)"""
+    for sequence in sequences:
+        cursor.execute(sequence_insert_sql, [sequence.id, len(sequence)])
+        seq_id = cursor.lastrowid
+        seq_count += 1
+        for sample, weight in weights[sequence.id].items():
+            sample_id = get_sample_id(sample)
+            cursor.execute("""INSERT INTO sequences_samples
+                    (sequence_id, sample_id, weight)
+                    VALUES (?, ?, ?)""",
+                    [seq_id, sample_id, weight])
+    return seq_count
 
 def _create_tables(con, ref_fasta, ref_meta, fasta_file,
         maxaccepts=1, maxrejects=8, search_id=0.99, quiet=True,
@@ -159,14 +190,26 @@ def _create_tables(con, ref_fasta, ref_meta, fasta_file,
 
 # Database schema
 SCHEMA = """
+CREATE TABLE samples (
+  sample_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR UNIQUE
+);
+
 CREATE TABLE sequences (
   sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
   name VARCHAR,
-  length INT,
+  length INT
+);
+CREATE UNIQUE INDEX ix_sequences_name ON sequences(name);
+
+CREATE TABLE sequences_samples (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sequence_id INT REFERENCES sequences(sequence_id) ON DELETE CASCADE,
+  sample_id INT REFERENCES samples(sample_id) ON DELETE CASCADE,
   weight FLOAT
 );
-
-CREATE UNIQUE INDEX ix_sequences_name ON sequences(name);
+CREATE INDEX ix_sequences_samples_sequence_id ON sequences_samples(sequence_id);
+CREATE INDEX ix_sequences_samples_sample_id ON sequences_samples(sample_id);
 
 CREATE TABLE ref_seqs (
   ref_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -194,16 +237,23 @@ CREATE TABLE params (
 
 CREATE VIEW vw_cluster_weights AS
 SELECT cluster_name, SUM(weight) AS total_weight FROM
-(SELECT DISTINCT s.sequence_id, s.weight, ref_seqs.cluster_name
+(SELECT DISTINCT s.sequence_id, ss.weight as weight, ref_seqs.cluster_name
  FROM sequences s
+     INNER JOIN sequences_samples ss USING (sequence_id)
      INNER JOIN best_hits USING (sequence_id)
      INNER JOIN ref_seqs USING (ref_id)) q
 GROUP BY cluster_name;
+
+CREATE VIEW vw_sample_weights AS
+SELECT s.sample_id, s.name, SUM(ss.weight) AS total_weight
+FROM samples s
+INNER JOIN sequences_samples ss USING (sample_id)
+GROUP BY s.sample_id, s.name
 """
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
-        maxaccepts=1, maxrejects=8, search_id=0.99, select_threshold=SELECT_THRESHOLD,
-        quiet=True, group_field='cluster'):
+        maxaccepts=1, maxrejects=8, search_id=0.99,
+        select_threshold=SELECT_THRESHOLD, quiet=True, group_field='cluster'):
     """
     Create a database of sequences searched against a sequence database for
     reference set creation.

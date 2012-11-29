@@ -4,6 +4,7 @@ candidates.
 """
 
 import argparse
+import collections
 import sqlite3
 
 from .. import search
@@ -19,6 +20,10 @@ def build_parser(p):
     p.add_argument('--group-field', help="""Column to indicate group
             membership for a reference sequence (e.g., OTU; NCBI taxon id)
             [default: %(default)s]""", default='cluster')
+    p.add_argument('--specimen-map',
+            help="""CSV file containing two-column rows, with read name in the
+            first, specimen identifier in the second [compatible with pplacer
+            split placefiles]""", type=argparse.FileType('r'))
     uc = p.add_argument_group('UCLUST')
     uc.add_argument('--maxaccepts', default=5, type=int,
             help="""[default: %(default)d]""")
@@ -32,10 +37,17 @@ def build_parser(p):
 
 def action(args):
     con = sqlite3.connect(args.output)
+
+    specimens = collections.defaultdict(str)
+    if args.specimen_map:
+        with args.specimen_map as fp:
+            specimens = search.load_specimen_map(fp)
+    else:
+        specimens = collections.defaultdict(str)
     weights = None
     if args.weights:
         with args.weights:
-            weights = search.dedup_info_to_counts(args.weights)
+            weights = search.dedup_info_to_counts(args.weights, specimens)
         assert weights
     search.create_database(con, args.sequence_file, ref_fasta=args.ref_database,
             ref_meta=args.ref_meta,

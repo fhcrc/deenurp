@@ -24,9 +24,23 @@ GA05AQR02HZ4VX,GLKT0ZE02GQ2FO,1""")
 
     def test_basic(self):
         actual = search.dedup_info_to_counts(self.s)
-        self.assertEqual({'FUM0LCO02JSVPV': 1.0,
-            'FUM0LCO01DPWLL': 3.0,
-            'GA05AQR02HZ4VX': 3.0}, actual)
+        self.assertEqual({'FUM0LCO02JSVPV': {'default': 1.0},
+            'FUM0LCO01DPWLL': {'default': 3.0},
+            'GA05AQR02HZ4VX': {'default': 3.0}}, actual)
+
+    def test_with_sample_map(self):
+        m = {'FUM0LCO01DPWLL': 'A',
+             'GA05AQR02H61T7': 'B',
+             'GA05AQR02HZ4VX': 'B',
+             'GA05AQR02IGIUG': 'C',
+             'GLKT0ZE02GQ2FO': 'A',
+             'FUM0LCO02JSVPV': 'A'}
+        actual = search.dedup_info_to_counts(self.s, m)
+        self.assertEqual(
+                {'FUM0LCO02JSVPV': {'A': 1.0},
+                 'FUM0LCO01DPWLL': {'A': 2.0, 'B': 1.0},
+                 'GA05AQR02HZ4VX': {'A': 1.0, 'B': 1.0, 'C': 1.0}},
+                actual)
 
 TestHit = collections.namedtuple('TestHit', ['query_label', 'target_label', 'pct_id'])
 
