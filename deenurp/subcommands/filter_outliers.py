@@ -9,7 +9,6 @@ import logging
 import os.path
 import subprocess
 import sys
-import threading
 
 from concurrent import futures
 
@@ -77,7 +76,7 @@ def filter_sequences(sequence_file, cutoff):
         a_fasta.flush()
         return run_r_find_outliers(a_fasta.name, cutoff)
 
-def filter_worker(sequence_file, node, seqs, distance_cutoff, sfetch_lock, log_taxid=None):
+def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
     """
     Worker task for running filtering tasks.
 
@@ -88,11 +87,12 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, sfetch_lock, log_t
     :distance_cutoff: Distance cutoff for medoid filtering
     :sfetch_lock: Lock to acquire to retrieving sequences from ``sequence_file``
     :log_taxid: Optional function to log tax_id activity.
+
+    :returns: Set of sequences to *keep*
     """
     with util.ntf(prefix='to_filter', suffix='.fasta') as tf:
         # Extract sequences
-        with sfetch_lock:
-            wrap.esl_sfetch(sequence_file, seqs, tf)
+        wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
         prune = frozenset(filter_sequences(tf.name, distance_cutoff))
         assert not prune - seqs
@@ -131,7 +131,6 @@ def action(a):
         nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
         futs = {}
-        sfetch_lock = threading.Lock()
         with futures.ThreadPoolExecutor(a.threads) as executor:
             for i, node in enumerate(nodes):
                 seqs = frozenset(node.subtree_sequence_ids())
@@ -148,8 +147,7 @@ def action(a):
                         node=node,
                         seqs=seqs,
                         distance_cutoff=a.distance_cutoff,
-                        log_taxid=log_taxid,
-                        sfetch_lock=sfetch_lock)
+                        log_taxid=log_taxid)
                 futs[f] = {'n_seqs': len(seqs), 'node': node}
 
             complete = 0
@@ -158,7 +156,6 @@ def action(a):
                 complete += len(done)
                 sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(complete,
                     complete+len(pending)))
-                sys.stderr.flush()
                 for f in done:
                     info = futs.pop(f)
                     kept = f.result()
