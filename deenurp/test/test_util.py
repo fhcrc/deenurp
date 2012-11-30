@@ -31,6 +31,9 @@ class MemoizeTestCase(unittest.TestCase):
         expected = d.pop('test')
 
         self.assertEqual(expected, m('test'))
+        self.assertEqual([expected], list(m.cache.values()))
+        m.cache.clear()
+        self.assertIsNone(m('test'))
 
 class MaybeTempFileTestCase(unittest.TestCase):
     def test_tempfile(self):
