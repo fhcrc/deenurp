@@ -19,24 +19,24 @@ from .util import SingletonDefaultDict, memoize
 SELECT_THRESHOLD = 0.05
 
 # Utility stuff
-def dedup_info_to_counts(fp, specimen_map=None):
+def dedup_info_to_counts(fp, sample_map=None):
     """
     Convert a guppy dedup file (seqid1, seqid2, count) into a dictionary
-    mapping {seqid:{specimen:count}}
+    mapping {seqid:{sample:count}}
     """
-    if specimen_map is None:
-        specimen_map = collections.defaultdict(str)
+    if sample_map is None:
+        sample_map = SingletonDefaultDict('default')
     result = collections.defaultdict(functools.partial(collections.defaultdict, float))
     rows = csv.reader(fp)
     for i, j, c in rows:
-        result[i][specimen_map[j]] += float(c)
+        result[i][sample_map[j]] += float(c)
     return result
 
-def load_specimen_map(fp, header=False):
+def load_sample_map(fp, header=False):
     """
-    Load a pplacer-compatible specimen map
+    Load a pplacer-compatible sample map
 
-    Returns a dict mapping from {sequence:specimen}
+    Returns a dict mapping from {sequence:sample}
     """
     r = csv.reader(fp)
     if header:
