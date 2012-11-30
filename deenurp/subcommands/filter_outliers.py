@@ -8,6 +8,10 @@ import csv
 import logging
 import os.path
 import subprocess
+import sys
+import threading
+
+from concurrent import futures
 
 from Bio import SeqIO
 from taxtastic.taxtable import TaxNode
@@ -61,17 +65,41 @@ def run_r_find_outliers(sequence_file, cutoff):
         subprocess.check_call(cmd)
         return [i.strip() for i in tf]
 
-def filter_sequences(sequence_file, cutoff, threads=12):
+def filter_sequences(sequence_file, cutoff):
     with util.ntf(prefix='cmalign', suffix='.sto') as a_sto, \
          util.ntf(prefix='cmalign', suffix='.fasta') as a_fasta, \
          open(os.devnull) as devnull:
         # Align
         wrap.cmalign_files(sequence_file, a_sto.name,
-                stdout=devnull, mpi_args=['-np', str(threads)])
+                stdout=devnull, mpi_args=None)
         # APE requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
         a_fasta.flush()
         return run_r_find_outliers(a_fasta.name, cutoff)
+
+def filter_worker(sequence_file, node, seqs, distance_cutoff, sfetch_lock, log_taxid=None):
+    """
+    Worker task for running filtering tasks.
+
+    Arguments:
+    :sequence_file: Complete sequence file
+    :node: Taxonomic node being filtered
+    :seqs: set containing the names of sequences to keep
+    :distance_cutoff: Distance cutoff for medoid filtering
+    :sfetch_lock: Lock to acquire to retrieving sequences from ``sequence_file``
+    :log_taxid: Optional function to log tax_id activity.
+    """
+    with util.ntf(prefix='to_filter', suffix='.fasta') as tf:
+        # Extract sequences
+        with sfetch_lock:
+            wrap.esl_sfetch(sequence_file, seqs, tf)
+        tf.flush()
+        prune = frozenset(filter_sequences(tf.name, distance_cutoff))
+        assert not prune - seqs
+        if log_taxid:
+            log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
+                      len(prune))
+        return seqs - prune
 
 def action(a):
     # Load taxonomy
@@ -87,15 +115,13 @@ def action(a):
     # Sequences which are classified above the desired rank should just be kept
     kept_ids = frozenset(sequences_above_rank(taxonomy, a.filter_rank))
 
+    log_taxid = None
     if a.log:
         writer = csv.writer(a.log, lineterminator='\n',
                 quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(('tax_id', 'tax_name', 'n', 'kept', 'pruned'))
         def log_taxid(tax_id, tax_name, n, kept, pruned):
             writer.writerow((tax_id, tax_name, n, kept, pruned))
-    else:
-        def log_taxid(*args):
-            pass
 
     with a.output_fp as fp, a.log or util.nothing():
         logging.info('Keeping %d sequences classified above %s', len(kept_ids), a.filter_rank)
@@ -103,38 +129,53 @@ def action(a):
 
         # For each filter-rank, filter
         nodes = [i for i in taxonomy if i.rank == a.filter_rank]
-        for i, node in enumerate(nodes):
-            seqs = frozenset(node.subtree_sequence_ids())
-            if not seqs:
-                logging.warn("No sequences for %s (%s)", node.tax_id, node.name)
-                log_taxid(node.tax_id, node.name, 0, 0, 0)
-                continue
-            elif len(seqs) == 1:
-                logging.warn('Only 1 sequence for %s (%s). Dropping', node.tax_id, node.name)
-                continue
 
-            with util.ntf(prefix='to_filter', suffix='.fasta') as tf:
-                # Extract sequences
-                wrap.esl_sfetch(a.sequence_file, seqs,
-                        tf)
-                tf.flush()
-                prune = frozenset(filter_sequences(tf.name, a.distance_cutoff))
-                assert not prune - seqs
-                kept_ids |= seqs - prune
-                log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
-                          len(prune))
-                logging.info("Pruned %d of %d sequences for %s (%s). [%d/%d]",
-                        len(prune), len(seqs),
-                        node.tax_id, node.name, i + 1, len(nodes))
+        futs = {}
+        sfetch_lock = threading.Lock()
+        with futures.ThreadPoolExecutor(a.threads) as executor:
+            for i, node in enumerate(nodes):
+                seqs = frozenset(node.subtree_sequence_ids())
+                if not seqs:
+                    logging.warn("No sequences for %s (%s)", node.tax_id, node.name)
+                    log_taxid(node.tax_id, node.name, 0, 0, 0)
+                    continue
+                elif len(seqs) == 1:
+                    logging.warn('Only 1 sequence for %s (%s). Dropping', node.tax_id, node.name)
+                    continue
 
-                # Extract
-                wrap.esl_sfetch(a.sequence_file, seqs - prune, fp)
+                f = executor.submit(filter_worker,
+                        sequence_file=a.sequence_file,
+                        node=node,
+                        seqs=seqs,
+                        distance_cutoff=a.distance_cutoff,
+                        log_taxid=log_taxid,
+                        sfetch_lock=sfetch_lock)
+                futs[f] = {'n_seqs': len(seqs), 'node': node}
+
+            complete = 0
+            while futs:
+                done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
+                complete += len(done)
+                sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(complete,
+                    complete+len(pending)))
+                sys.stderr.flush()
+                for f in done:
+                    info = futs.pop(f)
+                    kept = f.result()
+                    kept_ids |= kept
+                    if len(kept) != info['n_seqs']:
+                        logging.warn('Pruned %d/%d sequences for %s (%s)',
+                                info['n_seqs'] - len(kept), info['n_seqs'],
+                                info['node'].tax_id, info['node'].name)
+                    # Extract
+                    wrap.esl_sfetch(a.sequence_file, kept, fp)
 
     # Filter seqinfo
-    with open(a.seqinfo_file.name) as fp:
-        r = csv.DictReader(fp)
-        rows = (i for i in r if i['seqname'] in kept_ids)
-        with a.filtered_seqinfo as ofp:
-            w = csv.DictWriter(ofp, r.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
-            w.writeheader()
-            w.writerows(rows)
+    if a.filtered_seqinfo:
+        with open(a.seqinfo_file.name) as fp:
+            r = csv.DictReader(fp)
+            rows = (i for i in r if i['seqname'] in kept_ids)
+            with a.filtered_seqinfo as ofp:
+                w = csv.DictWriter(ofp, r.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
+                w.writeheader()
+                w.writerows(rows)
