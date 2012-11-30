@@ -90,7 +90,10 @@ def get_sample_weights(con, sequence_names):
         INNER JOIN samples USING (sample_id)
         WHERE s.name = ?"""
         cursor.execute(sql, [sequence])
-        sample, weight = cursor.fetchone()
+        res = cursor.fetchone()
+        if not res:
+            continue
+        sample, weight = res
         weights[sample] += weight
     return weights
 
