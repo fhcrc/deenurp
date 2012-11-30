@@ -7,8 +7,9 @@ from Bio import SeqIO
 
 from deenurp import wrap
 from deenurp.test import util
+from deenurp.util import which
 
-@unittest.skipUnless(util.which('cmalign'), "cmalign not found.")
+@unittest.skipUnless(which('cmalign'), "cmalign not found.")
 class CmAlignTestCase(unittest.TestCase):
     def setUp(self):
         self.sequences = list(SeqIO.parse(util.data_path('test_input.fasta'), 'fasta'))
@@ -25,7 +26,7 @@ class CMTestCase(unittest.TestCase):
     def test_find_cm(self):
         self.assertTrue(os.path.isfile(wrap.CM))
 
-@unittest.skipUnless(util.which('FastTree'), "FastTree not found")
+@unittest.skipUnless(which('FastTree'), "FastTree not found")
 class AsRefpkgTestCase(unittest.TestCase):
     def setUp(self):
         self.sequences = SeqIO.parse(
@@ -35,7 +36,7 @@ class AsRefpkgTestCase(unittest.TestCase):
         with wrap.as_refpkg(self.sequences) as refpkg:
             self.assertTrue(os.path.isdir(refpkg.path))
 
-            if util.which('rppr'):
+            if which('rppr'):
                 out = subprocess.check_output(['rppr', 'check', '-c', refpkg.path])
                 self.assertTrue('OK!' in out, out)
 

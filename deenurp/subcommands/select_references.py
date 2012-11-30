@@ -6,7 +6,6 @@ import argparse
 import contextlib
 import csv
 import operator
-import shlex
 import sqlite3
 
 from Bio import SeqIO
@@ -48,10 +47,8 @@ def build_parser(p):
     p.add_argument('search_db', help="""Output of `deenurp search-sequences`""")
     p.add_argument('output', help="Output file (fasta)", type=argparse.FileType('w'))
 
-    mpi_group = p.add_argument_group('Number of processors')
-    mpi_group.add_argument('--threads', help="""Number of threads [default:
+    p.add_argument('--threads', help="""Number of threads [default:
             %(default)d]""", type=int, default=6)
-    mpi_group.add_argument('--mpi-args', type=shlex.split, default=None)
 
     selection_options = p.add_argument_group('Selection Options')
     selection_options.add_argument('--refs-per-cluster', type=int, default=5,
@@ -86,8 +83,7 @@ def action(args):
         with contextlib.closing(search_db):
             sequences = select.choose_references(search_db,
                     args.refs_per_cluster,
-                    threads=args.threads, min_cluster_prop=args.min_mass_prop,
-                    mpi_args=args.mpi_args)
+                    threads=args.threads, min_cluster_prop=args.min_mass_prop)
 
             with args.output as fp:
                 # Unique IDs

@@ -24,7 +24,7 @@ class run_audit(Command):
 
         warns = 0
         # Define top-level directories
-        dirs = ('deenurp', )
+        dirs = 'deenurp',
         for dir in dirs:
             for root, _, files in os.walk(dir):
                 for file in files:

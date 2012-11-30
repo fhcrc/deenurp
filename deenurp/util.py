@@ -64,6 +64,7 @@ def memoize(fn):
             result = fn(*args)
             cache[args] = result
             return result
+    inner.cache = cache
     return inner
 
 def unique(iterable, key=lambda x: x):
