@@ -130,8 +130,9 @@ def action(a):
         # For each filter-rank, filter
         nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
-        futs = {}
+        # Filter each tax_id, running in ``--threads`` tasks in parallel
         with futures.ThreadPoolExecutor(a.threads) as executor:
+            futs = {}
             for i, node in enumerate(nodes):
                 seqs = frozenset(node.subtree_sequence_ids())
                 if not seqs:
