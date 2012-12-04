@@ -1,5 +1,6 @@
 import os.path
 import subprocess
+import tempfile
 import unittest
 
 from Bio import SeqIO
@@ -38,9 +39,28 @@ class AsRefpkgTestCase(unittest.TestCase):
                 out = subprocess.check_output(['rppr', 'check', '-c', refpkg.path])
                 self.assertTrue('OK!' in out, out)
 
+@unittest.skipUnless(util.which('rppr'), "rppr not found")
+class RpprMinAdclTreeTestCase(unittest.TestCase):
+    def setUp(self):
+        self.tf = tempfile.NamedTemporaryFile(prefix='adcl', suffix='.tre')
+        self.tf.write("((C000721552:0.20692,C002038857:0.00015)0.844:0.01031,C002038856:0.00014,((C002963332:0.08558,(C001550734:0.06763,((C000004779:0.03889,C002963310:0.04622)0.633:0.00151,(C002963318:0.00014,C002963266:0.00014)0.697:0.00016)0.992:0.15253)0.889:0.07332)0.924:0.07668,C002038858:0.01032)0.907:0.00014);\n")
+        self.tf.flush()
+
+    def tearDown(self):
+        self.tf.close()
+
+    def test_min_adcl_prune3(self):
+        prune_seqs = wrap.rppr_min_adcl_tree(self.tf.name, 7)
+        self.assertEqual(3, len(prune_seqs))
+
+    def test_min_adcl_prune7(self):
+        prune_seqs = wrap.rppr_min_adcl_tree(self.tf.name, 3)
+        self.assertEqual(7, len(prune_seqs))
+
+
 def suite():
     s = unittest.TestSuite()
-    classes = [CmAlignTestCase, CMTestCase]
+    classes = [CmAlignTestCase, CMTestCase, RpprMinAdclTreeTestCase]
     for cls in classes:
         s.addTests(unittest.makeSuite(cls))
 

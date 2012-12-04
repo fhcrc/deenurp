@@ -1,5 +1,5 @@
 """
-Wrappers and context managers
+Wrappers and context managers around external programs.
 """
 import collections
 import contextlib
@@ -120,17 +120,33 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
 
     return jplace
 
-def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prop=False, point_mass=True,
+def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_mass=True,
         always_include=None):
     """
     Run rppr min_adcl on the given jplace file, cutting to the given number of leaves
+    Returns the names of the leaves *to remove*.
     """
     cmd = ['rppr', 'min_adcl', '--algorithm', algorithm, jplace, '--leaves',
            str(leaves)]
     if point_mass:
         cmd.append('--point-mass')
-    if posterior_prop:
+    if posterior_prob:
         cmd.append('--pp')
+    if always_include:
+        cmd.extend(('--always-include', always_include))
+    logging.info(' '.join(cmd))
+    output = subprocess.check_output(cmd)
+    return output.splitlines()
+
+def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
+        always_include=None):
+    """
+    Run rppr min_adcl_tree on the given newick tree file, cutting to the given number of leaves.
+
+    Returns the names of the leaves *to remove*.
+    """
+    cmd = ['rppr', 'min_adcl_tree', '--algorithm', algorithm, newick_file, '--leaves',
+           str(leaves)]
     if always_include:
         cmd.extend(('--always-include', always_include))
     logging.info(' '.join(cmd))
