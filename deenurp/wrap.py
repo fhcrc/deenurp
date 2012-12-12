@@ -95,7 +95,7 @@ def fasttree(sequences, output_fp, log_path=None, quiet=True, gtr=False,
 
 def guppy_redup(placefile, redup_file, output):
     cmd = ['guppy', 'redup', '-m', placefile, '-d', redup_file, '-o', output]
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     subprocess.check_call(cmd)
 
 def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, quiet=True):
@@ -115,7 +115,7 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
     stdout = open(os.devnull, 'w') if quiet else nothing()
 
     with stdout:
-        logging.info(' '.join(cmd))
+        logging.debug(' '.join(cmd))
         subprocess.check_call(cmd, stdout=stdout)
 
     assert os.path.exists(jplace)
@@ -136,7 +136,7 @@ def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_m
         cmd.append('--pp')
     if always_include:
         cmd.extend(('--always-include', always_include))
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
@@ -151,7 +151,7 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
            str(leaves)]
     if always_include:
         cmd.extend(('--always-include', always_include))
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
