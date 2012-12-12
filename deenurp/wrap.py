@@ -36,7 +36,7 @@ def as_refpkg(sequences, name='temp.refpkg', threads=None):
 
         log_fp.close()
 
-        fasttree(sequences, log_fp.name, tree_fp, gtr=True, threads=threads)
+        fasttree(sequences, log_path=log_fp.name, output_fp=tree_fp, gtr=True, threads=threads)
         tree_fp.close()
 
         rp = Refpkg(refpkg_dir(name), create=True)
@@ -66,7 +66,7 @@ def redupfile_of_seqs(sequences, **kwargs):
         tf.close()
         yield tf.name
 
-def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
+def fasttree(sequences, output_fp, log_path=None, quiet=True, gtr=False,
         gamma=False, threads=None, prefix=None):
 
     executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
@@ -77,10 +77,12 @@ def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
     env = os.environ.copy()
     if threads:
         env['OMP_NUM_THREADS'] = str(threads)
-    cmd = (prefix or []) + [executable, '-nt', '-log', log_path]
+    cmd = (prefix or []) + [executable, '-nt']
     for k, v in (('-gtr', gtr), ('-gamma', gamma), ('-quiet', quiet)):
         if v:
             cmd.append(k)
+    if log_path is not None:
+        cmd.extend(['-log', log_path])
 
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE, env=env)

@@ -345,7 +345,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
         aligned = list(aligned)
         assert aligned
         # Tree
-        wrap.fasttree(aligned, stats_fp.name, tree_fp, threads=1, gtr=True)
+        wrap.fasttree(aligned, log_path=stats_fp.name, output_fp=tree_fp, threads=1, gtr=True)
         tree_fp.close()
         sto_fp.close()
         SeqIO.write(aligned, fasta_fp, 'fasta')

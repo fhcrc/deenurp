@@ -44,7 +44,7 @@ def fill_lonely(node_id, parent_id, full_taxonomy, full_fasta):
 
             # Run FastTree
             sys.stderr.write('Node {0}: FastTree {1} sequences\r'.format(node_id, len(other_sequence_ids)))
-            wrap.fasttree(aligned, '/dev/null', tree_fp, gtr=True)
+            wrap.fasttree(aligned, tree_fp, gtr=True)
             tree_fp.close()
 
             # Select reps
