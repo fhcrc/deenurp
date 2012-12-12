@@ -54,6 +54,9 @@ class SingletonDefaultDict(dict):
     def __getitem__(self, key):
         return self.val
 
+    def __contains__(self, key):
+        return True
+
 def memoize(fn):
     cache = {}
     @functools.wraps(fn)
