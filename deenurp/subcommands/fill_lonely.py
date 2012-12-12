@@ -21,18 +21,40 @@ RANK = 'species'
 PARENT_RANK = 'genus'
 
 def is_lonely(node, parent_rank=PARENT_RANK):
+    """
+    Returns whether a node is lonely [the only node with rank ``node.rank``
+    under the parent].
+
+    Nodes without a parent at ``parent_rank`` are defined to be *non-lonely*
+    """
     try:
         parent = node.at_rank(parent_rank)
         return sum(True for i in parent if i.rank == node.rank) == 1
     except KeyError:
         return False
 
-def fill_lonely(node_id, parent_id, full_taxonomy, full_fasta):
+def fill_lonely_worker(node_id, parent_id, full_taxonomy, full_fasta):
+    """
+    Finds some company for lonely taxonomic node identified by ``node_id``
+
+    :param tax_id: Tax ID of lonely node
+    :param parent_id: Tax ID of parent node (at desired rank)
+    :param full_taxonomy: complete taxtable.TaxNode, populated with available
+    sequences in ``full_fasta``
+    :param full_fasta: Path to FASTA file with candidate references
+    :returns: Sequence IDs to keep
+    """
     parent_node = full_taxonomy.get_node(parent_id)
-    lonely_node = next(i for i in parent_node if i.tax_id == node_id)
+    lonely_node = next((i for i in parent_node if i.tax_id == node_id), None)
+    if lonely_node is None:
+        raise KeyError("Unable to find node with tax_id {0}".format(node_id))
+
+    # Find other nodes with equivalent rank
     other_nodes = [i for i in parent_node if i.rank == lonely_node.rank and i != lonely_node]
     other_sequence_ids = [s for i in other_nodes for s in i.subtree_sequence_ids()]
+
     if other_sequence_ids:
+        # Choose representatives
         with util.ntf(suffix='.fasta') as tf, util.ntf(suffix='.fast.tre') as tree_fp:
             wrap.esl_sfetch(full_fasta, other_sequence_ids, tf)
             tf.seek(0)
@@ -43,7 +65,8 @@ def fill_lonely(node_id, parent_id, full_taxonomy, full_fasta):
             aligned = list(wrap.cmalign(sequences))
 
             # Run FastTree
-            sys.stderr.write('Node {0}: FastTree {1} sequences\r'.format(node_id, len(other_sequence_ids)))
+            sys.stderr.write('Node {0}: FastTree {1} sequences\r'.format(
+                node_id, len(other_sequence_ids)))
             wrap.fasttree(aligned, tree_fp, gtr=True)
             tree_fp.close()
 
@@ -51,19 +74,23 @@ def fill_lonely(node_id, parent_id, full_taxonomy, full_fasta):
             sys.stderr.write('Node {0}: Minimizing ADCL\r'.format(node_id))
             prune_leaves = wrap.rppr_min_adcl_tree(tree_fp.name, 5)
             return frozenset(other_sequence_ids) - frozenset(prune_leaves)
-
-    return frozenset()
+    else:
+        return frozenset()
 
 def build_parser(p):
     p.add_argument('search_fasta', help="""Sequence corpus""")
-    p.add_argument('search_seqinfo', help="""Sequence corpus metadata""", type=argparse.FileType('r'))
-    p.add_argument('search_taxtable', help="""Metadata for sequence corpus""", type=argparse.FileType('r'))
+    p.add_argument('search_seqinfo', help="""Sequence corpus metadata""",
+            type=argparse.FileType('r'))
+    p.add_argument('search_taxtable', help="""Metadata for sequence corpus""",
+            type=argparse.FileType('r'))
 
-    p.add_argument('chosen_fasta', help="""Chosen reference sequences to augment""")
+    p.add_argument('chosen_fasta', help="""Chosen reference sequences to
+            augment""")
     p.add_argument('chosen_seqinfo', help="""Chosen reference sequence
-            metadata""", type=argparse.FileType('r'))
+    metadata""", type=argparse.FileType('r'))
 
-    p.add_argument('output', help="Output file (fasta)", type=argparse.FileType('w'))
+    p.add_argument('output', help="""Output file (fasta)""",
+            type=argparse.FileType('w'))
     p.add_argument('output_seqinfo', help="""Destination to write seqinfo for
             new representatives""", type=argparse.FileType('w'))
 
@@ -74,8 +101,8 @@ def build_parser(p):
             above `--lonely-rank` [default: %(default)s]""")
 
     thread_group = p.add_argument_group('Threading')
-    thread_group.add_argument('--threads', default=multiprocessing.cpu_count(), type=int,
-            help="""Number of threads [default: %(default)s]""")
+    thread_group.add_argument('--threads', default=multiprocessing.cpu_count(),
+            type=int, help="""Number of threads [default: %(default)s]""")
 
 def action(args):
     logging.info("Loading taxtable")
@@ -97,7 +124,9 @@ def action(args):
     futs = []
     with futures.ThreadPoolExecutor(args.threads) as executor:
         for node in lonely_nodes:
-            futs.append(executor.submit(fill_lonely, node.tax_id, node.at_rank(args.parent_rank).tax_id, full_taxonomy, args.search_fasta))
+            futs.append(executor.submit(fill_lonely_worker,
+                node.tax_id,
+                node.at_rank(args.parent_rank).tax_id, full_taxonomy, args.search_fasta))
         while futs:
             try:
                 done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
