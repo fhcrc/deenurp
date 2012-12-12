@@ -7,10 +7,12 @@ import argparse
 import copy
 import csv
 import logging
+import multiprocessing
 import shutil
 import sys
 
 from Bio import SeqIO
+from concurrent import futures
 from taxtastic import taxtable
 
 from .. import util, wrap
@@ -71,6 +73,10 @@ def build_parser(p):
     rank_group.add_argument('--parent-rank', default='genus', help="""Rank
             above `--lonely-rank` [default: %(default)s]""")
 
+    thread_group = p.add_argument_group('Threading')
+    thread_group.add_argument('--threads', default=multiprocessing.cpu_count(), type=int,
+            help="""Number of threads [default: %(default)s]""")
+
 def action(args):
     logging.info("Loading taxtable")
     with args.search_taxtable as fp:
@@ -88,9 +94,26 @@ def action(args):
     nodes = [i for i in chosen_taxonomy if i.rank == args.lonely_rank]
     lonely_nodes = [i for i in nodes if is_lonely(i)]
     additional_reps = set()
-    for node in lonely_nodes:
-        node_reps = fill_lonely(node.tax_id, node.at_rank(args.parent_rank).tax_id, full_taxonomy, args.search_fasta)
-        additional_reps |= node_reps
+    futs = []
+    with futures.ThreadPoolExecutor(args.threads) as executor:
+        for node in lonely_nodes:
+            futs.append(executor.submit(fill_lonely, node.tax_id, node.at_rank(args.parent_rank).tax_id, full_taxonomy, args.search_fasta))
+        while futs:
+            try:
+                done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
+                futs = set(pending)
+                for f in done:
+                    if f.exception():
+                        raise f.exception()
+                    additional_reps |= f.result()
+                sys.stderr.write("{0:6d}/{1:6d} complete        \r".format(len(lonely_nodes) - len(pending),
+                        len(lonely_nodes)))
+            except futures.TimeoutError:
+                pass # Keep waiting
+            except:
+                logging.exception("Caught error in child thread - exiting")
+                executor.shutdown(False)
+                raise
 
     logging.info("%d additional references", len(additional_reps))
     with open(args.chosen_fasta) as fp, args.output as ofp:
