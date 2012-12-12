@@ -16,6 +16,7 @@ from Bio.SeqRecord import SeqRecord
 from . import search, uclust
 from concurrent import futures
 
+from . import util, wrap
 from .util import as_fasta, tempdir
 from .wrap import cmalign, as_refpkg, redupfile_of_seqs, \
                   rppr_min_adcl, guppy_redup, pplacer, esl_sfetch
@@ -90,6 +91,30 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, cluster_name,
     refs = [i for i in ref_seqs if i.id in result]
     return refs
 
+@log_error
+def select_sequences_for_whitelist_cluster(ref_seqs, cluster_name, keep_leaves=5):
+    """
+    Selects a subset of ``ref_seqs`` using ``rppr min_adcl_tree``
+    """
+    logging.info("Whitelisted cluster %s", cluster_name)
+
+    ref_seqs = _cluster(ref_seqs)
+    ref_ids = set(i.id for i in ref_seqs)
+    for ref in ref_seqs:
+        ref.annotations.update({'cluster_name': cluster_name,
+                                'max_weight': None,
+                                'mean_weight': None})
+
+    if len(ref_seqs) <= keep_leaves:
+        return ref_seqs
+
+    aligned = list(cmalign(ref_seqs, mpi_args=None))
+    with util.ntf(suffix='.tre') as tf:
+        wrap.fasttree(aligned, tf, gtr=True)
+        tf.close()
+        prune = wrap.rppr_min_adcl_tree(tf.name, keep_leaves)
+    return ref_ids - frozenset(prune)
+
 def fetch_cluster_members(cluster_info_file, group_field):
     d = collections.defaultdict(list)
     with open(cluster_info_file) as fp:
@@ -146,11 +171,12 @@ def get_total_weight_per_sample(con):
     return dict(cursor)
 
 def choose_references(deenurp_db, refs_per_cluster=5,
-        threads=DEFAULT_THREADS, min_cluster_prop=0.0):
+        threads=DEFAULT_THREADS, min_cluster_prop=0.0, whitelist=None):
     """
     Choose reference sequences from a search, choosing refs_per_cluster
     reference sequences for each nonoverlapping cluster.
     """
+    whitelist = whitelist or set()
     params = search.load_params(deenurp_db)
     fasta_file = params['fasta_file']
     ref_fasta = params['ref_fasta']
@@ -163,6 +189,7 @@ def choose_references(deenurp_db, refs_per_cluster=5,
             FROM vw_cluster_weights
             ORDER BY total_weight DESC""")
 
+    selected_clusters = set()
     futs = set()
     with futures.ThreadPoolExecutor(threads) as executor:
         for cluster_name, cluster_weight in cursor:
@@ -185,11 +212,21 @@ def choose_references(deenurp_db, refs_per_cluster=5,
                 logging.info("Skipping.")
                 continue
 
+            selected_clusters.add(cluster_name)
             futs.add(executor.submit(select_sequences_for_cluster,
                 cluster_refs, query_seqs, cluster_name=cluster_name,
                 norm_sw=norm_sw, cluster_weight=cluster_weight,
                 max_sample=max_sample, max_weight=max_weight,
                 keep_leaves=refs_per_cluster))
+        # Whitelist
+        for cluster in whitelist:
+            if cluster in selected_clusters:
+                logging.info("Sequences for whitelist cluster %s already selected", cluster)
+                continue
+            else:
+                cluster_refs = esl_sfetch_seqs(ref_fasta, cluster_members[cluster])
+                futs.add(executor.submit(select_sequences_for_whitelist_cluster,
+                    cluster_refs, cluster, keep_leaves=refs_per_cluster))
 
         while futs:
             try:
