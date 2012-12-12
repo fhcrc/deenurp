@@ -40,7 +40,7 @@ class AsRefpkgTestCase(unittest.TestCase):
                 out = subprocess.check_output(['rppr', 'check', '-c', refpkg.path])
                 self.assertTrue('OK!' in out, out)
 
-@unittest.skipUnless(util.which('rppr'), "rppr not found")
+@unittest.skipUnless(which('rppr'), "rppr not found")
 class RpprMinAdclTreeTestCase(unittest.TestCase):
     def setUp(self):
         self.tf = tempfile.NamedTemporaryFile(prefix='adcl', suffix='.tre')

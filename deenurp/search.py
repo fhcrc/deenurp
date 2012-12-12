@@ -30,7 +30,7 @@ def dedup_info_to_counts(fp, sample_map=None):
     rows = csv.reader(fp)
     for i, j, c in rows:
         result[i][sample_map[j]] += float(c)
-    return result
+    return dict(result)
 
 def load_sample_map(fp, header=False):
     """
@@ -171,6 +171,8 @@ VALUES (?, ?)"""
         cursor.execute(sequence_insert_sql, [sequence.id, len(sequence)])
         seq_id = cursor.lastrowid
         seq_count += 1
+        if sequence.id not in weights:
+            continue
         for sample, weight in weights[sequence.id].items():
             sample_id = get_sample_id(sample)
             cursor.execute("""INSERT INTO sequences_samples
