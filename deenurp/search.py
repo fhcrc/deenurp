@@ -91,10 +91,11 @@ def select_hits(hits_by_seq, threshold=SELECT_THRESHOLD):
         result.extend(i for i in hits[1:] if best_pct_id - i.pct_id < threshold)
         yield seq, result
 
-def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD):
+def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD, blacklist=None):
     """
     Search the sequences in a file against a reference database
     """
+    blacklist = blacklist or set()
     p = load_params(con)
 
     cursor = con.cursor()
@@ -130,9 +131,13 @@ INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
 VALUES (?, ?, ?, ?)
 """
         for _, hits in by_seq:
+            # Drop clusters from blacklist
+            hits = (h for h in hits if not cluster_info[h.target_label] in blacklist)
             seen_clusters = set()
             for i, h in enumerate(hits):
                 cluster = cluster_info[h.target_label]
+
+                # Only keep one sequence per cluster
                 if cluster in seen_clusters:
                     continue
                 else:
@@ -255,7 +260,8 @@ GROUP BY s.sample_id, s.name
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
         maxaccepts=1, maxrejects=8, search_id=0.99,
-        select_threshold=SELECT_THRESHOLD, quiet=True, group_field='cluster'):
+        select_threshold=SELECT_THRESHOLD, quiet=True, group_field='cluster',
+        blacklist=None):
     """
     Create a database of sequences searched against a sequence database for
     reference set creation.
@@ -264,6 +270,8 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
     fasta_file: query sequences
     """
     con.row_factory = sqlite3.Row
+
+    blacklist = blacklist or set()
 
     if _table_exists(con, 'params'):
         raise ValueError("Database exists")
@@ -279,4 +287,5 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
 
     with con:
         logging.info("Searching")
-        _search(con, quiet=quiet, select_threshold=select_threshold)
+        _search(con, quiet=quiet, select_threshold=select_threshold,
+                blacklist=blacklist)
