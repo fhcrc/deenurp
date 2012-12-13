@@ -34,10 +34,12 @@ First, install binary dependencies:
           source("http://bioconductor.org/biocLite.R")
           biocLite("clstutils")
 
-
 Finally, install::
 
     python setup.py install
+
+UCLUST, pplacer, FastTree, Infernal, and R are all distributed with the `QIIME
+Virtual Machine <http://www.qiime.org>`_, which may be a great way to get started.
 
 De-novo reference set creation
 ==============================
