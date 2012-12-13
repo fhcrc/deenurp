@@ -137,7 +137,8 @@ def action(a):
                 seqs = frozenset(node.subtree_sequence_ids())
                 if not seqs:
                     logging.warn("No sequences for %s (%s)", node.tax_id, node.name)
-                    log_taxid(node.tax_id, node.name, 0, 0, 0)
+                    if log_taxid:
+                        log_taxid(node.tax_id, node.name, 0, 0, 0)
                     continue
                 elif len(seqs) == 1:
                     logging.warn('Only 1 sequence for %s (%s). Dropping', node.tax_id, node.name)
@@ -158,6 +159,11 @@ def action(a):
                 sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(complete,
                     complete+len(pending)))
                 for f in done:
+                    if f.exception():
+                        logging.exception("Error in child process: %s", f.exception())
+                        executor.shutdown(False)
+                        raise f.exception()
+
                     info = futs.pop(f)
                     kept = f.result()
                     kept_ids |= kept
