@@ -33,7 +33,7 @@ def is_lonely(node, parent_rank=PARENT_RANK):
     except KeyError:
         return False
 
-def fill_lonely_worker(node_id, parent_id, full_taxonomy, full_fasta):
+def fill_lonely_worker(node_id, parent_id, full_taxonomy, full_fasta, n_reps=5):
     """
     Finds some company for lonely taxonomic node identified by ``node_id``
 
@@ -53,29 +53,29 @@ def fill_lonely_worker(node_id, parent_id, full_taxonomy, full_fasta):
     other_nodes = [i for i in parent_node if i.rank == lonely_node.rank and i != lonely_node]
     other_sequence_ids = [s for i in other_nodes for s in i.subtree_sequence_ids()]
 
-    if other_sequence_ids:
-        # Choose representatives
-        with util.ntf(suffix='.fasta') as tf, util.ntf(suffix='.fast.tre') as tree_fp:
-            wrap.esl_sfetch(full_fasta, other_sequence_ids, tf)
-            tf.seek(0)
-            sequences = SeqIO.parse(tf, 'fasta')
+    if len(other_sequence_ids) <= n_reps:
+        return frozenset(other_sequence_ids)
 
-            # Align
-            sys.stderr.write('Node {0}: cmalign {1} sequences\r'.format(node_id, len(other_sequence_ids)))
-            aligned = list(wrap.cmalign(sequences))
+    # Choose representatives
+    with util.ntf(suffix='.fasta') as tf, util.ntf(suffix='.fast.tre') as tree_fp:
+        wrap.esl_sfetch(full_fasta, other_sequence_ids, tf)
+        tf.seek(0)
+        sequences = SeqIO.parse(tf, 'fasta')
 
-            # Run FastTree
-            sys.stderr.write('Node {0}: FastTree {1} sequences\r'.format(
-                node_id, len(other_sequence_ids)))
-            wrap.fasttree(aligned, tree_fp, gtr=True)
-            tree_fp.close()
+        # Align
+        sys.stderr.write('Node {0}: cmalign {1} sequences\r'.format(node_id, len(other_sequence_ids)))
+        aligned = list(wrap.cmalign(sequences))
 
-            # Select reps
-            sys.stderr.write('Node {0}: Minimizing ADCL\r'.format(node_id))
-            prune_leaves = wrap.rppr_min_adcl_tree(tree_fp.name, 5)
-            return frozenset(other_sequence_ids) - frozenset(prune_leaves)
-    else:
-        return frozenset()
+        # Run FastTree
+        sys.stderr.write('Node {0}: FastTree {1} sequences\r'.format(
+            node_id, len(other_sequence_ids)))
+        wrap.fasttree(aligned, tree_fp, gtr=True)
+        tree_fp.close()
+
+        # Select reps
+        sys.stderr.write('Node {0}: Minimizing ADCL\r'.format(node_id))
+        prune_leaves = wrap.rppr_min_adcl_tree(tree_fp.name, 5)
+        return frozenset(other_sequence_ids) - frozenset(prune_leaves)
 
 def build_parser(p):
     p.add_argument('search_fasta', help="""Sequence corpus""")
@@ -99,6 +99,11 @@ def build_parser(p):
             search for lonely taxa [default: %(default)s]""")
     rank_group.add_argument('--parent-rank', default='genus', help="""Rank
             above `--lonely-rank` [default: %(default)s]""")
+
+    reps_group = p.add_argument_group('Representative Choice')
+    reps_group.add_argument('-n', '--number-of-reps', type=int, default=5,
+            metavar='N', help="""Number of additional sequences to add for each
+            lonely taxonomic node [default: %(default)s]""")
 
     thread_group = p.add_argument_group('Threading')
     thread_group.add_argument('--threads', default=multiprocessing.cpu_count(),
@@ -126,7 +131,8 @@ def action(args):
         for node in lonely_nodes:
             futs.append(executor.submit(fill_lonely_worker,
                 node.tax_id,
-                node.at_rank(args.parent_rank).tax_id, full_taxonomy, args.search_fasta))
+                node.at_rank(args.parent_rank).tax_id, full_taxonomy, args.search_fasta,
+                n_reps=args.number_of_reps))
         while futs:
             try:
                 done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
