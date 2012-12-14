@@ -159,13 +159,23 @@ def choose_references(deenurp_db, refs_per_cluster=5,
 
     # Iterate over clusters
     cursor = deenurp_db.cursor()
-    cursor.execute("""SELECT cluster_name, total_weight
-            FROM vw_cluster_weights
-            ORDER BY total_weight DESC""")
+
+    # Select all clusters above cutoff
+    cursor.execute("""
+SELECT ref_seqs.cluster_name, sample_id, SUM(sequences_samples.weight) AS total_weight
+FROM ref_seqs
+    INNER JOIN best_hits USING (ref_id)
+    INNER JOIN sequences USING (sequence_id)
+    INNER JOIN sequences_samples USING (sequence_id)
+GROUP BY ref_seqs.cluster_name, sample_id
+HAVING SUM(sequences_samples.weight) > ?
+ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
+""", [min_cluster_prop])
+    grouped = itertools.groupby(cursor, operator.itemgetter(0))
 
     futs = set()
     with futures.ThreadPoolExecutor(threads) as executor:
-        for cluster_name, cluster_weight in cursor:
+        for cluster_name, values in grouped:
             cluster_seq_names = sequences_hitting_cluster(deenurp_db, cluster_name)
             sample_weights = get_sample_weights(deenurp_db, cluster_seq_names)
             norm_sw = {k: v / sample_total_weights[k] for k, v in sample_weights.items()}
@@ -187,7 +197,7 @@ def choose_references(deenurp_db, refs_per_cluster=5,
 
             futs.add(executor.submit(select_sequences_for_cluster,
                 cluster_refs, query_seqs, cluster_name=cluster_name,
-                norm_sw=norm_sw, cluster_weight=cluster_weight,
+                norm_sw=norm_sw, cluster_weight=sum(v[-1] for v in values),
                 max_sample=max_sample, max_weight=max_weight,
                 keep_leaves=refs_per_cluster))
 
