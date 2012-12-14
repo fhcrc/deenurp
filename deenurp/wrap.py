@@ -36,7 +36,7 @@ def as_refpkg(sequences, name='temp.refpkg', threads=None):
 
         log_fp.close()
 
-        fasttree(sequences, log_fp.name, tree_fp, gtr=True, threads=threads)
+        fasttree(sequences, log_path=log_fp.name, output_fp=tree_fp, gtr=True, threads=threads)
         tree_fp.close()
 
         rp = Refpkg(refpkg_dir(name), create=True)
@@ -66,7 +66,7 @@ def redupfile_of_seqs(sequences, **kwargs):
         tf.close()
         yield tf.name
 
-def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
+def fasttree(sequences, output_fp, log_path=None, quiet=True, gtr=False,
         gamma=False, threads=None, prefix=None):
 
     executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
@@ -77,10 +77,12 @@ def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
     env = os.environ.copy()
     if threads:
         env['OMP_NUM_THREADS'] = str(threads)
-    cmd = (prefix or []) + [executable, '-nt', '-log', log_path]
+    cmd = (prefix or []) + [executable, '-nt']
     for k, v in (('-gtr', gtr), ('-gamma', gamma), ('-quiet', quiet)):
         if v:
             cmd.append(k)
+    if log_path is not None:
+        cmd.extend(['-log', log_path])
 
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE, env=env)
@@ -93,7 +95,7 @@ def fasttree(sequences, log_path, output_fp, quiet=True, gtr=False,
 
 def guppy_redup(placefile, redup_file, output):
     cmd = ['guppy', 'redup', '-m', placefile, '-d', redup_file, '-o', output]
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     subprocess.check_call(cmd)
 
 def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, quiet=True):
@@ -113,7 +115,7 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
     stdout = open(os.devnull, 'w') if quiet else nothing()
 
     with stdout:
-        logging.info(' '.join(cmd))
+        logging.debug(' '.join(cmd))
         subprocess.check_call(cmd, stdout=stdout)
 
     assert os.path.exists(jplace)
@@ -134,7 +136,7 @@ def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_m
         cmd.append('--pp')
     if always_include:
         cmd.extend(('--always-include', always_include))
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
@@ -149,7 +151,7 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
            str(leaves)]
     if always_include:
         cmd.extend(('--always-include', always_include))
-    logging.info(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     output = subprocess.check_output(cmd)
     return output.splitlines()
 

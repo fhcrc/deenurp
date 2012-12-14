@@ -19,10 +19,8 @@ First, install binary dependencies:
 
 * uclust 1.1
 * Infernal version 1.0.2, (http://infernal.janelia.org/)
-  Note: If compiled with MPI, ``cmalign`` can be run with multiple cores.
 * pplacer suite (http://matsen.fhcrc.org/pplacer)
 * FastTree 2 (http://www.microbesonline.org/fasttree/#Install)
-  Note: If available, the multithreaded version of FastTree, ``FastTreeMP`` will be used.
 * R
 
     - Package ``ape``:: 
@@ -104,6 +102,13 @@ good set of reference sequences.
 For each reference cluster  with a minimal amount of sequences having best hits
 to the cluster, (see ``cluster-refs``), selects a set number of sequences to
 serve as references.
+
+``deenurp fill-lonely``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Taxa who are the sole descendent of their parent can complicate taxonomic classification.
+
+The ``fill-lonely`` subcommand finds some company for these lonely taxa.
 
 ``deenurp add-reps``
 ^^^^^^^^^^^^^^^^^^^^
