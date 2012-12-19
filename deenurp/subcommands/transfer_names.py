@@ -27,6 +27,9 @@ def build_parser(p):
             taxonomy; 'replace': replace the tax_id for the matching sequence
             [default:%(default)s]""")
 
+    p.add_argument('--log', type=argparse.FileType('w'), help="""Log renaming
+            to file""")
+
     p.add_argument('-i', '--percent-id', type=float, default=0.99, help="""Minimum
             percent ID to transfer taxonomy [default: %(default).2f]""")
 
@@ -65,6 +68,13 @@ def ungap(seqrecord):
     return seqrecord
 
 def action(args):
+    log_writer = None
+    if args.log:
+        log_writer = csv.DictWriter(args.log, ['seqname', 'orig_tax_id',
+            'renamed_tax_id', 'renamed_tax_name', 'best_hit', 'pct_id',
+            'applied'], quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')
+        log_writer.writeheader()
+
     # Load all tax_ids
     with args.taxtable as fp:
         new_tax = taxtable.read(fp)
@@ -101,11 +111,23 @@ def action(args):
             #best_hit_id = dict((g, max(i.pct_id for i in v)) for g, v in grouped)
 
         for record in input_records:
+
             ref_si = ref_seq_info[record.query_label]
             target_si = new_seq_info[record.target_label]
             #if record.pct_id > best_hit_id.get(record.query_label, 0.0):
             tax_id = target_si['tax_id']
             node = new_tax.get_node(tax_id)
+
+            if log_writer:
+                log_record = {'seqname': record.query_label,
+                              'best_hit': record.target_label,
+                              'pct_id': record.pct_id,
+                              'orig_tax_id': ref_si['tax_id'],
+                              'renamed_tax_id': node.tax_id,
+                              'renamed_tax_name': node.name,
+                              'applied': not ref_si['tax_id'] or args.conflict_action == 'replace'}
+                log_writer.writerow(log_record)
+
             logging.info('Naming %s %s[%s,%s] based on %s (%.2f%%)', ref_si['seqname'],
                     node.name, node.tax_id, node.rank, record.target_label, record.pct_id)
             if ref_si['tax_id'] and ref_si['tax_id'] != tax_id:
@@ -113,7 +135,7 @@ def action(args):
                 logging.warn('Already named: %s[%s,%s]%s',
                         old_node.name, old_node.tax_id, old_node.rank,
                         ' - replacing' if args.conflict_action == 'replace' else '')
-            if args.conflict_action == 'replace':
+            if not ref_si['tax_id'] or args.conflict_action == 'replace':
                 ref_si['tax_id'] = target_si['tax_id']
                 if tax_id not in ref_taxonomy.index:
                     add_to_taxonomy(ref_taxonomy, node)
