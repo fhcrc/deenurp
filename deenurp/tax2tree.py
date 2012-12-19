@@ -57,7 +57,10 @@ def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True):
         return s
 
     with open(refpkg.file_abspath('seq_info')) as fp:
-        dialect = csv.Sniffer().sniff(fp.read(500))
+        try:
+            dialect = csv.Sniffer().sniff(fp.read(1024), delimiters=',')
+        except csv.Error:
+            dialect = csv.excel # Wh needs unix line endings?
         fp.seek(0)
         r = csv.DictReader(fp, dialect=dialect)
         h = r.fieldnames
