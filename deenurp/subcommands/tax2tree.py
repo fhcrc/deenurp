@@ -10,6 +10,8 @@ from .. import tax2tree, util
 def build_parser(p):
     p.add_argument('refpkg', help="""Reference package""",
             metavar='refpkg', type=partial(refpkg.Refpkg, create=False))
+    p.add_argument('--unknown-taxid', help="""Tax id to assign if tax2tree does
+            not assign a tax_id to an unlabeled sequence""")
     g = p.add_mutually_exclusive_group()
     g.add_argument('--allow-rename', action='store_true', default=True,
             help="""Allow sequences to be renamed [default: %(default)s]""")
@@ -17,6 +19,7 @@ def build_parser(p):
 
 def action(args):
     with util.ntf(prefix='seq_info', suffix='.csv') as tf:
-        tax2tree.tax2tree(args.refpkg, tf, allow_rename=args.allow_rename)
+        tax2tree.tax2tree(args.refpkg, tf, allow_rename=args.allow_rename,
+                unknown_taxid=args.unknown_taxid)
         tf.close()
         args.refpkg.update_file('seq_info', tf.name)

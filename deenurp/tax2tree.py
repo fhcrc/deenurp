@@ -46,7 +46,7 @@ def parse_tax2tree_out(fp):
         lineage = filter(None, lineage)
         yield sequence, lineage[-1] if lineage else None
 
-def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True):
+def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True, unknown_taxid=None):
     with open(refpkg.file_abspath('taxonomy')) as fp:
         tax_root = TaxNode.from_taxtable(fp)
     def lineage_ids(tax_id):
@@ -60,7 +60,7 @@ def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True):
         try:
             dialect = csv.Sniffer().sniff(fp.read(1024), delimiters=',')
         except csv.Error:
-            dialect = csv.excel # Wh needs unix line endings?
+            dialect = csv.excel # Who needs unix line endings?
         fp.seek(0)
         r = csv.DictReader(fp, dialect=dialect)
         h = r.fieldnames
@@ -86,11 +86,12 @@ def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True):
                     i['tax_id'] = n
                 else:
                     logging.info("Not applied.")
-            elif n is None:
+            elif n is None and not i['tax_id']:
+                i['tax_id'] = unknown_taxid
                 logging.warn("no taxonomy for %s", i['seqname'])
             w.writerow(i)
 
-def tax2tree(refpkg, output_fp, allow_rename=True):
+def tax2tree(refpkg, output_fp, allow_rename=True, unknown_taxid=None):
     """
     Run tax2tree on a reference package lacking names
     """
@@ -105,6 +106,6 @@ def tax2tree(refpkg, output_fp, allow_rename=True):
         try:
             with open(consensus) as fp:
                 d = dict(parse_tax2tree_out(fp))
-                update_taxids(refpkg, d, output_fp, allow_rename=allow_rename)
+                update_taxids(refpkg, d, output_fp, allow_rename=allow_rename, unknown_taxid=unknown_taxid)
         finally:
             os.remove(consensus)
