@@ -23,17 +23,21 @@ def build_parser(p):
     p.add_argument('-u', '--unnamed-sequences', help="""Path to unnamed sequence file""")
     p.add_argument('-m', '--unnamed-sequence-meta', help="""Path to unnamed
             sequence file sequence info""", type=argparse.FileType('r'))
-    p.add_argument('-r', '--redundant-cluster-id', default=0.990, type=float,
+    p.add_argument('-r', '--redundant-cluster-id', default=0.97, type=float,
             help="""Percent ID at which to remove redundant sequences.
             [default: %(default).3f]""")
     p.add_argument('-i', '--cluster-id', default=0.985, type=float, help="""Cluster ID [default: %(default).3f]""")
 
 def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
-        threshold=0.995):
+        threshold=0.97):
     with util.ntf(suffix='.uc', prefix='to_cluster') as tf:
         # Search with uclust
-        uclust.search(named_sequence_file, to_cluster, tf.name, pct_id=0.90,
+        uclust.search(named_sequence_file, to_cluster, tf.name,
+                pct_id=0.80,
+                maxaccepts=5,
+                maxrejects=100,
                 trunclabels=True)
+
         # Uclust.search renames to tf, need a new handle.
         records = uclust.parse_uclust_out(tf)
         hits = (i.query_label for i in records
@@ -85,7 +89,7 @@ def action(a):
 
 
     # Write clustering information for sequences with cluster_rank-level
-    # classificatios
+    # classifications
     done = set()
     cluster_ids = {}
     with a.sequence_out:
@@ -118,7 +122,7 @@ def action(a):
             # Remove redundant sequences: we don't need anything that's unnamed
             # & close to something named.
             redundant_ids = cluster_identify_redundant(a.sequence_out.name,
-                    done, tf.name, a.redundant_cluster_id)
+                    done, to_cluster=tf.name, threshold=a.redundant_cluster_id)
             logging.info('%d redundant sequences', len(redundant_ids))
 
             # Extract desired sequences
