@@ -122,12 +122,20 @@ def tempdir(**kwargs):
     """
     Create a temporary directory for the duration of the context manager,
     removing on exit.
+
+    :returns: a partially applied os.path.join, with name of the temporary
+    directory as the first argument
+
+    Example:
+    >>> with tempdir(prefix='rubbish-') as td:         # doctest: +SKIP
+    ...     print "Directory is:", td()
+    ...     print "Put some data in:", td('file1.txt')
+    Directory is: /tmp/rubbish-5AQFpo
+    Put some data in: /tmp/rubbish-5AQFpo/file1.txt
     """
     td = tempfile.mkdtemp(**kwargs)
-    def p(*args):
-        return os.path.join(td, *args)
     try:
-        yield p
+        yield functools.partial(os.path.join, td)
     finally:
         shutil.rmtree(td)
 
