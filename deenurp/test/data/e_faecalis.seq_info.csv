@@ -1,0 +1,101 @@
+seqname,tax_id,accession,description,length,ambig_count,is_type,rdp_lineage
+S000000617,1351,AJ271847,Enterococcus faecalis; UK1399; from a traditional fermented milk.,1532,9,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000001976,1351,AJ301831,Enterococcus faecalis; LMG 7937.,1554,2,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000008133,1351,AJ271856,Enterococcus faecalis; UK873; from a traditional fermented milk.,1555,2,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000009238,1351,Y18293,Enterococcus faecalis.,1449,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000012997,1351,AF039902,Enterococcus faecalis.,1494,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000013428,1351,AJ271855,Enterococcus faecalis; UK755; From a traditional fermented milk.,1556,9,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000127028,1351,AJ276460,Enterococcus faecalis; P7812.,1516,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000134137,1351,AJ420803,Enterococcus faecalis; CECT481T.,1477,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000261697,1351,AB154827,Enterococcus faecalis; EC-12.,1522,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000319413,1351,AB098122,Enterococcus faecalis; TUA 2495L.,1466,1,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000375664,1351,AY692453,Enterococcus faecalis; SL5.,1570,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000385522,1351,AB092693,Enterococcus faecalis; K-4.,1455,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000394239,1351,AF447490,Enterococcus faecalis; DJ1.,1506,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000395092,1351,AF477496,Enterococcus faecalis; PL9003.,1477,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000409542,1351,AY395018,Enterococcus faecalis; NAB11.,1506,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000427506,1351,AB012212,Enterococcus faecalis (T); JCM 5803.,1517,0,TRUE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000428402,1351,AF070224,Enterococcus faecalis; JH2-2.,1510,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000430944,1351,AF515223,Enterococcus faecalis; RO90.,1522,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000468458,1351,AY850358,Enterococcus faecalis; SFL.,1553,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000485949,1351,AY550919,Enterococcus faecalis; C13115.,1483,1,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000495530,1351,AB036835,Enterococcus faecalis; K-4.,1518,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000514054,1351,AY942557,Enterococcus faecalis; ChDC YE1.,1514,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000514055,1351,AY942558,Enterococcus faecalis; ChDC YE2.,1522,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000514056,1351,AY942559,Enterococcus faecalis; ChDC YE3.,1525,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000514057,1351,AY942560,Enterococcus faecalis; ChDC YE4.,1525,8,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000617875,1351,AM157433,Enterococcus faecalis; mother C4; 7C4.,1568,2,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000619967,1351,DQ239694,Enterococcus faecalis; D3.,1526,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000627086,1351,DQ295036,Enterococcus faecalis; PFK3.,1393,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000628286,226185,AE016830,Enterococcus faecalis V583.,1522,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000628288,226185,AE016830,Enterococcus faecalis V583.,1522,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000628291,226185,AE016830,Enterococcus faecalis V583.,1522,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000628293,226185,AE016830,Enterococcus faecalis V583.,1522,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000640087,1351,DQ340070,Enterococcus faecalis; KLDS 6.0316.,1525,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000640088,1351,DQ340071,Enterococcus faecalis; KLDS 6.0317.,1527,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000640091,1351,DQ340074,Enterococcus faecalis; KLDS 6.0319.,1526,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000651465,1351,DQ411814,Enterococcus faecalis; ATCC 19433.,1483,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000654187,1351,DQ473268,Enterococcus faecalis; II/1.,1414,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000727869,1351,AB272354,Enterococcus faecalis; SLE1.,1290,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000769615,1351,EF120452,Enterococcus faecalis; GM.,1485,5,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000776154,1351,DQ983196,Enterococcus faecalis; ABPL 007.,1527,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000776649,1351,EF183510,Enterococcus faecalis; NT-10.,1534,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000901530,1351,AB292313,Enterococcus faecalis; N1-33.,1400,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000902414,1351,EF653454,Enterococcus faecalis; 47/3.,1526,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000925383,1351,AB244434,Enterococcus faecalis; A19-2.,1486,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000927251,1351,EU106142,Enterococcus faecalis; MR-1.,1263,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000941629,1351,AB362592,Enterococcus faecalis; NRIC 0103.,1555,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000941636,1351,AB362599,Enterococcus faecalis; NRIC 0110.,1555,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000941637,1351,AB362600,Enterococcus faecalis; NRIC 0111.,1555,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000941638,1351,AB362601,Enterococcus faecalis; NRIC 0112.,1555,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S000941639,1351,AB362602,Enterococcus faecalis; NRIC 0113.,1555,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001045371,1351,EU708623,Enterococcus faecalis; XR7.,1464,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001045700,1351,EU717961,Enterococcus faecalis; Hj05.,1475,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001045704,1351,EU717965,Enterococcus faecalis; Zy05.,1474,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001046039,1351,EU728747,Enterococcus faecalis; DJF_O03.,1445,1,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001095541,1351,EU168400,Enterococcus faecalis; 17A.,1392,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001095542,1351,EU168401,Enterococcus faecalis; 4B.,1405,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001096577,1351,EU547773,Enterococcus faecalis; IJ-03.,1473,1,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001096579,1351,EU547775,Enterococcus faecalis; IJ-07.,1517,1,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001096580,1351,EU547776,Enterococcus faecalis; IJ-11.,1470,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001096581,1351,EU547777,Enterococcus faecalis; IJ-12.,1246,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001152971,1351,EU285587,Enterococcus faecalis; C19315led5A.,1456,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001153804,1351,EU807757,Enterococcus faecalis; NR1.,1440,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001156218,1351,EU887827,Enterococcus faecalis; H13.,1527,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001169260,1351,EU888509,Enterococcus faecalis; ES_MS6c.,1316,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001169262,1351,EU888511,Enterococcus faecalis; ES_MS13c.,1322,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001189397,1351,FJ348443,Enterococcus faecalis; RS-16.,1475,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199556,1351,FJ378664,Enterococcus faecalis; HN-N9.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199557,1351,FJ378665,Enterococcus faecalis; HN-N10.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199559,1351,FJ378667,Enterococcus faecalis; HN-N12.,1523,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199577,1351,FJ378685,Enterococcus faecalis; HN-N30.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199580,1351,FJ378688,Enterococcus faecalis; HN-N33.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199588,1351,FJ378696,Enterococcus faecalis; HN-N41.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199590,1351,FJ378698,Enterococcus faecalis; HN-S1.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199591,1351,FJ378699,Enterococcus faecalis; HN-S2.,1523,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199593,1351,FJ378701,Enterococcus faecalis; HN-S4.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199594,1351,FJ378702,Enterococcus faecalis; HN-S5.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199595,1351,FJ378703,Enterococcus faecalis; HN-S6.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001199596,1351,FJ378704,Enterococcus faecalis; HN-S7.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001241184,1351,FJ378656,Enterococcus faecalis; HN-N1.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001241185,1351,FJ378657,Enterococcus faecalis; HN-N2.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001241187,1351,FJ378659,Enterococcus faecalis; HN-N4.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001241188,1351,FJ378660,Enterococcus faecalis; HN-N5.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001241190,1351,FJ378662,Enterococcus faecalis; HN-N7.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001241191,1351,FJ378663,Enterococcus faecalis; HN-N8.,1524,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001243491,1351,FJ481129,Enterococcus faecalis; RSCQ0.,1486,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001293383,1351,FJ603646,Enterococcus faecalis; XJ-1.,1512,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001293384,1351,FJ603647,Enterococcus faecalis; XJ-2.,1423,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001293452,1351,FJ607275,Enterococcus faecalis; KLDS6.0611.,1436,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001293467,1351,FJ607290,Enterococcus faecalis; KLDS6.0608.,1442,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001293468,1351,FJ607291,Enterococcus faecalis; KLDS6.0609.,1442,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001293475,1351,FJ607298,Enterococcus faecalis; KLDS6.0610.,1449,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001328845,1351,FJ608830,Enterococcus faecalis; XJ-3.,1520,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001329737,1351,FJ749301,Enterococcus faecalis; IMAU40025; QH9-5.,1468,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001329739,1351,FJ749303,Enterococcus faecalis; IMAU40029; QH29-4.,1457,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001329757,1351,FJ749321,Enterococcus faecalis; IMAU40046; QH5-5.,1487,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001329813,1351,FJ749377,Enterococcus faecalis; IMAU40104; QH4-4.,1387,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001329814,1351,FJ749378,Enterococcus faecalis; IMAU40105; QH8-3-2.,1421,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001351431,1351,FJ804073,Enterococcus faecalis; CTC328.,1476,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001352670,1351,FJ861089,Enterococcus faecalis; KLDS 6.0638.,1445,1,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
+S001352671,1351,FJ861090,Enterococcus faecalis; KLDS 6.0639.,1445,0,FALSE,Root;Bacteria;Firmicutes;Bacilli;Lactobacillales;Enterococcaceae;Enterococcus
