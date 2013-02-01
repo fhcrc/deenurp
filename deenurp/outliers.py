@@ -30,7 +30,7 @@ def read_dists(fobj):
 
     return taxa, distmat
 
-def fasttree_dists(fasta, suppress_stderr = True):
+def fasttree_dists(fasta):
     """
     Calculate pairwise distances among DNA multiple alignment in
     `fasta` using FastTree and return (taxon_names, matrix).
@@ -41,9 +41,7 @@ def fasttree_dists(fasta, suppress_stderr = True):
     cmd = ['FastTree','-nt','-makematrix', fasta]
 
     with tempfile.TemporaryFile('rw') as stdout, open(os.devnull) as devnull:
-        proc = subprocess.Popen(
-            cmd, stdout = stdout,
-            stderr = devnull if suppress_stderr else None)
+        proc = subprocess.Popen(cmd, stdout = stdout, stderr = devnull)
         proc.communicate()
         stdout.flush()
         stdout.seek(0)
@@ -51,7 +49,7 @@ def fasttree_dists(fasta, suppress_stderr = True):
 
     return taxa, distmat
 
-def outliers(mat, cutoff):
+def outliers(distmat, cutoff):
     """
     Given pairwise distance matrix `mat`, identify elements with a
     distance to the centrid element of > cutoff. Returns a boolean
@@ -59,9 +57,9 @@ def outliers(mat, cutoff):
     """
 
     # index of most central element.
-    medoid = numpy.argmin(numpy.median(mat, 0))
+    medoid = numpy.argmin(numpy.median(distmat, 0))
 
     # distance from each element to most central element
-    dists = mat[medoid, :]
+    dists = distmat[medoid, :]
 
     return dists > cutoff

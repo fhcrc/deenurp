@@ -15,7 +15,7 @@ from concurrent import futures
 from Bio import SeqIO
 from taxtastic.taxtable import TaxNode
 
-from .. import wrap, util
+from .. import wrap, util, outliers
 
 DEFAULT_RANK = 'species'
 RSCRIPT_PATH = os.path.join(os.path.dirname(__file__),
@@ -65,6 +65,10 @@ def run_r_find_outliers(sequence_file, cutoff):
         return [i.strip() for i in tf]
 
 def filter_sequences(sequence_file, cutoff):
+    """
+    Return a list of sequence names identifying outliers.
+    """
+
     with util.ntf(prefix='cmalign', suffix='.sto') as a_sto, \
          util.ntf(prefix='cmalign', suffix='.fasta') as a_fasta, \
          open(os.devnull) as devnull:
@@ -74,7 +78,28 @@ def filter_sequences(sequence_file, cutoff):
         # APE requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
         a_fasta.flush()
+
         return run_r_find_outliers(a_fasta.name, cutoff)
+
+def filter_sequences_numpy(sequence_file, cutoff):
+    """
+    Return a list of sequence names identifying outliers.
+    """
+
+    with util.ntf(prefix='cmalign', suffix='.sto') as a_sto, \
+         util.ntf(prefix='cmalign', suffix='.fasta') as a_fasta, \
+         open(os.devnull) as devnull:
+        # Align
+        wrap.cmalign_files(sequence_file, a_sto.name,
+                stdout=devnull, mpi_args=None)
+        # APE requires FASTA
+        SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
+        a_fasta.flush()
+
+        taxa, distmat = outliers.fasttree_dists(a_fasta.name)
+        is_out = outliers.outliers(distmat, cutoff)
+
+        return [t for t,o in zip(taxa, is_out) if o]
 
 def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
     """
@@ -94,7 +119,8 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
         # Extract sequences
         wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
-        prune = frozenset(filter_sequences(tf.name, distance_cutoff))
+        # prune = frozenset(filter_sequences(tf.name, distance_cutoff))
+        prune = frozenset(filter_sequences_numpy(tf.name, distance_cutoff))
         assert not prune - seqs
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
