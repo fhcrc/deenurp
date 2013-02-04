@@ -57,12 +57,14 @@ class TestFindOutliers(unittest.TestCase):
 
     def test02(self):
         """
-        Test special handling for matrices of size (2,2)
+        Test special handling for matrices of size (2,2): these never
+        fail.
         """
+
         mat = numpy.matrix([0, 0.02, 0.02, 0])
         mat.shape = (2,2)
         is_outlier = outliers.outliers(mat, cutoff = 0.015)
-        self.assertTrue(all(is_outlier))
+        self.assertFalse(any(is_outlier))
 
         is_outlier = outliers.outliers(mat, cutoff = 0.025)
         self.assertFalse(any(is_outlier))

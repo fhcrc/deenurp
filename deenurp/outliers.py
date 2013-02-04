@@ -39,7 +39,7 @@ def fasttree_dists(fasta):
 
     # TODO: need a more informative error if FastTree is not installed.
 
-    cmd = ['FastTree','-nt','-makematrix', fasta]
+    cmd = ['FastTree', '-nt', '-makematrix', fasta]
 
     with tempfile.TemporaryFile('rw') as stdout, open(os.devnull) as devnull:
         proc = subprocess.Popen(cmd, stdout = stdout, stderr = devnull)
@@ -50,20 +50,20 @@ def fasttree_dists(fasta):
 
     return taxa, distmat
 
-def outliers(distmat, cutoff):
+def outliers(distmat, cutoff, prune_min = 2):
     """
-    Given pairwise distance matrix `mat`, identify elements with a
+    Given pairwise distance matrix `distmat`, identify elements with a
     distance to the centrid element of > cutoff. Returns a boolean
-    vector corresponding to the margin of mat.
+    vector corresponding to the margin of`distmat`. `prune_min`
+    defines a minimal edge length for `distmat` below which no
+    sequences will be pruned (raises AssertionError if `prune_min` <
+    2).
     """
 
-    if distmat.shape[0] == 2:
-        # it really doesn't make sense to perform this test at all
-        # with a small number of comparisons, but we'll try to make
-        # some sense out of a comparison of only two sequences by
-        # discarding both if the distance between them is > cutoff.
-        both_fail = distmat[0, 1] > cutoff
-        return numpy.repeat(both_fail, 2)
+    assert prune_min >= 2
+
+    if distmat.shape[0] <= 2:
+        to_prune = numpy.repeat(False, distmat.shape[0])
     else:
         # index of most central element.
         medoid = numpy.argmin(numpy.median(distmat, 0))
@@ -71,4 +71,10 @@ def outliers(distmat, cutoff):
         # distance from each element to most central element
         dists = distmat[medoid, :]
 
-        return dists > cutoff
+        to_prune = dists > cutoff
+
+        # If all but medoid pruned, all should be pruned
+        if sum(to_prune) == distmat.shape[0] - 1:
+            to_prune = numpy.repeat(True, distmat.shape[0])
+
+    return to_prune
