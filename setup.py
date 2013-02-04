@@ -1,4 +1,17 @@
-from setuptools import setup, find_packages, Command
+# Fix for `setup.py test`
+# See http://bugs.python.org/issue15881
+try:
+    import multiprocessing
+    from concurrent import futures
+except ImportError:
+    pass
+
+try:
+    from setuptools import setup, find_packages, Command
+except ImportError:
+    from distribute_setup import use_setuptools
+    use_setuptools()
+    from setuptools import setup, find_packages, Command
 
 class run_audit(Command):
     """Audits source code using PyFlakes for following issues:
@@ -34,11 +47,6 @@ class run_audit(Command):
             print "Audit finished with total %d warnings." % warns
         else:
             print "No problems found in sourcecode."
-
-#install_requires = ['biopython>=1.58',
-        #'tax2tree',
-        #'cogent>=1.5.1',
-        #'taxtastic>=0.4.0']
 
 install_requires = []
 

@@ -115,9 +115,4 @@ file.
 Sequences whose lineage changes are relabeled. The prior ``tax_id`` is added to
 the ``seq_info`` file in the reference package.
 
-TODO
-====
-
-* Fix loneliness
-
 .. vim: set ft=rest:
