@@ -92,7 +92,7 @@ def filter_sequences_numpy(sequence_file, cutoff):
         # Align
         wrap.cmalign_files(sequence_file, a_sto.name,
                 stdout=devnull, mpi_args=None)
-        # APE requires FASTA
+        # FastTree requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
         a_fasta.flush()
 

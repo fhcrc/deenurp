@@ -17,18 +17,19 @@ def read_dists(fobj):
     into a numpy matrix. Return (taxon_names, matrix).
     """
 
-    # TODO: there has to be a more efficient way to read a numpy matrix
-    elements = fobj.read().split()
-    N = int(elements.pop(0))
+    N = int(fobj.readline())
     distmat = numpy.repeat(-1*numpy.inf, N**2)
     distmat.shape = (N, N)
 
     taxa = []
-    for row, i in enumerate(range(0, len(elements), N+1)):
-        taxa.append(elements[i])
-        distmat[row, :] = [float(x) for x in elements[i+1:i+N+1]]
+    for row, line in enumerate(fobj):
+        spl = line.split()
+        assert len(spl) == N + 1
+        taxa.append(spl.pop(0))
+        distmat[row, :] = map(float, spl)
 
     return taxa, distmat
+
 
 def fasttree_dists(fasta):
     """
@@ -56,10 +57,18 @@ def outliers(distmat, cutoff):
     vector corresponding to the margin of mat.
     """
 
-    # index of most central element.
-    medoid = numpy.argmin(numpy.median(distmat, 0))
+    if distmat.shape[0] == 2:
+        # it really doesn't make sense to perform this test at all
+        # with a small number of comparisons, but we'll try to make
+        # some sense out of a comparison of only two sequences by
+        # discarding both if the distance between them is > cutoff.
+        both_fail = distmat[0, 1] > cutoff
+        return numpy.repeat(both_fail, 2)
+    else:
+        # index of most central element.
+        medoid = numpy.argmin(numpy.median(distmat, 0))
 
-    # distance from each element to most central element
-    dists = distmat[medoid, :]
+        # distance from each element to most central element
+        dists = distmat[medoid, :]
 
-    return dists > cutoff
+        return dists > cutoff

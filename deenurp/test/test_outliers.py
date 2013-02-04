@@ -1,5 +1,6 @@
 import os
 import unittest
+import numpy
 
 from deenurp import outliers
 
@@ -29,15 +30,17 @@ def data_path(*args):
 
 class TestReadDists(unittest.TestCase):
 
-    def test_01(self):
+    def test01(self):
         with open(data_path('e_faecium.distmat')) as f:
             taxa, mat = outliers.read_dists(f)
             self.assertEqual(len(taxa), 100)
             self.assertEqual(mat.shape, (100, 100))
+            self.assertAlmostEqual(list(mat[(0, 0, 99, 99),(0, 99, 0, 99)]),
+                                   [0, 0.003299, 0.003299, 0])
 
 class TestFastTreeDists(unittest.TestCase):
 
-    def test_01(self):
+    def test01(self):
         fa = data_path('e_faecium.aln.fasta')
         taxa, mat = outliers.fasttree_dists(fa)
         self.assertEqual(len(taxa), 100)
@@ -45,9 +48,21 @@ class TestFastTreeDists(unittest.TestCase):
 
 class TestFindOutliers(unittest.TestCase):
 
-    def test_01(self):
+    def test01(self):
         with open(data_path('e_faecium.distmat')) as f:
             taxa, mat = outliers.read_dists(f)
             is_outlier = outliers.outliers(mat, cutoff = 0.015)
             out = {t for t,o in zip(taxa, is_outlier) if o}
             self.assertEqual(len(out), 7)
+
+    def test02(self):
+        """
+        Test special handling for matrices of size (2,2)
+        """
+        mat = numpy.matrix([0, 0.02, 0.02, 0])
+        mat.shape = (2,2)
+        is_outlier = outliers.outliers(mat, cutoff = 0.015)
+        self.assertTrue(all(is_outlier))
+
+        is_outlier = outliers.outliers(mat, cutoff = 0.025)
+        self.assertFalse(any(is_outlier))
