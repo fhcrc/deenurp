@@ -221,7 +221,7 @@ def load_tax_maps(fps, has_header=False):
     for fp in fps:
         reader = csv.reader(fp)
         if has_header:
-            next(reader) # Skip
+            next(reader)  # Skip
         for row in reader:
             name, taxid = row[:2]
             if name in d and taxid != d[name]:

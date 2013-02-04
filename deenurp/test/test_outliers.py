@@ -35,7 +35,7 @@ class TestReadDists(unittest.TestCase):
             taxa, mat = outliers.read_dists(f)
             self.assertEqual(len(taxa), 100)
             self.assertEqual(mat.shape, (100, 100))
-            self.assertAlmostEqual(list(mat[(0, 0, 99, 99),(0, 99, 0, 99)]),
+            self.assertAlmostEqual(list(mat[(0, 0, 99, 99), (0, 99, 0, 99)]),
                                    [0, 0.003299, 0.003299, 0])
 
 class TestFastTreeDists(unittest.TestCase):
@@ -51,8 +51,8 @@ class TestFindOutliers(unittest.TestCase):
     def test01(self):
         with open(data_path('e_faecium.distmat')) as f:
             taxa, mat = outliers.read_dists(f)
-            is_outlier = outliers.outliers(mat, cutoff = 0.015)
-            out = {t for t,o in zip(taxa, is_outlier) if o}
+            is_outlier = outliers.outliers(mat, cutoff=0.015)
+            out = {t for t, o in zip(taxa, is_outlier) if o}
             self.assertEqual(len(out), 7)
 
     def test02(self):
@@ -62,9 +62,9 @@ class TestFindOutliers(unittest.TestCase):
         """
 
         mat = numpy.matrix([0, 0.02, 0.02, 0])
-        mat.shape = (2,2)
-        is_outlier = outliers.outliers(mat, cutoff = 0.015)
+        mat.shape = (2, 2)
+        is_outlier = outliers.outliers(mat, cutoff=0.015)
         self.assertFalse(any(is_outlier))
 
-        is_outlier = outliers.outliers(mat, cutoff = 0.025)
+        is_outlier = outliers.outliers(mat, cutoff=0.025)
         self.assertFalse(any(is_outlier))

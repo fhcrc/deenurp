@@ -45,6 +45,7 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
     ranks = taxonomy.ranks
     r_index = ranks.index(rank)
     assert r_index >= 0
+
     def above_rank(node):
         n_index = ranks.index(node.rank)
         assert n_index >= 0
@@ -99,7 +100,7 @@ def filter_sequences_numpy(sequence_file, cutoff):
         taxa, distmat = outliers.fasttree_dists(a_fasta.name)
         is_out = outliers.outliers(distmat, cutoff)
 
-        return [t for t,o in zip(taxa, is_out) if o]
+        return [t for t, o in zip(taxa, is_out) if o]
 
 def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
     """
@@ -146,6 +147,7 @@ def action(a):
         writer = csv.writer(a.log, lineterminator='\n',
                 quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(('tax_id', 'tax_name', 'n', 'kept', 'pruned'))
+
         def log_taxid(tax_id, tax_name, n, kept, pruned):
             writer.writerow((tax_id, tax_name, n, kept, pruned))
 
@@ -183,7 +185,7 @@ def action(a):
                 done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
                 complete += len(done)
                 sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(complete,
-                    complete+len(pending)))
+                    complete + len(pending)))
                 for f in done:
                     if f.exception():
                         logging.exception("Error in child process: %s", f.exception())

@@ -156,7 +156,8 @@ def _load_sequences(con, sequence_file, weights=None):
     """
     if weights is None:
         weights = SingletonDefaultDict({'default': 1.0})
-    seq_count = 0;
+    seq_count = 0
+
     @memoize
     def get_sample_id(sample_name):
         cursor = con.cursor()

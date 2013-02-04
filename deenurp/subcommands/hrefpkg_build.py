@@ -140,8 +140,8 @@ def action(a):
         # Build index refpkg
         logging.info('Building index.refpkg')
         index_rp, sequence_ids = build_index_refpkg(hrefpkgs, a.sequence_file,
-                seqinfo, taxonomy, dest=j('index.refpkg'),
-                index_rank=a.index_rank)
+            seqinfo, taxonomy, dest=j('index.refpkg'),
+            index_rank=a.index_rank)
 
         # Write unused seqs
         logging.info("Extracting unused sequences")
@@ -159,16 +159,19 @@ def find_nodes(taxonomy, index_rank, want_rank='species'):
     rdict = dict(zip(ranks, xrange(len(ranks))))
     assert index_rank in rdict
     assert want_rank in rdict
+
     def any_sequences_below(node):
         for i in node:
             if i.sequence_ids:
                 return True
         return False
+
     def try_next(it):
         try:
             return next(it)
         except StopIteration:
             return None
+
     def inner(node):
         # Prefer nodes at want_rank with sequences
         if node.rank == want_rank and any_sequences_below(node):
@@ -383,6 +386,7 @@ def partition_taxonomy(taxonomy, partition_below_rank, partition_rank, partition
     if partition_log:
         writer = csv.writer(partition_log, lineterminator='\n', quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(('parent', 'child', 'prune'))
+
         def w(parent, node, partition):
             writer.writerow((parent, node, partition))
     else:

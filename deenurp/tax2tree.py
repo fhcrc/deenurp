@@ -49,6 +49,7 @@ def parse_tax2tree_out(fp):
 def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True, unknown_taxid=None):
     with open(refpkg.file_abspath('taxonomy')) as fp:
         tax_root = TaxNode.from_taxtable(fp)
+
     def lineage_ids(tax_id):
         if not tax_id:
             return frozenset()
@@ -60,7 +61,7 @@ def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True, unknown_t
         try:
             dialect = csv.Sniffer().sniff(fp.read(1024), delimiters=',')
         except csv.Error:
-            dialect = csv.excel # Who needs unix line endings?
+            dialect = csv.excel
         fp.seek(0)
         r = csv.DictReader(fp, dialect=dialect)
         h = r.fieldnames
@@ -78,7 +79,6 @@ def update_taxids(refpkg, tax2tree_dict, output_fp, allow_rename=True, unknown_t
                     orig_name, orig_rank = node.name, node.rank
                 else:
                     orig_name, orig_rank = '', ''
-
 
                 logging.info('%s changed from "%s" (%s) to "%s" (%s)',
                         i['seqname'], orig_name, orig_rank, new_name, new_rank)

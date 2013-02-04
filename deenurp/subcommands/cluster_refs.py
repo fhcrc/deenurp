@@ -87,7 +87,6 @@ def action(a):
         assert not set(unnamed_seqinfo) & set(seqinfo)
         seqinfo.update(unnamed_seqinfo)
 
-
     # Write clustering information for sequences with cluster_rank-level
     # classifications
     done = set()

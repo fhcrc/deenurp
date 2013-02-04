@@ -173,7 +173,7 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
                 '--uc', o,
                 '--libonly',       # Don't generate new clusters when no DB hits
                 '--allhits',       # output all hits
-                '--id', str(search_pct_id or pct_id)] # Prefer search_pct_id
+                '--id', str(search_pct_id or pct_id)]  # Prefer search_pct_id
         if not wordcountreject:
             cmd.append('--nowordcountreject')
         if maxaccepts:
@@ -237,7 +237,7 @@ def cluster_seeds(sequence_file, uclust_out):
 
     if seeds - seen_seeds:
         raise ValueError(
-                "Some expected seeds were not found in the FASTA file: {0}".format(','.join(seeds - seen_seeds)))
+            "Some expected seeds were not found in the FASTA file: {0}".format(','.join(seeds - seen_seeds)))
 
 def sort(sequence_file, output, quiet=False):
     """
@@ -262,6 +262,7 @@ def sort_and_cluster(sequence_file, output, **kwargs):
 # Functions to convert uclust output into format usable by `guppy redup -m`
 class DeduplicatedSequence(object):
     __slots__ = ['id', 'count']
+
     def __init__(self, id, count):
         self.id = id
         self.count = count

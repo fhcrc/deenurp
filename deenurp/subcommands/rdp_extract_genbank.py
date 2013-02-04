@@ -37,6 +37,7 @@ def is_classified_fn(taxonomy):
     based on presence in taxonomy and names.is_classified.
     """
     nodes = taxonomy.nodes
+
     @memoize
     def fetch_tax_id(tax_id):
         s = select([nodes.c.tax_id, nodes.c.is_valid, nodes.c.parent_id, nodes.c.rank])\
@@ -108,7 +109,8 @@ def action(a):
         if a.header:
             writer.writerow(('seqname', 'tax_id', 'accession', 'description',
                 'length', 'ambig_count', 'is_type', 'rdp_lineage'))
-        for record, tax_id in taxa :
+
+        for record, tax_id in taxa:
             accession = record.id
             row = (record.name, tax_id, accession, record.description,
                     len(record), count_ambiguous(str(record.seq)),

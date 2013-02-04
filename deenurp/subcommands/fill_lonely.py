@@ -144,7 +144,7 @@ def action(args):
                 sys.stderr.write("{0:6d}/{1:6d} complete        \r".format(len(lonely_nodes) - len(pending),
                         len(lonely_nodes)))
             except futures.TimeoutError:
-                pass # Keep waiting
+                pass  # Keep waiting
             except:
                 logging.exception("Caught error in child thread - exiting")
                 executor.shutdown(False)

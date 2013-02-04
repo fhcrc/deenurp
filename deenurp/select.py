@@ -19,7 +19,7 @@ from concurrent import futures
 from . import util, wrap
 from .util import as_fasta, tempdir
 from .wrap import cmalign, as_refpkg, redupfile_of_seqs, \
-                  rppr_min_adcl, guppy_redup, pplacer, esl_sfetch
+    rppr_min_adcl, guppy_redup, pplacer, esl_sfetch
 
 DEFAULT_THREADS = 12
 CLUSTER_THRESHOLD = 0.998
@@ -249,7 +249,7 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
                         assert hasattr(ref, 'id')
                         yield ref
             except futures.TimeoutError:
-                pass # Keep waiting
+                pass  # Keep waiting
             except:
                 logging.exception("Caught error in child thread - exiting")
                 executor.shutdown(False)

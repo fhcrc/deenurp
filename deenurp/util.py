@@ -59,6 +59,7 @@ class SingletonDefaultDict(dict):
 
 def memoize(fn):
     cache = {}
+
     @functools.wraps(fn)
     def inner(*args):
         try:
@@ -184,9 +185,11 @@ def file_opener(mode='r'):
     """
     exts = {'.bz2': bz2.BZ2File,
             '.gz': gzip.open}
+
     def open_file(s):
         ext = os.path.splitext(s)[1]
         return exts.get(ext, open)(s, mode=mode)
+
     return open_file
 
 def which(executable_name, dirs=None):

@@ -14,24 +14,24 @@ from .. import util, uclust
 
 def build_parser(p):
     p.add_argument('refpkg', help="""Reference package""",
-            type=functools.partial(refpkg.Refpkg, create=False))
+        type=functools.partial(refpkg.Refpkg, create=False))
     p.add_argument('fasta_file', help="""Sequence file to augment reference
-            package with""", metavar='fasta_file')
+        package with""", metavar='fasta_file')
     p.add_argument('seq_info', help="""Sequence info for fasta_file""",
-            type=argparse.FileType('r'))
+        type=argparse.FileType('r'))
     p.add_argument('taxtable', help="""Taxtable for sequences in fasta_file""",
-            type=argparse.FileType('r'))
+        type=argparse.FileType('r'))
     p.add_argument('--conflict-action', default='warn', choices=('warn', 'replace'),
-            help="""Action to take when an already-named sequence matches a
-            sequence in fasta_file. 'warn': show a message, do not change
-            taxonomy; 'replace': replace the tax_id for the matching sequence
-            [default:%(default)s]""")
+        help="""Action to take when an already-named sequence matches a
+        sequence in fasta_file. 'warn': show a message, do not change
+        taxonomy; 'replace': replace the tax_id for the matching sequence
+        [default:%(default)s]""")
 
     p.add_argument('--log', type=argparse.FileType('w'), help="""Log renaming
-            to file""")
+        to file""")
 
     p.add_argument('-i', '--percent-id', type=float, default=0.99, help="""Minimum
-            percent ID to transfer taxonomy [default: %(default).2f]""")
+        percent ID to transfer taxonomy [default: %(default).2f]""")
 
 def add_to_taxonomy(taxonomy, tax_node):
     """Add tax_node to taxonomy, including any missing"""
@@ -129,17 +129,16 @@ def action(args):
                 log_writer.writerow(log_record)
 
             logging.info('Naming %s %s[%s,%s] based on %s (%.2f%%)', ref_si['seqname'],
-                    node.name, node.tax_id, node.rank, record.target_label, record.pct_id)
+                         node.name, node.tax_id, node.rank, record.target_label, record.pct_id)
             if ref_si['tax_id'] and ref_si['tax_id'] != tax_id:
                 old_node = ref_taxonomy.get_node(ref_si['tax_id'])
                 logging.warn('Already named: %s[%s,%s]%s',
-                        old_node.name, old_node.tax_id, old_node.rank,
-                        ' - replacing' if args.conflict_action == 'replace' else '')
+                             old_node.name, old_node.tax_id, old_node.rank,
+                             ' - replacing' if args.conflict_action == 'replace' else '')
             if not ref_si['tax_id'] or args.conflict_action == 'replace':
                 ref_si['tax_id'] = target_si['tax_id']
                 if tax_id not in ref_taxonomy.index:
                     add_to_taxonomy(ref_taxonomy, node)
-
 
     # Write updated taxtable, seqinfo
     with util.ntf(prefix='taxonomy-', suffix='.csv') as new_tax, \

@@ -16,7 +16,7 @@ class UniqueTestCase(unittest.TestCase):
         v = [(1, 'test'), (2, 'test'), (2, 'other')]
         l = [dict(zip(keys, i)) for i in v]
         expected1 = [{'n': 1, 's': 'test'},
-                    {'n': 2, 's': 'test'}]
+                     {'n': 2, 's': 'test'}]
         actual1 = util.unique(l, key=operator.itemgetter('n'))
         self.assertEqual(expected1, list(actual1))
 

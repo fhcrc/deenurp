@@ -18,7 +18,7 @@ def read_dists(fobj):
     """
 
     N = int(fobj.readline())
-    distmat = numpy.repeat(-1*numpy.inf, N**2)
+    distmat = numpy.repeat(-1 * numpy.inf, N ** 2)
     distmat.shape = (N, N)
 
     taxa = []
@@ -42,7 +42,7 @@ def fasttree_dists(fasta):
     cmd = ['FastTree', '-nt', '-makematrix', fasta]
 
     with tempfile.TemporaryFile('rw') as stdout, open(os.devnull) as devnull:
-        proc = subprocess.Popen(cmd, stdout = stdout, stderr = devnull)
+        proc = subprocess.Popen(cmd, stdout=stdout, stderr=devnull)
         proc.communicate()
         stdout.flush()
         stdout.seek(0)
@@ -50,7 +50,7 @@ def fasttree_dists(fasta):
 
     return taxa, distmat
 
-def outliers(distmat, cutoff, prune_min = 2):
+def outliers(distmat, cutoff, prune_min=2):
     """
     Given pairwise distance matrix `distmat`, identify elements with a
     distance to the centrid element of > cutoff. Returns a boolean

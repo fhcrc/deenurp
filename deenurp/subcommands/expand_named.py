@@ -72,7 +72,7 @@ def action(a):
     seq_group = {}
     for n, seqs in underrep:
         tax_seqs[n.tax_id] = seqs
-        seq_group.update({i:n.tax_id for i in seqs})
+        seq_group.update({i: n.tax_id for i in seqs})
 
     with util.ntf(prefix='to_expand-', suffix='.fasta') as expand_fp, \
          util.ntf(prefix='expand_hits-', suffix='.fasta') as hits_fp:

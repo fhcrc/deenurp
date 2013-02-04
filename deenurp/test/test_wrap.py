@@ -30,7 +30,7 @@ class CMTestCase(unittest.TestCase):
 class AsRefpkgTestCase(unittest.TestCase):
     def setUp(self):
         self.sequences = SeqIO.parse(
-                util.data_path('taxon171552.seqs.fasta'), 'fasta')
+            util.data_path('taxon171552.seqs.fasta'), 'fasta')
 
     def test_as_refpkg(self):
         with wrap.as_refpkg(self.sequences) as refpkg:
