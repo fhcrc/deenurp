@@ -21,6 +21,9 @@ DEFAULT_RANK = 'species'
 RSCRIPT_PATH = os.path.join(os.path.dirname(__file__),
         '..', 'data', 'find_outliers.R')
 
+DROP = 'drop'
+KEEP = 'keep'
+
 def build_parser(p):
     p.add_argument('sequence_file', help="""All sequences""")
     p.add_argument('seqinfo_file', help="""Sequence info file""",
@@ -37,6 +40,14 @@ def build_parser(p):
             help="""Distance cutoff from cluster centroid [default:
             %(default)f]""")
     p.add_argument('--threads', type=int, default=12)
+
+    rare_group = p.add_argument_group("Rare taxa")
+    rare_group.add_argument('--min-seqs-for-filtering', type=int, default=3, help="""Minimum
+            number of sequences perform distance-based medoid-filtering on [default:
+            %(default)d]""")
+    rare_group.add_argument('--rare-taxon-action', choices=(KEEP, DROP), default=DROP,
+            help="""Action to perform when a taxon has < '--min-seqs-to-filter'
+            representatives. [default: %(default)s]""")
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
     """
@@ -73,6 +84,8 @@ def filter_sequences(sequence_file, cutoff):
 
         taxa, distmat = outliers.fasttree_dists(a_fasta.name)
         is_out = outliers.outliers(distmat, cutoff)
+
+        assert len(is_out) == len(taxa)
 
         return [t for t, o in zip(taxa, is_out) if o]
 
@@ -141,9 +154,17 @@ def action(a):
                     if log_taxid:
                         log_taxid(node.tax_id, node.name, 0, 0, 0)
                     continue
-                elif len(seqs) == 1:
-                    logging.warn('Only 1 sequence for %s (%s). Dropping', node.tax_id, node.name)
-                    continue
+                elif len(seqs) < a.min_seqs_for_filtering:
+                    logging.warn('%d sequence(s) for %s (%s) [action: %s]',
+                                 len(seqs), node.tax_id, node.name,
+                                 a.rare_taxon_action)
+                    if a.rare_taxon_action == DROP:
+                        continue
+                    elif a.rare_taxon_action == KEEP:
+                        kept_ids |= seqs
+                    else:
+                        raise ValueError("Unknown action: {0}".format(
+                            a.rare_taxon_action))
 
                 f = executor.submit(filter_worker,
                         sequence_file=a.sequence_file,
@@ -168,7 +189,11 @@ def action(a):
                     info = futs.pop(f)
                     kept = f.result()
                     kept_ids |= kept
-                    if len(kept) != info['n_seqs']:
+                    if len(kept) == 0:
+                        logging.warn('Pruned all %d sequences for %s (%s)',
+                                info['n_seqs'], info['node'].tax_id,
+                                info['node'].name)
+                    elif len(kept) != info['n_seqs']:
                         logging.warn('Pruned %d/%d sequences for %s (%s)',
                                 info['n_seqs'] - len(kept), info['n_seqs'],
                                 info['node'].tax_id, info['node'].name)
