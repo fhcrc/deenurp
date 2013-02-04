@@ -21,16 +21,6 @@ First, install binary dependencies:
 * Infernal version 1.0.2, (http://infernal.janelia.org/)
 * pplacer suite (http://matsen.fhcrc.org/pplacer)
 * FastTree 2 (http://www.microbesonline.org/fasttree/#Install)
-* R
-
-    - Package ``ape``:: 
-
-          install.packages("ape")
-
-    - BioConductor package ``clstutils``::
-
-          source("http://bioconductor.org/biocLite.R")
-          biocLite("clstutils")
 
 Finally, install::
 

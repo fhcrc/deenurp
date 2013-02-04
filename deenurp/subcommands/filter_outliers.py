@@ -56,33 +56,7 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
             for sequence_id in n.sequence_ids:
                 yield sequence_id
 
-def run_r_find_outliers(sequence_file, cutoff):
-    """
-    Run the R script find_outliers.R
-    """
-    with util.ntf(prefix='prune-') as tf:
-        cmd = [RSCRIPT_PATH, sequence_file, str(cutoff), tf.name]
-        subprocess.check_call(cmd)
-        return [i.strip() for i in tf]
-
 def filter_sequences(sequence_file, cutoff):
-    """
-    Return a list of sequence names identifying outliers.
-    """
-
-    with util.ntf(prefix='cmalign', suffix='.sto') as a_sto, \
-         util.ntf(prefix='cmalign', suffix='.fasta') as a_fasta, \
-         open(os.devnull) as devnull:
-        # Align
-        wrap.cmalign_files(sequence_file, a_sto.name,
-                stdout=devnull, mpi_args=None)
-        # APE requires FASTA
-        SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
-        a_fasta.flush()
-
-        return run_r_find_outliers(a_fasta.name, cutoff)
-
-def filter_sequences_numpy(sequence_file, cutoff):
     """
     Return a list of sequence names identifying outliers.
     """
@@ -120,8 +94,7 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
         # Extract sequences
         wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
-        # prune = frozenset(filter_sequences(tf.name, distance_cutoff))
-        prune = frozenset(filter_sequences_numpy(tf.name, distance_cutoff))
+        prune = frozenset(filter_sequences(tf.name, distance_cutoff))
         assert not prune - seqs
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
