@@ -45,7 +45,7 @@ def build_parser(p):
     rare_group.add_argument('--min-seqs-for-filtering', type=int, default=3, help="""Minimum
             number of sequences perform distance-based medoid-filtering on [default:
             %(default)d]""")
-    rare_group.add_argument('--rare-taxon-action', choices=(KEEP, DROP), default=DROP,
+    rare_group.add_argument('--rare-taxon-action', choices=(KEEP, DROP), default=KEEP,
             help="""Action to perform when a taxon has < '--min-seqs-to-filter'
             representatives. [default: %(default)s]""")
 
