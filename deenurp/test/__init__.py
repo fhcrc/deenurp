@@ -1,6 +1,12 @@
 import unittest
 
-modules = ['test_search', 'test_subcommand_hrefpkg_build', 'test_util', 'test_wrap']
+modules = [
+    'test_outliers',
+    'test_search',
+    'test_subcommand_hrefpkg_build',
+    'test_util',
+    'test_wrap',
+]
 
 def suite():
     s = unittest.TestSuite()

@@ -68,3 +68,11 @@ class TestFindOutliers(unittest.TestCase):
 
         is_outlier = outliers.outliers(mat, cutoff=0.025)
         self.assertFalse(any(is_outlier))
+
+def suite():
+    s = unittest.TestSuite()
+    classes = [TestReadDists, TestFastTreeDists, TestFindOutliers]
+    for cls in classes:
+        s.addTests(unittest.makeSuite(cls))
+
+    return s
