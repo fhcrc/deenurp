@@ -15,7 +15,8 @@ First, install binary dependencies:
     - pip, for installing python dependencies (http://www.pip-installer.org/)
     - Python packages:
 
-        + Run ``pip install PACKAGE`` for every PACKAGE listed in requirements.txt
+        + Run ``pip install PACKAGE`` for every PACKAGE listed in requirements.txt, e.g.
+          ``cat requirements.txt | xargs -n 1 pip install``
 
 * uclust 1.1
 * Infernal version 1.0.2, (http://infernal.janelia.org/)
