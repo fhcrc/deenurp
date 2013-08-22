@@ -7,7 +7,6 @@ import argparse
 import csv
 import logging
 import os.path
-import subprocess
 import sys
 
 from concurrent import futures
@@ -139,7 +138,6 @@ def action(a):
 
     with a.output_fp as fp, a.log or util.nothing():
         logging.info('Keeping %d sequences classified above %s', len(kept_ids), a.filter_rank)
-        wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
 
         # For each filter-rank, filter
         nodes = [i for i in taxonomy if i.rank == a.filter_rank]
@@ -197,10 +195,12 @@ def action(a):
                         logging.warn('Pruned %d/%d sequences for %s (%s)',
                                 info['n_seqs'] - len(kept), info['n_seqs'],
                                 info['node'].tax_id, info['node'].name)
-                    # Extract
-                    wrap.esl_sfetch(a.sequence_file, kept, fp)
 
-    # Filter seqinfo
+        # Extract all of the sequences that passed.
+        logging.info('Extracting %d sequences', len(kept_ids))
+        wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
+
+    # Filter seqinfo to sequences that passed.
     if a.filtered_seqinfo:
         with open(a.seqinfo_file.name) as fp:
             r = csv.DictReader(fp)
