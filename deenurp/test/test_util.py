@@ -48,9 +48,19 @@ class MaybeTempFileTestCase(unittest.TestCase):
         with util.maybe_tempfile(o, prefix='tmp') as tf:
             self.assertEqual(o, tf)
 
+
+class RequireExecutableTestCase(unittest.TestCase):
+    def test_exists(self):
+        util.require_executable('python')
+
+    def test_not_exists(self):
+        self.assertRaises(util.MissingDependencyError, util.require_executable,
+                          'fake_program-')
+
 def suite():
     s = unittest.TestSuite()
-    classes = [MaybeTempFileTestCase, MemoizeTestCase, UniqueTestCase]
+    classes = [MaybeTempFileTestCase, MemoizeTestCase, UniqueTestCase,
+               RequireExecutableTestCase]
     for cls in classes:
         s.addTests(unittest.makeSuite(cls))
 

@@ -14,7 +14,7 @@ from Bio import SeqIO
 import peasel
 from taxtastic.refpkg import Refpkg
 
-from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which
+from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -73,6 +73,7 @@ def fasttree(sequences, output_fp, log_path=None, quiet=True, gtr=False,
     if executable == 'FastTreeMP' and not which('FastTreeMP'):
         executable = 'FastTree'
         logging.warn("Multithreaded FastTreeMP not found. Using FastTree")
+    require_executable(executable)
 
     env = os.environ.copy()
     if threads:
@@ -94,6 +95,7 @@ def fasttree(sequences, output_fp, log_path=None, quiet=True, gtr=False,
         raise subprocess.CalledProcessError(p.returncode, cmd)
 
 def guppy_redup(placefile, redup_file, output):
+    require_executable('guppy')
     cmd = ['guppy', 'redup', '-m', placefile, '-d', redup_file, '-o', output]
     logging.debug(' '.join(cmd))
     subprocess.check_call(cmd)
@@ -102,6 +104,7 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
     """
     Run pplacer on the provided refpkg
     """
+    require_executable('pplacer')
     cmd = ['pplacer', '-j', str(threads), '-c', refpkg, alignment]
     if posterior_prob:
         cmd.append('-p')
@@ -128,6 +131,7 @@ def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_m
     Run rppr min_adcl on the given jplace file, cutting to the given number of leaves
     Returns the names of the leaves *to remove*.
     """
+    require_executable('rppr')
     cmd = ['rppr', 'min_adcl', '--algorithm', algorithm, jplace, '--leaves',
            str(leaves)]
     if point_mass:
@@ -159,6 +163,7 @@ def _cmalign_has_mpi():
     """
     Returns whether cmalign was compiled with MPI support
     """
+    require_executable('cmalign')
     o = subprocess.check_output(['cmalign', '-h'])
     return '--mpi' in o
 
@@ -174,6 +179,7 @@ def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
         cmd = ['mpirun'] + mpi_args + ['cmalign', '--mpi']
     else:
         cmd = ['cmalign']
+    require_executable(cmd[0])
     cmd.extend(['--sub', '-1', '--dna', '--hbanded'])
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
@@ -235,6 +241,7 @@ def dnaclust(fasta_file, similarity=0.99, centers=None, left_gaps_allowed=True,
     """
     Run DNA clust
     """
+    require_executable('dnaclust')
     Cluster = collections.namedtuple('Cluster', ['center', 'sequences'])
     cmd = ['dnaclust', '-s', str(similarity), '-i', fasta_file]
     if no_overlap:

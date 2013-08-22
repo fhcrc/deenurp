@@ -206,3 +206,10 @@ def which(executable_name, dirs=None):
         return next(executable_paths)
     except StopIteration:
         return None
+
+class MissingDependencyError(ValueError):
+    pass
+
+def require_executable(executable_name):
+    if not which(executable_name):
+        raise MissingDependencyError(executable_name)

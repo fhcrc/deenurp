@@ -20,6 +20,8 @@ import tempfile
 
 from Bio import SeqIO
 
+from .util import require_executable
+
 log = logging.getLogger(__name__)
 
 DEFAULT_PCT_ID = 0.99
@@ -166,6 +168,7 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
 
     Others: see ``uclust --help``
     """
+    require_executable('uclust')
     with _maybe_tempfile_name(output if not search_pct_id else None, prefix='uclust-') as o:
         cmd = ['uclust',
                 '--input', query,
@@ -203,6 +206,7 @@ def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
     """
     Cluster de novo
     """
+    require_executable('uclust')
     cmd = ['uclust',
             '--input', sequence_file,
             '--uc', output,
@@ -243,6 +247,7 @@ def sort(sequence_file, output, quiet=False):
     """
     sort by descending length
     """
+    require_executable('uclust')
     cmd = ['uclust', '--sort', sequence_file, '--output', output]
     if quiet:
         cmd.append('--quiet')
