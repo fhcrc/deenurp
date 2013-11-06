@@ -30,7 +30,7 @@ def log_error(fn):
         try:
             return fn(*args, **kwargs)
         except:
-            logging.exception("ERROR in %s", fn.name)
+            logging.exception("ERROR in %s", fn.__name__)
             raise
     return wrapper
 
