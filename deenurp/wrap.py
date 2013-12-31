@@ -20,7 +20,7 @@ from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, requir
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
 
 """16S bacterial covariance model"""
-CM = data_path('bacteria16S_508_mod5.cm')
+CM = data_path('RRNA_16S_BACTERIA.cm')
 
 @contextlib.contextmanager
 def as_refpkg(sequences, name='temp.refpkg', threads=None):
