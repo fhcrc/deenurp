@@ -19,7 +19,7 @@ First, install binary dependencies:
           ``cat requirements.txt | xargs -n 1 pip install``
 
 * uclust 1.1
-* Infernal version 1.0.2, (http://infernal.janelia.org/)
+* Infernal version 1.1, (http://infernal.janelia.org/)
 * pplacer suite (http://matsen.fhcrc.org/pplacer)
 * FastTree 2 (http://www.microbesonline.org/fasttree/#Install)
 

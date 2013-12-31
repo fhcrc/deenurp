@@ -9,6 +9,7 @@ import logging
 import os
 import os.path
 import subprocess
+import sys
 
 from Bio import SeqIO
 import peasel
@@ -169,6 +170,9 @@ def _cmalign_has_mpi():
 
 def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
         stdout=None):
+
+    subprocess.check_call(['cp', input_file, 'temp.fasta'])
+
     has_mpi = _cmalign_has_mpi()
     if (mpi_args is not None) and not has_mpi:
         logging.warn('MPI arguments %s passed to cmalign_files, '
@@ -180,10 +184,10 @@ def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
     else:
         cmd = ['cmalign']
     require_executable(cmd[0])
-    cmd.extend(['--sub', '-1', '--dna', '--hbanded'])
+    cmd.extend(['--noprob', '--dnaout'])
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
-    subprocess.check_call(cmd, stdout=stdout)
+    subprocess.check_call(cmd, stdout=stdout, stderr=sys.stderr)
 
 
 def cmalign(sequences, output=None, mpi_args=None, cm=CM):
