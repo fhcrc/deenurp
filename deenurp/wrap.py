@@ -171,8 +171,6 @@ def _cmalign_has_mpi():
 def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
         stdout=None):
 
-    subprocess.check_call(['cp', input_file, 'temp.fasta'])
-
     has_mpi = _cmalign_has_mpi()
     if (mpi_args is not None) and not has_mpi:
         logging.warn('MPI arguments %s passed to cmalign_files, '
