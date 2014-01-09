@@ -8,6 +8,18 @@ Under development.
 Installation
 ============
 
+The Easy Way
+^^^^^^^^^^^^
+
+* Install Python 2.7
+* run `bin/bootstrap.sh`
+* run `source deenurp-env/bin/activate`
+
+the `deenurp` executable should now be on your `$PATH`
+
+The Hard Way
+^^^^^^^^^^^^
+
 First, install binary dependencies:
 
 * Python 2.7
