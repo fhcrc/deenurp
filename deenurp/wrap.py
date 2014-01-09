@@ -15,7 +15,7 @@ from Bio import SeqIO
 import peasel
 from taxtastic.refpkg import Refpkg
 
-from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable
+from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable, MissingDependencyError
 
 DEFAULT_CMALIGN_THREADS = 1
 
@@ -162,10 +162,22 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
+def _require_cmalign_11(cmalign='cmalign'):
+    """
+    Check for cmalign version 1.1, raising an error if not found
+    """
+    version_str = 'INFERNAL 1.1'
+    cmd = [cmalign, '-h']
+    o = subprocess.check_output(cmd)
+    if version_str not in o:
+        msg = ('cmalign 1.1 not found. '
+                'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
+        raise MissingDependencyError(msg)
 
 def cmalign_files(input_file, output_file, cm=CM, cpu=None, stdout=None):
     cmd = ['cmalign']
     require_executable(cmd[0])
+    _require_cmalign_11(cmd[0])
     cmd.extend(['--noprob', '--dnaout'])
     if cpu is not None:
         cmd.extend(['--cpu', str(cpu)])
