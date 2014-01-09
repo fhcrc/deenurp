@@ -344,7 +344,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
             wrap.esl_sfetch(sequence_file, test_seq_ids, test_file)
 
         # Cmalign
-        aligned = wrap.cmalign(sequences, output=sto_fp, mpi_args=None)
+        aligned = wrap.cmalign(sequences, output=sto_fp)
         aligned = list(aligned)
         assert aligned
         # Tree

@@ -74,7 +74,7 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, cluster_name,
 
     c = itertools.chain(ref_seqs, query_seqs)
     ref_ids = frozenset(i.id for i in ref_seqs)
-    aligned = list(cmalign(c, mpi_args=None))
+    aligned = list(cmalign(c))
     with as_refpkg((i for i in aligned if i.id in ref_ids), threads=1) as rp, \
              as_fasta(aligned) as fasta, \
              tempdir(prefix='jplace') as placedir, \
@@ -108,7 +108,7 @@ def select_sequences_for_whitelist_cluster(ref_seqs, cluster_name, keep_leaves=5
     if len(ref_seqs) <= keep_leaves:
         return ref_seqs
 
-    aligned = list(cmalign(ref_seqs, mpi_args=None))
+    aligned = list(cmalign(ref_seqs))
     with util.ntf(suffix='.tre') as tf:
         wrap.fasttree(aligned, tf, gtr=True)
         tf.close()

@@ -160,27 +160,10 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
-def _cmalign_has_mpi():
-    """
-    Returns whether cmalign was compiled with MPI support
-    """
-    require_executable('cmalign')
-    o = subprocess.check_output(['cmalign', '-h'])
-    return '--mpi' in o
 
-def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
-        stdout=None):
+def cmalign_files(input_file, output_file, cm=CM, stdout=None):
 
-    has_mpi = _cmalign_has_mpi()
-    if (mpi_args is not None) and not has_mpi:
-        logging.warn('MPI arguments %s passed to cmalign_files, '
-                'but cmalign does not appear to have MPI support. '
-                'Running without MPI.',
-                mpi_args)
-    if mpi_args is not None and has_mpi:
-        cmd = ['mpirun'] + mpi_args + ['cmalign', '--mpi']
-    else:
-        cmd = ['cmalign']
+    cmd = ['cmalign']
     require_executable(cmd[0])
     cmd.extend(['--noprob', '--dnaout'])
     cmd.extend(['-o', output_file, cm, input_file])
@@ -188,15 +171,13 @@ def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
     subprocess.check_call(cmd, stdout=stdout, stderr=sys.stderr)
 
 
-def cmalign(sequences, output=None, mpi_args=None, cm=CM):
+def cmalign(sequences, output=None, cm=CM):
     """
     Run cmalign
-
-    If mpi_args is specified, run via mpirun
     """
     with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
          maybe_tempfile(output, prefix='cmalign', suffix='.sto', dir='.') as tf:
-        cmalign_files(fasta, tf.name, mpi_args=mpi_args, stdout=devnull, cm=cm)
+        cmalign_files(fasta, tf.name, stdout=devnull, cm=cm)
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence

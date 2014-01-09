@@ -76,7 +76,7 @@ def filter_sequences(sequence_file, cutoff):
          open(os.devnull) as devnull:
         # Align
         wrap.cmalign_files(sequence_file, a_sto.name,
-                stdout=devnull, mpi_args=None)
+                stdout=devnull)
         # FastTree requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
         a_fasta.flush()
