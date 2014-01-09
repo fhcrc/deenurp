@@ -161,26 +161,29 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
     return output.splitlines()
 
 
-def cmalign_files(input_file, output_file, cm=CM, stdout=None):
-
+def cmalign_files(input_file, output_file, cm=CM, cpu=1, stdout=None):
     cmd = ['cmalign']
     require_executable(cmd[0])
     cmd.extend(['--noprob', '--dnaout'])
+    if cpu is not None:
+        cmd.extend(['--cpu', str(cpu)])
+
     cmd.extend(['-o', output_file, cm, input_file])
-    logging.debug(' '.join(cmd))
+    logging.error(' '.join(cmd))
     subprocess.check_call(cmd, stdout=stdout, stderr=sys.stderr)
 
 
-def cmalign(sequences, output=None, cm=CM):
+def cmalign(sequences, output=None, cm=CM, cpu=1):
     """
     Run cmalign
     """
     with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
          maybe_tempfile(output, prefix='cmalign', suffix='.sto', dir='.') as tf:
-        cmalign_files(fasta, tf.name, stdout=devnull, cm=cm)
+        cmalign_files(fasta, tf.name, stdout=devnull, cm=cm, cpu=cpu)
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
+
 
 def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):
     """

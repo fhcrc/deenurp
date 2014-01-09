@@ -18,6 +18,15 @@ class CmAlignTestCase(unittest.TestCase):
         result = list(wrap.cmalign(self.sequences))
         self.assertEqual(len(self.sequences), len(result))
 
+    def test_twoproc(self):
+        result = list(wrap.cmalign(self.sequences, cpu=2))
+        self.assertEqual(len(self.sequences), len(result))
+
+    def test_allproc(self):
+        result = list(wrap.cmalign(self.sequences, cpu=None))
+        self.assertEqual(len(self.sequences), len(result))
+
+
 class CMTestCase(unittest.TestCase):
     def test_find_cm(self):
         self.assertTrue(os.path.isfile(wrap.CM))
