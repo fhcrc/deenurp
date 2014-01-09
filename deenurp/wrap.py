@@ -17,6 +17,8 @@ from taxtastic.refpkg import Refpkg
 
 from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable
 
+DEFAULT_CMALIGN_THREADS = 1
+
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
 
@@ -161,7 +163,7 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
     return output.splitlines()
 
 
-def cmalign_files(input_file, output_file, cm=CM, cpu=1, stdout=None):
+def cmalign_files(input_file, output_file, cm=CM, cpu=None, stdout=None):
     cmd = ['cmalign']
     require_executable(cmd[0])
     cmd.extend(['--noprob', '--dnaout'])
@@ -169,11 +171,11 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=1, stdout=None):
         cmd.extend(['--cpu', str(cpu)])
 
     cmd.extend(['-o', output_file, cm, input_file])
-    logging.error(' '.join(cmd))
+    logging.debug(' '.join(cmd))
     subprocess.check_call(cmd, stdout=stdout, stderr=sys.stderr)
 
 
-def cmalign(sequences, output=None, cm=CM, cpu=1):
+def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     """
     Run cmalign
     """

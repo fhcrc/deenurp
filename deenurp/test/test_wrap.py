@@ -22,8 +22,8 @@ class CmAlignTestCase(unittest.TestCase):
         result = list(wrap.cmalign(self.sequences, cpu=2))
         self.assertEqual(len(self.sequences), len(result))
 
-    def test_allproc(self):
-        result = list(wrap.cmalign(self.sequences, cpu=None))
+    def test_defaultproc(self):
+        result = list(wrap.cmalign(self.sequences))
         self.assertEqual(len(self.sequences), len(result))
 
 
