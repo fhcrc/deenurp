@@ -9,18 +9,21 @@ import logging
 import os
 import os.path
 import subprocess
+import sys
 
 from Bio import SeqIO
 import peasel
 from taxtastic.refpkg import Refpkg
 
-from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable
+from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable, MissingDependencyError
+
+DEFAULT_CMALIGN_THREADS = 1
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
 
 """16S bacterial covariance model"""
-CM = data_path('bacteria16S_508_mod5.cm')
+CM = data_path('RRNA_16S_BACTERIA.cm')
 
 @contextlib.contextmanager
 def as_refpkg(sequences, name='temp.refpkg', threads=None):
@@ -159,45 +162,42 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
-def _cmalign_has_mpi():
+def _require_cmalign_11(cmalign='cmalign'):
     """
-    Returns whether cmalign was compiled with MPI support
+    Check for cmalign version 1.1, raising an error if not found
     """
-    require_executable('cmalign')
-    o = subprocess.check_output(['cmalign', '-h'])
-    return '--mpi' in o
+    version_str = 'INFERNAL 1.1'
+    cmd = [cmalign, '-h']
+    o = subprocess.check_output(cmd)
+    if version_str not in o:
+        msg = ('cmalign 1.1 not found. '
+                'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
+        raise MissingDependencyError(msg)
 
-def cmalign_files(input_file, output_file, mpi_args=None, cm=CM,
-        stdout=None):
-    has_mpi = _cmalign_has_mpi()
-    if (mpi_args is not None) and not has_mpi:
-        logging.warn('MPI arguments %s passed to cmalign_files, '
-                'but cmalign does not appear to have MPI support. '
-                'Running without MPI.',
-                mpi_args)
-    if mpi_args is not None and has_mpi:
-        cmd = ['mpirun'] + mpi_args + ['cmalign', '--mpi']
-    else:
-        cmd = ['cmalign']
+def cmalign_files(input_file, output_file, cm=CM, cpu=None, stdout=None):
+    cmd = ['cmalign']
     require_executable(cmd[0])
-    cmd.extend(['--sub', '-1', '--dna', '--hbanded'])
+    _require_cmalign_11(cmd[0])
+    cmd.extend(['--noprob', '--dnaout'])
+    if cpu is not None:
+        cmd.extend(['--cpu', str(cpu)])
+
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
-    subprocess.check_call(cmd, stdout=stdout)
+    subprocess.check_call(cmd, stdout=stdout, stderr=sys.stderr)
 
 
-def cmalign(sequences, output=None, mpi_args=None, cm=CM):
+def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     """
     Run cmalign
-
-    If mpi_args is specified, run via mpirun
     """
     with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
          maybe_tempfile(output, prefix='cmalign', suffix='.sto', dir='.') as tf:
-        cmalign_files(fasta, tf.name, mpi_args=mpi_args, stdout=devnull, cm=cm)
+        cmalign_files(fasta, tf.name, stdout=devnull, cm=cm, cpu=cpu)
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
+
 
 def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):
     """
