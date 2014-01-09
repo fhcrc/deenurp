@@ -1,0 +1,11 @@
+=====================
+ Changes for deenurp
+=====================
+
+0.0.2-dev
+=====
+
+ * require Infernal 1.1
+ * update 16S alignment model (from https://github.com/rdpstaff/fungene_pipeline/blob/eab8ab3751da687b4d6dbd553f6a1d8261d98385/resources/RRNA_16S_BACTERIA/model.cm)
+ * add bin/boostrap.sh to create execution environment with installed dependencies
+

@@ -1,3 +1,11 @@
+/src
 /build
 /dist
+*-env
 *.pyc
+*.egg-info
+tests/*/output/*
+tests/*/temp.fasta
+tests/hrefpkg-build/hrefpkg
+*.ssi
+

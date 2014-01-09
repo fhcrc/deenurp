@@ -14,13 +14,18 @@ class CmAlignTestCase(unittest.TestCase):
     def setUp(self):
         self.sequences = list(SeqIO.parse(util.data_path('test_input.fasta'), 'fasta'))
 
-    def test_nompi(self):
+    def test_oneproc(self):
         result = list(wrap.cmalign(self.sequences))
         self.assertEqual(len(self.sequences), len(result))
 
-    def test_mpi(self):
-        result = list(wrap.cmalign(self.sequences, mpi_args=['-np', '2']))
+    def test_twoproc(self):
+        result = list(wrap.cmalign(self.sequences, cpu=2))
         self.assertEqual(len(self.sequences), len(result))
+
+    def test_defaultproc(self):
+        result = list(wrap.cmalign(self.sequences))
+        self.assertEqual(len(self.sequences), len(result))
+
 
 class CMTestCase(unittest.TestCase):
     def test_find_cm(self):
