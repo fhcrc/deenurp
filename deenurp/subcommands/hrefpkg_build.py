@@ -368,6 +368,8 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
             raise
         rp.update_file('profile', wrap.CM)
         rp.commit_transaction()
+
+        util.require_executable('rppr')
         rp.reroot()
 
         return rp.path
