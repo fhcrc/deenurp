@@ -174,26 +174,31 @@ def _require_cmalign_11(cmalign='cmalign'):
                 'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
         raise MissingDependencyError(msg)
 
-def cmalign_files(input_file, output_file, cm=CM, cpu=None, stdout=None):
+def cmalign_files(input_file, output_file, cm=CM, cpu=None):
     cmd = ['cmalign']
     require_executable(cmd[0])
     _require_cmalign_11(cmd[0])
     cmd.extend(['--noprob', '--dnaout'])
     if cpu is not None:
         cmd.extend(['--cpu', str(cpu)])
-
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
-    subprocess.check_call(cmd, stdout=stdout, stderr=sys.stderr)
-
+    p = subprocess.Popen(cmd,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for line in p.stdout:
+        logging.debug(line.strip())
+    if p.wait() != 0:
+        # TODO: preserve output files (input_file, output_file)
+        error = p.stderr.read().strip()
+        raise subprocess.CalledProcessError(p.returncode, error)
 
 def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     """
     Run cmalign
     """
-    with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
+    with as_fasta(sequences) as fasta, \
          maybe_tempfile(output, prefix='cmalign', suffix='.sto', dir='.') as tf:
-        cmalign_files(fasta, tf.name, stdout=devnull, cm=cm, cpu=cpu)
+        cmalign_files(fasta, tf.name, cm=cm, cpu=cpu)
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence

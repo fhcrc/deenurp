@@ -39,6 +39,9 @@ def build_parser(p):
             help="""Distance cutoff from cluster centroid [default:
             %(default)f]""")
     p.add_argument('--threads', type=int, default=12)
+    p.add_argument('--tmp',
+            type=lambda tmp: maketmp(tmp),
+            help="""directory for intermediary files""")
 
     rare_group = p.add_argument_group("Rare taxa")
     rare_group.add_argument('--min-seqs-for-filtering', type=int, default=3, help="""Minimum
@@ -47,6 +50,11 @@ def build_parser(p):
     rare_group.add_argument('--rare-taxon-action', choices=(KEEP, DROP), default=KEEP,
             help="""Action to perform when a taxon has < '--min-seqs-to-filter'
             representatives. [default: %(default)s]""")
+
+def maketmp(tmpdir):
+    if not os.path.exists(tmpdir):
+        os.makedirs(tmpdir)
+    return tmpdir
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
     """
@@ -66,17 +74,17 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
             for sequence_id in n.sequence_ids:
                 yield sequence_id
 
-def filter_sequences(sequence_file, cutoff):
+def filter_sequences(sequence_file, tax_id, cutoff, tmp=None):
     """
     Return a list of sequence names identifying outliers.
     """
 
-    with util.ntf(prefix='cmalign', suffix='.sto') as a_sto, \
-         util.ntf(prefix='cmalign', suffix='.fasta') as a_fasta, \
-         open(os.devnull) as devnull:
+    prefix = '{}_'.format(tax_id)
+
+    with util.ntf(prefix=prefix, suffix='.sto', dir=tmp) as a_sto, \
+            util.ntf(prefix=prefix, suffix='.fasta', dir=tmp) as a_fasta:
         # Align
-        wrap.cmalign_files(sequence_file, a_sto.name,
-                stdout=devnull)
+        wrap.cmalign_files(sequence_file, a_sto.name)
         # FastTree requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
         a_fasta.flush()
@@ -88,7 +96,7 @@ def filter_sequences(sequence_file, cutoff):
 
         return [t for t, o in zip(taxa, is_out) if o]
 
-def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
+def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None, tmp=None):
     """
     Worker task for running filtering tasks.
 
@@ -102,11 +110,14 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
 
     :returns: Set of sequences to *keep*
     """
-    with util.ntf(prefix='to_filter', suffix='.fasta') as tf:
+
+    prefix = '{}_'.format(node.tax_id)
+
+    with util.ntf(prefix=prefix, suffix='.fasta', dir=tmp) as tf:
         # Extract sequences
         wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
-        prune = frozenset(filter_sequences(tf.name, distance_cutoff))
+        prune = frozenset(filter_sequences(tf.name, node.tax_id, distance_cutoff, tmp=tmp))
         assert not prune - seqs
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
@@ -148,12 +159,12 @@ def action(a):
             for i, node in enumerate(nodes):
                 seqs = frozenset(node.subtree_sequence_ids())
                 if not seqs:
-                    logging.warn("No sequences for %s (%s)", node.tax_id, node.name)
+                    logging.debug("No sequences for %s (%s)", node.tax_id, node.name)
                     if log_taxid:
                         log_taxid(node.tax_id, node.name, 0, 0, 0)
                     continue
                 elif len(seqs) < a.min_seqs_for_filtering:
-                    logging.warn('%d sequence(s) for %s (%s) [action: %s]',
+                    logging.debug('%d sequence(s) for %s (%s) [action: %s]',
                                  len(seqs), node.tax_id, node.name,
                                  a.rare_taxon_action)
                     if a.rare_taxon_action == DROP:
@@ -169,7 +180,8 @@ def action(a):
                         node=node,
                         seqs=seqs,
                         distance_cutoff=a.distance_cutoff,
-                        log_taxid=log_taxid)
+                        log_taxid=log_taxid,
+                        tmp=a.tmp)
                 futs[f] = {'n_seqs': len(seqs), 'node': node}
 
             complete = 0
@@ -188,11 +200,11 @@ def action(a):
                     kept = f.result()
                     kept_ids |= kept
                     if len(kept) == 0:
-                        logging.warn('Pruned all %d sequences for %s (%s)',
+                        logging.info('Pruned all %d sequences for %s (%s)',
                                 info['n_seqs'], info['node'].tax_id,
                                 info['node'].name)
                     elif len(kept) != info['n_seqs']:
-                        logging.warn('Pruned %d/%d sequences for %s (%s)',
+                        logging.info('Pruned %d/%d sequences for %s (%s)',
                                 info['n_seqs'] - len(kept), info['n_seqs'],
                                 info['node'].tax_id, info['node'].name)
 
