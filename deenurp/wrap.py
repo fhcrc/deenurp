@@ -9,7 +9,6 @@ import logging
 import os
 import os.path
 import subprocess
-import sys
 
 from Bio import SeqIO
 import peasel
@@ -185,9 +184,9 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=None):
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    for line in p.stdout:
-        logging.debug(line.strip())
-    if p.wait() != 0:
+    p.wait()
+    logging.debug(p.stdout.read().strip())
+    if p.returncode != 0:
         # TODO: preserve output files (input_file, output_file)
         error = p.stderr.read().strip()
         raise subprocess.CalledProcessError(p.returncode, error)
