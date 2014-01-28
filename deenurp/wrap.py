@@ -16,7 +16,7 @@ from taxtastic.refpkg import Refpkg
 
 from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable, MissingDependencyError
 
-DEFAULT_CMALIGN_THREADS = 1
+DEFAULT_CMALIGN_THREADS = 2
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -173,7 +173,7 @@ def _require_cmalign_11(cmalign='cmalign'):
                 'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
         raise MissingDependencyError(msg)
 
-def cmalign_files(input_file, output_file, cm=CM, cpu=None):
+def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     cmd = ['cmalign']
     require_executable(cmd[0])
     _require_cmalign_11(cmd[0])
@@ -184,11 +184,13 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=None):
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    p.wait()
+#    p.wait() # cmalign does not work nicely with futures so don't do this
     logging.debug(p.stdout.read().strip())
-    if p.returncode != 0:
+
+    error = p.stderr.read().strip()
+
+    if error:
         # TODO: preserve output files (input_file, output_file)
-        error = p.stderr.read().strip()
         raise subprocess.CalledProcessError(p.returncode, error)
 
 def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
