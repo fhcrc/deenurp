@@ -39,9 +39,6 @@ def build_parser(p):
             help="""Distance cutoff from cluster centroid [default:
             %(default)f]""")
     p.add_argument('--threads', type=int, default=12)
-    p.add_argument('--tmp',
-            type=lambda tmp: maketmp(tmp),
-            help="""directory for intermediary files""")
 
     rare_group = p.add_argument_group("Rare taxa")
     rare_group.add_argument('--min-seqs-for-filtering', type=int, default=3, help="""Minimum
@@ -50,11 +47,6 @@ def build_parser(p):
     rare_group.add_argument('--rare-taxon-action', choices=(KEEP, DROP), default=KEEP,
             help="""Action to perform when a taxon has < '--min-seqs-to-filter'
             representatives. [default: %(default)s]""")
-
-def maketmp(tmpdir):
-    if not os.path.exists(tmpdir):
-        os.makedirs(tmpdir)
-    return tmpdir
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
     """
@@ -74,15 +66,15 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
             for sequence_id in n.sequence_ids:
                 yield sequence_id
 
-def filter_sequences(sequence_file, tax_id, cutoff, tmp=None):
+def filter_sequences(sequence_file, tax_id, cutoff):
     """
     Return a list of sequence names identifying outliers.
     """
 
     prefix = '{}_'.format(tax_id)
 
-    with util.ntf(prefix=prefix, suffix='.sto', dir=tmp) as a_sto, \
-            util.ntf(prefix=prefix, suffix='.fasta', dir=tmp) as a_fasta:
+    with util.ntf(prefix=prefix, suffix='.sto') as a_sto, \
+            util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
         # Align
         wrap.cmalign_files(sequence_file, a_sto.name)
         # FastTree requires FASTA
@@ -96,7 +88,7 @@ def filter_sequences(sequence_file, tax_id, cutoff, tmp=None):
 
         return [t for t, o in zip(taxa, is_out) if o]
 
-def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None, tmp=None):
+def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
     """
     Worker task for running filtering tasks.
 
@@ -113,11 +105,11 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None, tm
 
     prefix = '{}_'.format(node.tax_id)
 
-    with util.ntf(prefix=prefix, suffix='.fasta', dir=tmp) as tf:
+    with util.ntf(prefix=prefix, suffix='.fasta') as tf:
         # Extract sequences
         wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
-        prune = frozenset(filter_sequences(tf.name, node.tax_id, distance_cutoff, tmp=tmp))
+        prune = frozenset(filter_sequences(tf.name, node.tax_id, distance_cutoff))
         assert not prune - seqs
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
@@ -180,8 +172,7 @@ def action(a):
                         node=node,
                         seqs=seqs,
                         distance_cutoff=a.distance_cutoff,
-                        log_taxid=log_taxid,
-                        tmp=a.tmp)
+                        log_taxid=log_taxid)
                 futs[f] = {'n_seqs': len(seqs), 'node': node}
 
             complete = 0
