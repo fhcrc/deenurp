@@ -184,12 +184,9 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#    p.wait() # cmalign does not work nicely with futures so don't do this
     logging.debug(p.stdout.read().strip())
-
     error = p.stderr.read().strip()
-
-    if error:
+    if p.wait() != 0:
         # TODO: preserve output files (input_file, output_file)
         raise subprocess.CalledProcessError(p.returncode, error)
 
