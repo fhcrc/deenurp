@@ -9,7 +9,6 @@ import logging
 import os
 import os.path
 import subprocess
-import sys
 
 from Bio import SeqIO
 import peasel
@@ -17,7 +16,7 @@ from taxtastic.refpkg import Refpkg
 
 from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable, MissingDependencyError
 
-DEFAULT_CMALIGN_THREADS = 1
+DEFAULT_CMALIGN_THREADS = 2
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -174,26 +173,30 @@ def _require_cmalign_11(cmalign='cmalign'):
                 'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
         raise MissingDependencyError(msg)
 
-def cmalign_files(input_file, output_file, cm=CM, cpu=None, stdout=None):
+def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     cmd = ['cmalign']
     require_executable(cmd[0])
     _require_cmalign_11(cmd[0])
     cmd.extend(['--noprob', '--dnaout'])
     if cpu is not None:
         cmd.extend(['--cpu', str(cpu)])
-
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
-    subprocess.check_call(cmd, stdout=stdout, stderr=sys.stderr)
-
+    p = subprocess.Popen(cmd,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logging.debug(p.stdout.read().strip())
+    error = p.stderr.read().strip()
+    if p.wait() != 0:
+        # TODO: preserve output files (input_file, output_file)
+        raise subprocess.CalledProcessError(p.returncode, error)
 
 def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     """
     Run cmalign
     """
-    with as_fasta(sequences) as fasta, open(os.devnull) as devnull, \
+    with as_fasta(sequences) as fasta, \
          maybe_tempfile(output, prefix='cmalign', suffix='.sto', dir='.') as tf:
-        cmalign_files(fasta, tf.name, stdout=devnull, cm=cm, cpu=cpu)
+        cmalign_files(fasta, tf.name, cm=cm, cpu=cpu)
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
