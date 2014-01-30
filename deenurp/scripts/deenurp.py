@@ -31,7 +31,7 @@ def parse_arguments(argv):
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-v', '--verbose', dest='verbosity',
-            action='count', default=1,
+            action='count', default=0,
             help="Be more verbose. Specify -vv or -vvv for even more")
     parser.add_argument('-q', '--quiet', action='store_const', const=0,
             dest='verbosity', help="Suppress output")
