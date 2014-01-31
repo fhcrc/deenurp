@@ -76,7 +76,7 @@ def filter_sequences(sequence_file, tax_id, cutoff):
     with util.ntf(prefix=prefix, suffix='.sto') as a_sto, \
             util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
         # Align
-        wrap.cmalign_files(sequence_file, a_sto.name, threads=1)
+        wrap.cmalign_files(sequence_file, a_sto.name, cpu=1)
         # FastTree requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
         a_fasta.flush()
