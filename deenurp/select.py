@@ -17,11 +17,11 @@ from . import search, uclust
 from concurrent import futures
 
 from . import util, wrap
+from .config import DEFAULT_THREADS
 from .util import as_fasta, tempdir
 from .wrap import cmalign, as_refpkg, redupfile_of_seqs, \
     rppr_min_adcl, guppy_redup, pplacer, esl_sfetch
 
-DEFAULT_THREADS = 12
 CLUSTER_THRESHOLD = 0.998
 
 def log_error(fn):

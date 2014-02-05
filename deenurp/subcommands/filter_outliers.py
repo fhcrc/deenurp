@@ -14,7 +14,7 @@ from concurrent import futures
 from Bio import SeqIO
 from taxtastic.taxtable import TaxNode
 
-from .. import wrap, util, outliers
+from .. import config, wrap, util, outliers
 
 DEFAULT_RANK = 'species'
 RSCRIPT_PATH = os.path.join(os.path.dirname(__file__),
@@ -38,7 +38,7 @@ def build_parser(p):
     p.add_argument('--distance-cutoff', type=float, default=0.015,
             help="""Distance cutoff from cluster centroid [default:
             %(default)f]""")
-    p.add_argument('--threads', type=int, default=12)
+    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS)
 
     rare_group = p.add_argument_group("Rare taxa")
     rare_group.add_argument('--min-seqs-for-filtering', type=int, default=3, help="""Minimum
