@@ -58,6 +58,9 @@ fi
 
 source $venv/bin/activate
 
+# full path; set by activate
+venv=$VIRTUAL_ENV
+
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
 while read line; do

@@ -4,6 +4,7 @@ python:
 
 install:
   - "bin/bootstrap.sh $VIRTUAL_ENV"
+
 script: 
   - python setup.py test
   - tests/run.sh
