@@ -1,0 +1,11 @@
+language: python
+python:
+  - "2.7"
+
+install:
+  - "bin/bootstrap.sh $VIRTUAL_ENV"
+script: python setup.py test
+
+notifications:
+  email:
+    - cmccoy@fhcrc.org
