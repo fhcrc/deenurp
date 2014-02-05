@@ -73,7 +73,7 @@ if [ ! -f $venv/bin/pplacer ]; then
 	(cd src && \
 	wget -N http://matsen.fhcrc.org/pplacer/builds/$PPLACER_TGZ && \
 	tar -xf $PPLACER_TGZ && \
-	cp $(srcdir $PPLACER_TGZ)/{pplacer,guppy,rppr} ../$venv/bin && \
+	cp $(srcdir $PPLACER_TGZ)/{pplacer,guppy,rppr} $venv/bin && \
 	pip install -U $(srcdir $PPLACER_TGZ)/scripts && \
 	rm -r $(srcdir $PPLACER_TGZ))
 else
@@ -90,7 +90,7 @@ if [ ! -f $venv/bin/cmalign ]; then
 	for binary in cmalign cmconvert esl-alimerge esl-sfetch; do
 	    tar xvf ${INFERNAL}.tar.gz --no-anchored binaries/$binary
 	done && \
-	    cp ${INFERNAL}/binaries/* ../$venv/bin && \
+	    cp ${INFERNAL}/binaries/* $venv/bin && \
 	    rm -r ${INFERNAL}
     )
 else
