@@ -1,11 +1,13 @@
 #!/bin/bash
 
-# Usage: [PYTHON=/path/to/python] bootstrap.sh [virtualenv-name]
+# Usage: [PYTHON=path/to/python] [DEENURP=path/to/deenurp] bootstrap.sh [virtualenv-name]
 #
 # Create a virtualenv, and install requirements to it.
 #
 # specify a python interpreter using
-# `PYTHON=/path/to/python bootstrap.sh`
+# `PYTHON=path/to/python bootstrap.sh`
+# specify path to the deenurp source directory using
+# `DEENURP=path/to/deenurp bootstrap.sh`
 
 set -e
 
@@ -23,9 +25,13 @@ if [[ -z $PYTHON ]]; then
     PYTHON=$(which python)
 fi
 
+if [[ -z $DEENURP ]]; then
+    DEENURP="."
+fi
+
 mkdir -p src
 
-VENV_VERSION=1.10.1
+VENV_VERSION=1.11.2
 PPLACER_VERSION=1.1
 INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
@@ -56,10 +62,10 @@ source $venv/bin/activate
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
     pip install -U "$line"
-done < requirements.txt
+done < "$DEENURP/requirements.txt"
 
 # install deenurp
-pip install -e .
+pip install -e "$DEENURP"
 
 # install pplacer and accompanying python scripts
 PPLACER_TGZ=pplacer-v${PPLACER_VERSION}-Linux.tar.gz
@@ -101,11 +107,12 @@ else
     echo "$(uclust --version) is already installed"
 fi
 
-# install FastTree
-if [ ! -f $venv/bin/FastTree ]; then
+# install FastTree and FastTreeMP
+if [ ! -f $venv/bin/FastTree ] | [ ! -f $venv/bin/FastTreeMP ]; then
     (cd $venv/bin && \
 	wget -N http://www.microbesonline.org/fasttree/FastTree && \
-	chmod +x FastTree)
+	wget -N http://www.microbesonline.org/fasttree/FastTreeMP && \
+	chmod +x FastTree*)
 else
     echo "FastTree is already installed: $(FastTree -expert 2>&1 | head -1)"
 fi
