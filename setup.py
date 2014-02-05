@@ -51,7 +51,7 @@ class run_audit(Command):
 install_requires = []
 
 setup(name='deenurp',
-      version='0.0.2',
+      version='0.0.3-dev',
       package_data={'deenurp': ['data/*', 'test/data/*']},
       entry_points={'console_scripts': {'deenurp = deenurp.scripts.deenurp:main'}},
       install_requires=install_requires,
