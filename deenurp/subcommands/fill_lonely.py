@@ -7,7 +7,6 @@ import argparse
 import copy
 import csv
 import logging
-import multiprocessing
 import shutil
 import sys
 
@@ -15,7 +14,7 @@ from Bio import SeqIO
 from concurrent import futures
 from taxtastic import taxtable
 
-from .. import util, wrap
+from .. import config, util, wrap
 
 RANK = 'species'
 PARENT_RANK = 'genus'
@@ -106,7 +105,7 @@ def build_parser(p):
             lonely taxonomic node [default: %(default)s]""")
 
     thread_group = p.add_argument_group('Threading')
-    thread_group.add_argument('--threads', default=multiprocessing.cpu_count(),
+    thread_group.add_argument('--threads', default=config.DEFAULT_THREADS,
             type=int, help="""Number of threads [default: %(default)s]""")
 
 def action(args):

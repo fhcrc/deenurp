@@ -10,7 +10,7 @@ import sqlite3
 
 from Bio import SeqIO
 
-from .. import search, select, util
+from .. import config, search, select, util
 
 def meta_writer(fp):
     writer = csv.writer(fp, lineterminator='\n')
@@ -48,7 +48,7 @@ def build_parser(p):
     p.add_argument('output', help="Output file (fasta)", type=argparse.FileType('w'))
 
     p.add_argument('--threads', help="""Number of threads [default:
-            %(default)d]""", type=int, default=6)
+            %(default)d]""", type=int, default=config.DEFAULT_THREADS)
 
     selection_options = p.add_argument_group('Selection Options')
     selection_options.add_argument('--refs-per-cluster', type=int, default=5,

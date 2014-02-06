@@ -16,7 +16,7 @@ from taxtastic.refpkg import Refpkg
 
 from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable, MissingDependencyError
 
-DEFAULT_CMALIGN_THREADS = 2
+DEFAULT_CMALIGN_THREADS = 1
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')

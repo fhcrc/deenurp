@@ -22,7 +22,7 @@ from Bio import SeqIO
 from taxtastic.refpkg import Refpkg
 from taxtastic.taxtable import TaxNode
 
-from .. import wrap, util
+from .. import config, wrap, util
 
 PER_TAXON = 5
 
@@ -37,8 +37,8 @@ def build_parser(p):
     p.add_argument('taxonomy', help="""Taxtable""")
     p.add_argument('--index-rank', help="""Rank for individual reference
             packages [default: %(default)s]""", default='order')
-    p.add_argument('--threads', type=int, default=12, help="""Number of threads
-            [default: %(default)d]""")
+    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
+                   help="""Number of threads [default: %(default)d]""")
     p.add_argument('--only', help="""List of taxids to keep""", type=comma_set)
     p.add_argument('--output-dir', default='.')
     partition_group = p.add_argument_group('Generate partitiond reference packages',
