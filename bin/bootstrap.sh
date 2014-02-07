@@ -35,6 +35,7 @@ VENV_VERSION=1.11.2
 PPLACER_VERSION=1.1
 INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
+RAXML_VERSION=8.0.5
 
 # Create a virtualenv using a specified version of the virtualenv
 # source. This also provides setuptools and pip. Inspired by
@@ -118,6 +119,20 @@ if [ ! -f $venv/bin/FastTree ] | [ ! -f $venv/bin/FastTreeMP ]; then
 	chmod +x FastTree*)
 else
     echo "FastTree is already installed: $(FastTree -expert 2>&1 | head -1)"
+fi
+
+# install raxmlHPC-SSE3 and raxmlHPC-PTHREADS-SSE3
+if [ ! -f $venv/bin/raxmlHPC-SSE3 ] | [ ! -f $venv/bin/raxmlHPC-PTHREADS-SSE3 ]; then
+    (cd src && \
+	wget -N https://github.com/stamatak/standard-RAxML/archive/v${RAXML_VERSION}.tar.gz && \
+	tar -xf v${RAXML_VERSION}.tar.gz && \
+	cd standard-RAxML-${RAXML_VERSION} && \
+	rm -f *.o && make -f Makefile.SSE3.gcc && \
+	rm -f *.o && make -f Makefile.SSE3.PTHREADS.gcc && \
+	mv raxmlHPC-SSE3 raxmlHPC-PTHREADS-SSE3 $venv/bin
+    )
+else
+    echo "raxml is already installed: $(raxmlHPC-SSE3 | grep RAxML)"
 fi
 
 # correct any more shebang lines
