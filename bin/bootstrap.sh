@@ -26,7 +26,7 @@ if [[ -z $PYTHON ]]; then
 fi
 
 if [[ -z $DEENURP ]]; then
-    DEENURP="."
+    DEENURP=$(cd $(dirname $BASH_SOURCE) && cd .. && pwd)
 fi
 
 mkdir -p src
