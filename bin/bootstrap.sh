@@ -25,6 +25,8 @@ if [[ -z $PYTHON ]]; then
     PYTHON=$(which python)
 fi
 
+# Defines the default source directory for deenurp as the parent of
+# the directory containing this file.
 if [[ -z $DEENURP ]]; then
     DEENURP=$(cd $(dirname $BASH_SOURCE) && cd .. && pwd)
 fi
