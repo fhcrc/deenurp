@@ -33,8 +33,9 @@ fi
 
 mkdir -p src
 
-VENV_VERSION=1.11.2
-PPLACER_VERSION=1.1
+VENV_VERSION=1.11.6
+PPLACER_BINARY_VERSION=1.1
+PPLACER_BUILD=1.1.alpha16
 INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
@@ -64,26 +65,30 @@ source $venv/bin/activate
 # full path; set by activate
 venv=$VIRTUAL_ENV
 
-# install python requirements; note that `pip install -r
-# requirements.txt` fails due to install-time dependencies.
-while read line; do
-    pip install -U "$line"
-done < "$DEENURP/requirements.txt"
-
-# install deenurp
-pip install -e "$DEENURP"
-
 # install pplacer and accompanying python scripts
-PPLACER_TGZ=pplacer-v${PPLACER_VERSION}-Linux.tar.gz
-if [ ! -f $venv/bin/pplacer ]; then
+PPLACER_TGZ=pplacer-v${PPLACER_BINARY_VERSION}-Linux.tar.gz
+
+pplacer_is_installed(){
+    $venv/bin/pplacer --version 2> /dev/null | grep -q "$PPLACER_BUILD"
+}
+
+if pplacer_is_installed; then
+    echo -n "pplacer is already installed: "
+    $venv/bin/pplacer --version
+else
+    mkdir -p src && \
 	(cd src && \
 	wget -N http://matsen.fhcrc.org/pplacer/builds/$PPLACER_TGZ && \
 	tar -xf $PPLACER_TGZ && \
 	cp $(srcdir $PPLACER_TGZ)/{pplacer,guppy,rppr} $venv/bin && \
-	pip install -U $(srcdir $PPLACER_TGZ)/scripts && \
-	rm -r $(srcdir $PPLACER_TGZ))
-else
-      echo "$(pplacer --version) is already installed"
+	pip install -U $(srcdir $PPLACER_TGZ)/scripts)
+    # confirm that we have installed the requested build
+    if ! pplacer_is_installed; then
+	echo -n "Error: you requested pplacer build $PPLACER_BUILD "
+	echo "but $($venv/bin/pplacer --version) was installed."
+	echo "Try removing src/$PPLACER_TGZ first."
+	exit 1
+    fi
 fi
 
 # install infernal and easel binaries
@@ -136,6 +141,15 @@ if [ ! -f $venv/bin/raxmlHPC-SSE3 ] | [ ! -f $venv/bin/raxmlHPC-PTHREADS-SSE3 ];
 else
     echo "raxml is already installed: $(raxmlHPC-SSE3 | grep RAxML)"
 fi
+
+# install python requirements; note that `pip install -r
+# requirements.txt` fails due to install-time dependencies.
+while read line; do
+    pip install -U "$line"
+done < "$DEENURP/requirements.txt"
+
+# install deenurp
+pip install -e "$DEENURP"
 
 # correct any more shebang lines
 $PYTHON src/virtualenv-${VENV_VERSION}/virtualenv.py --relocatable $venv

@@ -5,10 +5,10 @@ python:
 install:
   - "bin/bootstrap.sh $VIRTUAL_ENV"
 
-script: 
+script:
   - python setup.py test
   - tests/run.sh
 
 notifications:
   email:
-    - cmccoy@fhcrc.org
+    - noah.hoffman@gmail.com
