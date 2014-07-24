@@ -34,6 +34,7 @@ UCLUST_TYPES = {'cluster_number': int, 'pct_id': float, 'query_start': int,
 
 UClustRecord = collections.namedtuple('UClustRecord', UCLUST_HEADERS)
 
+
 @contextlib.contextmanager
 def _handle(s, *args, **kwargs):
     """
@@ -48,6 +49,7 @@ def _handle(s, *args, **kwargs):
     else:
         yield s
 
+
 @contextlib.contextmanager
 def _maybe_tempfile_name(obj=None, **kwargs):
     if obj:
@@ -55,6 +57,7 @@ def _maybe_tempfile_name(obj=None, **kwargs):
     else:
         with tempfile.NamedTemporaryFile(**kwargs) as tf:
             yield tf.name
+
 
 def _check_call(cmd, **kwargs):
     """
@@ -113,6 +116,7 @@ def hits_by_sequence(uclust_records):
         # Only return hits
         yield g, [i for i in v if i.type == 'H']
 
+
 def sequences_by_cluster(uclust_records):
     """
     Collect sequences by cluster
@@ -128,6 +132,7 @@ def sequences_by_cluster(uclust_records):
     for g, v in grouped:
         l = list(v)
         yield l[0].query_label, l
+
 
 def cluster_map(uclust_records):
     """
@@ -154,7 +159,7 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
      database:        Path to FASTA file to search against
      query:           Path to query file
      output:          Path for uclust output
-     pct_id:          Minimum percent ID for match
+     pct_id:          Minimum identity for match (provided to ``uclust --id``)
      wordcountreject: Pre-filter based on word count in common between query
                       and target seqs. When true, decreases sensitivity, but
                       decreases speed by 50-70%.
@@ -171,12 +176,12 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
     require_executable('uclust')
     with _maybe_tempfile_name(output if not search_pct_id else None, prefix='uclust-') as o:
         cmd = ['uclust',
-                '--input', query,
-                '--lib', database,
-                '--uc', o,
-                '--libonly',       # Don't generate new clusters when no DB hits
-                '--allhits',       # output all hits
-                '--id', str(search_pct_id or pct_id)]  # Prefer search_pct_id
+               '--input', query,
+               '--lib', database,
+               '--uc', o,
+               '--libonly',       # Don't generate new clusters when no DB hits
+               '--allhits',       # output all hits
+               '--id', str(search_pct_id or pct_id)]  # Prefer search_pct_id
         if not wordcountreject:
             cmd.append('--nowordcountreject')
         if maxaccepts:
@@ -201,6 +206,7 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
                 records = (i for i in records if i.type != 'H' or i.pct_id >= id_cutoff)
                 w.writerows(records)
 
+
 def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
         usersort=False, trunclabels=False, wordcountreject=True):
     """
@@ -208,9 +214,9 @@ def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
     """
     require_executable('uclust')
     cmd = ['uclust',
-            '--input', sequence_file,
-            '--uc', output,
-            '--id', str(pct_id)]
+           '--input', sequence_file,
+           '--uc', output,
+           '--id', str(pct_id)]
     if not wordcountreject:
         cmd.append('--nowordcountreject')
     if quiet:
@@ -220,6 +226,7 @@ def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
     if trunclabels:
         cmd.append('--trunclabels')
     _check_call(cmd)
+
 
 def cluster_seeds(sequence_file, uclust_out):
     """
@@ -241,7 +248,9 @@ def cluster_seeds(sequence_file, uclust_out):
 
     if seeds - seen_seeds:
         raise ValueError(
-            "Some expected seeds were not found in the FASTA file: {0}".format(','.join(seeds - seen_seeds)))
+            "Some expected seeds were not found in the FASTA file: {0}".format(
+                ','.join(seeds - seen_seeds)))
+
 
 def sort(sequence_file, output, quiet=False):
     """
@@ -265,6 +274,8 @@ def sort_and_cluster(sequence_file, output, **kwargs):
         cluster(tf.name, output, **kwargs)
 
 # Functions to convert uclust output into format usable by `guppy redup -m`
+
+
 class DeduplicatedSequence(object):
     __slots__ = ['id', 'count']
 
@@ -272,12 +283,14 @@ class DeduplicatedSequence(object):
         self.id = id
         self.count = count
 
+
 class ConstantDict(object):
     def __init__(self, return_value=None):
         self.return_value = return_value
 
     def __getitem__(self, item):
         return self.return_value
+
 
 def guppy_redup_from_uclust(uclust_records, sample_map=None):
     """
@@ -304,12 +317,12 @@ def guppy_redup_from_uclust(uclust_records, sample_map=None):
         sample = sample_map[q]
         if record.type == 'S':
             seeds[number] = q
-        if not sample in clusters[number]:
+        if sample not in clusters[number]:
             clusters[number][sample] = DeduplicatedSequence(q, 1)
         else:
             clusters[number][sample].count += 1
 
-    rows = [(seeds[number], dedup_seq.id, dedup_seq.count)
-            for number, samples in clusters.items()
+    rows = [(seeds[num], dedup_seq.id, dedup_seq.count)
+            for num, samples in clusters.items()
             for dedup_seq in samples.values()]
     return rows
