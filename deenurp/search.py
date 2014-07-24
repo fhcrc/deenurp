@@ -19,6 +19,8 @@ from .util import SingletonDefaultDict, memoize
 SELECT_THRESHOLD = 0.05
 
 # Utility stuff
+
+
 def dedup_info_to_counts(fp, sample_map=None):
     """
     Convert a guppy dedup file (seqid1, seqid2, count) into a dictionary
@@ -32,6 +34,7 @@ def dedup_info_to_counts(fp, sample_map=None):
         result[i][sample_map[j]] += float(c)
     return dict(result)
 
+
 def load_sample_map(fp, header=False):
     """
     Load a pplacer-compatible sample map
@@ -42,6 +45,7 @@ def load_sample_map(fp, header=False):
     if header:
         next(r)
     return dict(r)
+
 
 def _load_cluster_info(fp, group_field='cluster'):
     r = csv.DictReader(fp)
@@ -56,6 +60,7 @@ _PARAMS = dict([('fasta_file', str),
        ('maxaccepts', int),
        ('maxrejects', int)])
 
+
 def load_params(con):
     """
     Load parameters from the ``params`` table
@@ -69,6 +74,7 @@ def load_params(con):
         result[k] = v
     return result
 
+
 def _table_exists(con, table_name):
     """
     Returns whether or not ``table_name`` exists in ``con``
@@ -78,6 +84,7 @@ def _table_exists(con, table_name):
 FROM sqlite_master
 WHERE type = 'table' AND tbl_name = ?""", [table_name])
     return cursor.fetchone() is not None
+
 
 def select_hits(hits_by_seq, threshold=SELECT_THRESHOLD):
     """
@@ -90,6 +97,7 @@ def select_hits(hits_by_seq, threshold=SELECT_THRESHOLD):
         best_pct_id = hits[0].pct_id
         result.extend(i for i in hits[1:] if best_pct_id - i.pct_id < threshold)
         yield seq, result
+
 
 def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD, blacklist=None):
     """
@@ -150,6 +158,7 @@ VALUES (?, ?, ?, ?)
 
     return count
 
+
 def _load_sequences(con, sequence_file, weights=None):
     """
     Load sequences from sequence_file into database
@@ -186,6 +195,7 @@ VALUES (?, ?)"""
                     VALUES (?, ?, ?)""",
                     [seq_id, sample_id, weight])
     return seq_count
+
 
 def _create_tables(con, ref_fasta, ref_meta, fasta_file,
         maxaccepts=1, maxrejects=8, search_id=0.99, quiet=True,
@@ -258,6 +268,7 @@ FROM samples s
 INNER JOIN sequences_samples ss USING (sample_id)
 GROUP BY s.sample_id, s.name
 """
+
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
         maxaccepts=1, maxrejects=8, search_id=0.99,
