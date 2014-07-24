@@ -9,6 +9,10 @@
 # specify path to the deenurp source directory using
 # `DEENURP=path/to/deenurp bootstrap.sh`
 
+# Will attempt to install python packages from wheels (using `pip
+# install --use-wheel --find-links="$WHEELHOUSE"`) if a directory or
+# url is defined in the environment variable `$WHEELHOUSE`
+
 set -e
 
 srcdir(){
@@ -145,7 +149,11 @@ fi
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
-    pip install -U "$line"
+    if [[ -z "$WHEELHOUSE" ]]; then
+	pip install -U "$line"
+    else
+	pip install --use-wheel --find-links="$WHEELHOUSE" "$line"
+    fi
 done < "$DEENURP/requirements.txt"
 
 # install deenurp
