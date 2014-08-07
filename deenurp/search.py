@@ -17,6 +17,8 @@ _ntf = tempfile.NamedTemporaryFile
 from .util import SingletonDefaultDict, memoize
 
 SELECT_THRESHOLD = 0.05
+SEARCH_THRESHOLD = 0.90
+SEARCH_IDENTITY = 0.97
 
 # Utility stuff
 
@@ -53,12 +55,12 @@ def _load_cluster_info(fp, group_field='cluster'):
 
 # Parameters stores in the `params` table, with types
 _PARAMS = dict([('fasta_file', str),
-       ('ref_fasta', str),
-       ('ref_meta', str),
-       ('search_id', float),
-       ('group_field', str),
-       ('maxaccepts', int),
-       ('maxrejects', int)])
+                ('ref_fasta', str),
+                ('ref_meta', str),
+                ('search_id', float),
+                ('group_field', str),
+                ('maxaccepts', int),
+                ('maxrejects', int)])
 
 
 def load_params(con):
@@ -99,7 +101,8 @@ def select_hits(hits_by_seq, threshold=SELECT_THRESHOLD):
         yield seq, result
 
 
-def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD, blacklist=None):
+def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
+            search_threshold=SEARCH_THRESHOLD, blacklist=None):
     """
     Search the sequences in a file against a reference database
     """
@@ -124,9 +127,12 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD, blacklist=None):
         return cursor.fetchone()[0]
 
     with _ntf(prefix='usearch') as uc_fp:
-        uclust.search(ref_name, p['fasta_file'], uc_fp.name, pct_id=0.9,
-                trunclabels=True, maxaccepts=p['maxaccepts'],
-                maxrejects=p['maxrejects'], quiet=quiet)
+        uclust.search(ref_name, p['fasta_file'], uc_fp.name, pct_id=search_threshold,
+                      trunclabels=True, maxaccepts=p['maxaccepts'],
+                      maxrejects=p['maxrejects'], quiet=quiet)
+
+        # import shutil
+        # shutil.copy(uc_fp.name, '.')
 
         records = uclust.parse_uclust_out(uc_fp)
         records = (i for i in records
@@ -191,15 +197,15 @@ VALUES (?, ?)"""
         for sample, weight in weights[sequence.id].items():
             sample_id = get_sample_id(sample)
             cursor.execute("""INSERT INTO sequences_samples
-                    (sequence_id, sample_id, weight)
-                    VALUES (?, ?, ?)""",
-                    [seq_id, sample_id, weight])
+                           (sequence_id, sample_id, weight)
+                           VALUES (?, ?, ?)""",
+                           [seq_id, sample_id, weight])
     return seq_count
 
 
 def _create_tables(con, ref_fasta, ref_meta, fasta_file,
-        maxaccepts=1, maxrejects=8, search_id=0.99, quiet=True,
-        group_field='cluster'):
+                   maxaccepts=1, maxrejects=8, search_id=SEARCH_IDENTITY, quiet=True,
+                   group_field='cluster'):
     cursor = con.cursor()
     cursor.executescript(SCHEMA)
     # Save parameters
@@ -271,9 +277,11 @@ GROUP BY s.sample_id, s.name
 
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
-        maxaccepts=1, maxrejects=8, search_id=0.99,
-        select_threshold=SELECT_THRESHOLD, quiet=True, group_field='cluster',
-        blacklist=None):
+                    maxaccepts=1, maxrejects=8, search_id=SEARCH_IDENTITY,
+                    select_threshold=SELECT_THRESHOLD,
+                    search_threshold=SEARCH_THRESHOLD,
+                    quiet=True, group_field='cluster',
+                    blacklist=None):
     """
     Create a database of sequences searched against a sequence database for
     reference set creation.
@@ -281,6 +289,12 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
     con: Database connection
     fasta_file: query sequences
     """
+
+    if search_id < select_threshold:
+        raise ValueError(
+            "search_id ({}) should not be less than than select_threshold ({})".format(
+            search_id, select_threshold))
+
     con.row_factory = sqlite3.Row
 
     blacklist = blacklist or set()
@@ -291,8 +305,8 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
 
     with con:
         _create_tables(con, maxaccepts=maxaccepts, maxrejects=maxrejects,
-                search_id=search_id, quiet=quiet, ref_fasta=ref_fasta,
-                ref_meta=ref_meta, fasta_file=fasta_file, group_field=group_field)
+                       search_id=search_id, quiet=quiet, ref_fasta=ref_fasta,
+                       ref_meta=ref_meta, fasta_file=fasta_file, group_field=group_field)
 
         seq_count = _load_sequences(con, fasta_file, weights=weights)
         logging.info("Inserted %d sequences", seq_count)
@@ -300,4 +314,4 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
     with con:
         logging.info("Searching")
         _search(con, quiet=quiet, select_threshold=select_threshold,
-                blacklist=blacklist)
+                search_threshold=search_threshold, blacklist=blacklist)

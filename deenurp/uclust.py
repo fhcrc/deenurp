@@ -28,7 +28,7 @@ DEFAULT_PCT_ID = 0.99
 
 # For parsing .uc format
 UCLUST_HEADERS = ['type', 'cluster_number', 'size', 'pct_id', 'strand',
-    'query_start', 'seed_start', 'alignment', 'query_label', 'target_label']
+                  'query_start', 'seed_start', 'alignment', 'query_label', 'target_label']
 UCLUST_TYPES = {'cluster_number': int, 'pct_id': float, 'query_start': int,
                 'seed_start': int, 'size': int}
 
@@ -150,8 +150,8 @@ def cluster_map(uclust_records):
 
 
 def search(database, query, output, pct_id=DEFAULT_PCT_ID,
-        maxaccepts=None, maxrejects=None, quiet=False, trunclabels=False,
-        wordcountreject=True, search_pct_id=None):
+           maxaccepts=None, maxrejects=None, quiet=False, trunclabels=False,
+           wordcountreject=True, search_pct_id=None):
     """
     Run UCLUST against a sequence database in FASTA format.
 
@@ -208,7 +208,7 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
 
 
 def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
-        usersort=False, trunclabels=False, wordcountreject=True):
+            usersort=False, trunclabels=False, wordcountreject=True):
     """
     Cluster de novo
     """
