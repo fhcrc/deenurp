@@ -12,6 +12,9 @@ The search algorithm is as follows:
   is identified. The difference between the highest identity and the
   pairwise identity score of each additional hit is calculated, and
   those with a difference > ``SELECT_THRESHOLD`` are also discarded.
+* For each query sequence, each group identified by ``--group-field``
+  is represented by a single reference sequence only.
+
 """
 
 import argparse
