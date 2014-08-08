@@ -6,6 +6,7 @@ is above some threshold.
 import argparse
 import csv
 import logging
+import os
 import os.path
 import sys
 
@@ -123,6 +124,13 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
 
 
 def action(a):
+
+    # remove .ssi index for sequence file if it exists
+    try:
+        os.remove(a.sequence_file + '.ssi')
+    except OSError:
+        pass
+
     # Load taxonomy
     with a.taxonomy as fp:
         taxonomy = TaxNode.from_taxtable(fp)
