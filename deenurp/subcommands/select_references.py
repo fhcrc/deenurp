@@ -12,6 +12,7 @@ from Bio import SeqIO
 
 from .. import config, search, select, util
 
+
 def meta_writer(fp):
     writer = csv.writer(fp, lineterminator='\n')
     writer.writerow(('seqname', 'cluster_id', 'max_weight', 'mean_weight'))
@@ -20,12 +21,13 @@ def meta_writer(fp):
         with fp:
             for sequence in sequences:
                 writer.writerow((sequence.id,
-                    sequence.annotations['cluster_name'],
-                    sequence.annotations['max_weight'],
-                    sequence.annotations['mean_weight']))
+                                 sequence.annotations['cluster_name'],
+                                 sequence.annotations['max_weight'],
+                                 sequence.annotations['mean_weight']))
                 yield sequence
 
     return inner
+
 
 class track_attr(object):
     """
@@ -43,28 +45,33 @@ class track_attr(object):
             self.seen.add(getattr(i, self.attr))
             yield i
 
+
 def build_parser(p):
-    p.add_argument('search_db', help="""Output of `deenurp search-sequences`""")
-    p.add_argument('output', help="Output file (fasta)", type=argparse.FileType('w'))
+    p.add_argument(
+        'search_db', help="""Output of `deenurp search-sequences`""")
+    p.add_argument(
+        'output', help="Output file (fasta)", type=argparse.FileType('w'))
 
     p.add_argument('--threads', help="""Number of threads [default:
             %(default)d]""", type=int, default=config.DEFAULT_THREADS)
 
     selection_options = p.add_argument_group('Selection Options')
-    selection_options.add_argument('--refs-per-cluster', type=int, default=5,
-            help="""Maximum references per cluster [default: %(default)d]""")
+    selection_options.add_argument(
+        '--refs-per-cluster', type=int, default=5,
+        help="""Maximum references per cluster [default: %(default)d]""")
     selection_options.add_argument('--min-mass-prop', help="""Minimum
             proportion of total mass in a cluster to require before including
             references [default: %(default)f]""", type=float, default=-1.0)
     selection_options.add_argument('--whitelist', type=argparse.FileType('r'),
-            help="""Select sequences for cluster IDs in %(metavar)s, regardless
+                                   help="""Select sequences for cluster IDs in %(metavar)s, regardless
             of whether they had hits among the query sequences""")
 
     info_options = p.add_argument_group('Sequence info options')
     info_options.add_argument('--seqinfo-out', type=argparse.FileType('w'),
-            help="""File to write merged metadata""")
+                              help="""File to write merged metadata""")
     info_options.add_argument('--output-meta', help="""File to write selection metadata""",
-            type=argparse.FileType('w'))
+                              type=argparse.FileType('w'))
+
 
 def extract_meta(ids, search_db, out_fp):
     """
@@ -76,9 +83,10 @@ def extract_meta(ids, search_db, out_fp):
         r = csv.DictReader(fp)
         rows = (i for i in r if i['seqname'] in ids)
         w = csv.DictWriter(out_fp, r.fieldnames, lineterminator='\n',
-                quoting=csv.QUOTE_NONNUMERIC)
+                           quoting=csv.QUOTE_NONNUMERIC)
         w.writeheader()
         w.writerows(rows)
+
 
 def action(args):
     whitelist = set()
@@ -89,10 +97,12 @@ def action(args):
     with util.tempcopy(args.search_db) as search_path:
         search_db = sqlite3.connect(search_path)
         with contextlib.closing(search_db):
-            sequences = select.choose_references(search_db,
-                    args.refs_per_cluster,
-                    threads=args.threads, min_cluster_prop=args.min_mass_prop,
-                    whitelist=whitelist)
+            sequences = select.choose_references(
+                search_db,
+                args.refs_per_cluster,
+                threads=args.threads,
+                min_cluster_prop=args.min_mass_prop,
+                whitelist=whitelist)
 
             with args.output as fp:
                 # Unique IDs
