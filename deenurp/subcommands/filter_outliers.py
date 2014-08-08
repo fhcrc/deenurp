@@ -18,25 +18,27 @@ from .. import config, wrap, util, outliers
 
 DEFAULT_RANK = 'species'
 RSCRIPT_PATH = os.path.join(os.path.dirname(__file__),
-        '..', 'data', 'find_outliers.R')
+                            '..', 'data', 'find_outliers.R')
 
 DROP = 'drop'
 KEEP = 'keep'
 
+
 def build_parser(p):
     p.add_argument('sequence_file', help="""All sequences""")
     p.add_argument('seqinfo_file', help="""Sequence info file""",
-            type=argparse.FileType('r'))
-    p.add_argument('taxonomy', help="""Taxtable""", type=argparse.FileType('r'))
+                   type=argparse.FileType('r'))
+    p.add_argument(
+        'taxonomy', help="""Taxtable""", type=argparse.FileType('r'))
     p.add_argument('output_fp', help="""Destination for sequences""",
-            type=argparse.FileType('w'))
+                   type=argparse.FileType('w'))
     p.add_argument('--filter-rank', default=DEFAULT_RANK)
     p.add_argument('--filtered-seqinfo',
-            help="""Path to write filtered sequence info""",
-            type=argparse.FileType('w'))
+                   help="""Path to write filtered sequence info""",
+                   type=argparse.FileType('w'))
     p.add_argument('--log', help="""Log path""", type=argparse.FileType('w'))
     p.add_argument('--distance-cutoff', type=float, default=0.015,
-            help="""Distance cutoff from cluster centroid [default:
+                   help="""Distance cutoff from cluster centroid [default:
             %(default)f]""")
     p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS)
 
@@ -45,8 +47,9 @@ def build_parser(p):
             number of sequences perform distance-based medoid-filtering on [default:
             %(default)d]""")
     rare_group.add_argument('--rare-taxon-action', choices=(KEEP, DROP), default=KEEP,
-            help="""Action to perform when a taxon has < '--min-seqs-to-filter'
+                            help="""Action to perform when a taxon has < '--min-seqs-to-filter'
             representatives. [default: %(default)s]""")
+
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
     """
@@ -65,6 +68,7 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
         if above_rank(n):
             for sequence_id in n.sequence_ids:
                 yield sequence_id
+
 
 def filter_sequences(sequence_file, tax_id, cutoff):
     """
@@ -87,6 +91,7 @@ def filter_sequences(sequence_file, tax_id, cutoff):
         assert len(is_out) == len(taxa)
 
         return [t for t, o in zip(taxa, is_out) if o]
+
 
 def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
     """
@@ -116,6 +121,7 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
                       len(prune))
         return seqs - prune
 
+
 def action(a):
     # Load taxonomy
     with a.taxonomy as fp:
@@ -133,7 +139,7 @@ def action(a):
     log_taxid = None
     if a.log:
         writer = csv.writer(a.log, lineterminator='\n',
-                quoting=csv.QUOTE_NONNUMERIC)
+                            quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(('tax_id', 'tax_name', 'n', 'kept', 'pruned'))
 
         def log_taxid(tax_id, tax_name, n, kept, pruned):
@@ -157,8 +163,8 @@ def action(a):
                     continue
                 elif len(seqs) < a.min_seqs_for_filtering:
                     logging.debug('%d sequence(s) for %s (%s) [action: %s]',
-                                 len(seqs), node.tax_id, node.name,
-                                 a.rare_taxon_action)
+                                  len(seqs), node.tax_id, node.name,
+                                  a.rare_taxon_action)
                     if a.rare_taxon_action == DROP:
                         continue
                     elif a.rare_taxon_action == KEEP:
@@ -168,19 +174,19 @@ def action(a):
                             a.rare_taxon_action))
 
                 f = executor.submit(filter_worker,
-                        sequence_file=a.sequence_file,
-                        node=node,
-                        seqs=seqs,
-                        distance_cutoff=a.distance_cutoff,
-                        log_taxid=log_taxid)
+                                    sequence_file=a.sequence_file,
+                                    node=node,
+                                    seqs=seqs,
+                                    distance_cutoff=a.distance_cutoff,
+                                    log_taxid=log_taxid)
                 futs[f] = {'n_seqs': len(seqs), 'node': node}
 
             complete = 0
             while futs:
                 done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
                 complete += len(done)
-                sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(complete,
-                    complete + len(pending)))
+                sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(
+                    complete, complete + len(pending)))
                 for f in done:
                     if f.exception():
                         logging.exception("Error in child process: %s", f.exception())
@@ -192,12 +198,12 @@ def action(a):
                     kept_ids |= kept
                     if len(kept) == 0:
                         logging.info('Pruned all %d sequences for %s (%s)',
-                                info['n_seqs'], info['node'].tax_id,
-                                info['node'].name)
+                                     info['n_seqs'], info['node'].tax_id,
+                                     info['node'].name)
                     elif len(kept) != info['n_seqs']:
                         logging.info('Pruned %d/%d sequences for %s (%s)',
-                                info['n_seqs'] - len(kept), info['n_seqs'],
-                                info['node'].tax_id, info['node'].name)
+                                     info['n_seqs'] - len(kept), info['n_seqs'],
+                                     info['node'].tax_id, info['node'].name)
 
         # Extract all of the sequences that passed.
         logging.info('Extracting %d sequences', len(kept_ids))
