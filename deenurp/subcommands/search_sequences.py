@@ -24,36 +24,44 @@ from .. import search
 
 
 def build_parser(p):
-    p.add_argument('sequence_file', help="""Fasta file containing query
-            sequences""", metavar='<query_fasta>')
-    p.add_argument('output', help="""Output database to write""", metavar='<output_db>')
+    p.add_argument(
+        'sequence_file',
+        help="""Fasta file containing query sequences""", metavar='<query_fasta>')
+    p.add_argument(
+        'output', help="""Output database to write""", metavar='<output_db>')
     p.add_argument('ref_database', help="""Reference sequence database""")
     p.add_argument('ref_meta', help="""Reference sequence metadata""")
-    p.add_argument('--weights', help="""Weights, in a `guppy dedup
-            -m`-compatible dedup file""", type=argparse.FileType('r'))
-    p.add_argument('--group-field', help="""Column to indicate group
-            membership for a reference sequence (e.g., OTU; NCBI taxon id)
-            [default: %(default)s]""", default='cluster')
-    p.add_argument('--sample-map',
-            help="""CSV file containing two-column rows, with read name in the
-            first, sample identifier in the second [compatible with pplacer
-            split placefiles]""", type=argparse.FileType('r'))
+    p.add_argument(
+        '--weights', help="""Weights, in a `guppy dedup -m`-compatible
+        dedup file""", type=argparse.FileType('r'))
+    p.add_argument(
+        '--group-field',
+        help="""Column to indicate group membership for a reference
+            sequence (e.g., OTU; NCBI taxon id) [default:
+            %(default)s]""", default='cluster')
+    p.add_argument(
+        '--sample-map',
+        help="""CSV file containing two-column rows, with read name in
+                   the first, sample identifier in the second
+                   [compatible with pplacer split placefiles]""",
+        type=argparse.FileType('r'))
     p.add_argument('--blacklist', type=argparse.FileType('r'),
-            help="""List of cluster identifiers not to include in the results""")
+                   help="""List of cluster identifiers not to include in the results""")
     uc = p.add_argument_group('UCLUST')
-    uc.add_argument('--maxaccepts', default=5, type=int,
-            help="""[default: %(default)d]""")
-    uc.add_argument('--maxrejects', default=40, type=int,
-            help="""[default: %(default)d]""")
-    uc.add_argument('--search-threshold', help="""
-            Minimum threshold for database search (ie, "uclust --id") [default: %(default).2f]""",
-            default=search.SEARCH_THRESHOLD, metavar='THRESHOLD')
-    uc.add_argument('--search-identity', default=search.SEARCH_IDENTITY, type=float,
-            help="""Identity threshold for filtering results of database search
-            [default: %(default).2f]""")
-    uc.add_argument('--select-threshold', help="""Select hits within
-            %(metavar)s of best hit pct_id [default: %(default).2f]""",
-            default=search.SELECT_THRESHOLD, metavar='THRESHOLD')
+    uc.add_argument('--maxaccepts', default=5, type=int, help="""[default: %(default)d]""")
+    uc.add_argument('--maxrejects', default=40, type=int, help="""[default: %(default)d]""")
+    uc.add_argument(
+        '--search-threshold', help="""Minimum threshold for database search (ie,
+        "uclust --id") [default: %(default).2f]""",
+        default=search.SEARCH_THRESHOLD, metavar='THRESHOLD')
+    uc.add_argument(
+        '--search-identity', default=search.SEARCH_IDENTITY, type=float,
+        help="""Identity threshold for filtering results of database
+        search [default: %(default).2f]""")
+    uc.add_argument(
+        '--select-threshold', help="""Select hits within %(metavar)s
+        of best hit pct_id [default: %(default).2f]""",
+        default=search.SELECT_THRESHOLD, metavar='THRESHOLD')
 
 
 def action(args):
@@ -79,14 +87,15 @@ def action(args):
     # --> uclust.search(pct_id=search_threshold)
     # --> "uclust --id pct_id" and filter records after search
 
-    # create_database(search_id=args.search_identity)
-    # --> _create_tables(search_id=search_id)
+    # create_database(search_identity=args.search_identity)
+    # --> _create_tables(search_identity=search_identity)
     # --> (saved in params)
     # --> used to filter output of uclust_search in _search()
 
     # create_database(select_threshold=args.select_threshold)
     # --> _search(select_threshold=select_threshold) -->
     # select_hits(threshold=select_threshold)
+    # --> limit hits beyond top hit to those within select_threshold
 
     search.create_database(
         con,
@@ -96,7 +105,7 @@ def action(args):
         weights=weights,
         maxaccepts=args.maxaccepts,
         maxrejects=args.maxrejects,
-        search_id=args.search_identity,
+        search_identity=args.search_identity,
         quiet=args.verbosity == 0,
         select_threshold=args.select_threshold,
         search_threshold=args.search_threshold,

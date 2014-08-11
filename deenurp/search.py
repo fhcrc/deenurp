@@ -57,7 +57,7 @@ def _load_cluster_info(fp, group_field='cluster'):
 _PARAMS = dict([('fasta_file', str),
                 ('ref_fasta', str),
                 ('ref_meta', str),
-                ('search_id', float),
+                ('search_identity', float),
                 ('group_field', str),
                 ('maxaccepts', int),
                 ('maxrejects', int)])
@@ -136,7 +136,7 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
 
         records = uclust.parse_uclust_out(uc_fp)
         records = (i for i in records
-                   if i.type == 'H' and i.pct_id >= p['search_id'] * 100.0)
+                   if i.type == 'H' and i.pct_id >= p['search_identity'] * 100.0)
         by_seq = uclust.hits_by_sequence(records)
         by_seq = select_hits(by_seq, select_threshold)
 
@@ -204,7 +204,7 @@ VALUES (?, ?)"""
 
 
 def _create_tables(con, ref_fasta, ref_meta, fasta_file,
-                   maxaccepts=1, maxrejects=8, search_id=SEARCH_IDENTITY, quiet=True,
+                   maxaccepts=1, maxrejects=8, search_identity=SEARCH_IDENTITY, quiet=True,
                    group_field='cluster'):
     cursor = con.cursor()
     cursor.executescript(SCHEMA)
@@ -277,7 +277,7 @@ GROUP BY s.sample_id, s.name
 
 
 def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
-                    maxaccepts=1, maxrejects=8, search_id=SEARCH_IDENTITY,
+                    maxaccepts=1, maxrejects=8, search_identity=SEARCH_IDENTITY,
                     select_threshold=SELECT_THRESHOLD,
                     search_threshold=SEARCH_THRESHOLD,
                     quiet=True, group_field='cluster',
@@ -288,12 +288,19 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
 
     con: Database connection
     fasta_file: query sequences
+    search_identity:
+    select_threshold:
+    search_threshold:
     """
 
-    if search_id < select_threshold:
+    # print "search_identity", search_identity
+    # print "select_threshold", select_threshold
+    # print "search_threshold", search_threshold
+
+    if search_identity < search_threshold:
         raise ValueError(
-            "search_id ({}) should not be less than than select_threshold ({})".format(
-            search_id, select_threshold))
+            "search_identity ({}) should not be less than than search_threshold ({})".format(
+                search_identity, search_threshold))
 
     con.row_factory = sqlite3.Row
 
@@ -305,7 +312,7 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
 
     with con:
         _create_tables(con, maxaccepts=maxaccepts, maxrejects=maxrejects,
-                       search_id=search_id, quiet=quiet, ref_fasta=ref_fasta,
+                       search_identity=search_identity, quiet=quiet, ref_fasta=ref_fasta,
                        ref_meta=ref_meta, fasta_file=fasta_file, group_field=group_field)
 
         seq_count = _load_sequences(con, fasta_file, weights=weights)
