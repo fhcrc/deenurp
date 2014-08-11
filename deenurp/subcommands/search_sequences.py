@@ -52,7 +52,7 @@ def build_parser(p):
     uc.add_argument('--maxrejects', default=40, type=int, help="""[default: %(default)d]""")
     uc.add_argument(
         '--search-threshold', help="""Minimum threshold for database search (ie,
-        "uclust --id") [default: %(default).2f]""",
+        "uclust --id") [default: %(default).2f]""", type=float,
         default=search.SEARCH_THRESHOLD, metavar='THRESHOLD')
     uc.add_argument(
         '--search-identity', default=search.SEARCH_IDENTITY, type=float,
@@ -60,7 +60,7 @@ def build_parser(p):
         search [default: %(default).2f]""")
     uc.add_argument(
         '--select-threshold', help="""Select hits within %(metavar)s
-        of best hit pct_id [default: %(default).2f]""",
+        of best hit pct_id [default: %(default).2f]""", type=float,
         default=search.SELECT_THRESHOLD, metavar='THRESHOLD')
 
 

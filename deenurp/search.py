@@ -297,7 +297,9 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
     # print "select_threshold", select_threshold
     # print "search_threshold", search_threshold
 
-    if search_identity < search_threshold:
+    # try to avoid issues with floating point comparison
+    allowed_difference = 0.0001
+    if search_threshold - search_identity > allowed_difference:
         raise ValueError(
             "search_identity ({}) should not be less than than search_threshold ({})".format(
                 search_identity, search_threshold))
