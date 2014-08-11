@@ -51,26 +51,31 @@ def build_parser(p):
         'search_db', help="""Output of `deenurp search-sequences`""")
     p.add_argument(
         'output', help="Output file (fasta)", type=argparse.FileType('w'))
-
-    p.add_argument('--threads', help="""Number of threads [default:
-            %(default)d]""", type=int, default=config.DEFAULT_THREADS)
+    p.add_argument(
+        '--threads', help="""Number of threads [default:%(default)d]""",
+        type=int, default=config.DEFAULT_THREADS)
 
     selection_options = p.add_argument_group('Selection Options')
     selection_options.add_argument(
         '--refs-per-cluster', type=int, default=5,
         help="""Maximum references per cluster [default: %(default)d]""")
-    selection_options.add_argument('--min-mass-prop', help="""Minimum
-            proportion of total mass in a cluster to require before including
-            references [default: %(default)f]""", type=float, default=-1.0)
-    selection_options.add_argument('--whitelist', type=argparse.FileType('r'),
-                                   help="""Select sequences for cluster IDs in %(metavar)s, regardless
-            of whether they had hits among the query sequences""")
+    selection_options.add_argument(
+        '--min-mass-prop', help="""Minimum proportion of total mass in
+        a cluster to require before including references [default:
+        %(default)f]""", type=float, default=-1.0)
+    selection_options.add_argument(
+        '--whitelist', type=argparse.FileType('r'),
+        help="""Select sequences for cluster IDs in %(metavar)s,
+        regardless of whether they had hits among the query
+        sequences""")
 
     info_options = p.add_argument_group('Sequence info options')
-    info_options.add_argument('--seqinfo-out', type=argparse.FileType('w'),
-                              help="""File to write merged metadata""")
-    info_options.add_argument('--output-meta', help="""File to write selection metadata""",
-                              type=argparse.FileType('w'))
+    info_options.add_argument(
+        '--seqinfo-out', type=argparse.FileType('w'),
+        help="""File to write merged metadata""")
+    info_options.add_argument(
+        '--output-meta', help="""File to write selection metadata""",
+        type=argparse.FileType('w'))
 
 
 def extract_meta(ids, search_db, out_fp):
