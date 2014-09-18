@@ -9,6 +9,7 @@ import logging
 import os
 import os.path
 import sys
+import traceback
 
 from concurrent import futures
 
@@ -199,9 +200,9 @@ def action(a):
                     if f.exception():
                         logging.exception("Error in child process: %s", f.exception())
                         executor.shutdown(False)
-                        exception = f.exception()
-                        raise exception.exc_info[0], exception.exc_info[1], exception.exc_info[2]
-                        # raise f.exception()
+                        print sys.exc_info()[0]
+                        print traceback.format_exc()
+                        raise f.exception()
 
                     info = futs.pop(f)
                     kept = f.result()
