@@ -1,5 +1,6 @@
-DeeNuRP
-=======
+=========
+ DeeNuRP
+=========
 
 De-novo Reference Package Pipeline
 
