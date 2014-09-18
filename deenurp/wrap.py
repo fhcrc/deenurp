@@ -24,6 +24,7 @@ data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
 """16S bacterial covariance model"""
 CM = data_path('RRNA_16S_BACTERIA.cm')
 
+
 @contextlib.contextmanager
 def as_refpkg(sequences, name='temp.refpkg', threads=None):
     """
