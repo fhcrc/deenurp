@@ -200,8 +200,8 @@ def action(a):
                     if f.exception():
                         logging.exception("Error in child process: %s", f.exception())
                         executor.shutdown(False)
-                        print sys.exc_info()[0]
-                        print traceback.format_exc()
+                        # print sys.exc_info()[0]
+                        # print traceback.format_exc()
                         raise f.exception()
 
                     info = futs.pop(f)
