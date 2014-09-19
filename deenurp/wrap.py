@@ -216,12 +216,10 @@ def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):
             sequences = (index[i] for i in name_iter)
             count = peasel.write_fasta(sequences, output_fp)
     else:
-        # if not os.path.exists(sequence_file + '.ssi'):
-        #     logging.warning("No index exists for %s. creating.", sequence_file)
         try:
             peasel.create_ssi(sequence_file)
         except IOError:
-            logging.warning("An index already exists for %s", sequence_file)
+            logging.info("An index already exists for %s", sequence_file)
 
         index = peasel.open_ssi(sequence_file)
         sequences = (index[i] for i in name_iter)
