@@ -5,7 +5,9 @@
 0.0.3
 =====
 
-
+ * ``deenurp search-sequences`` learned option --search-threshold to
+   allow more permissive database searches
+ * Suppress FastTree messages in the absence of an error
 
 0.0.2
 =====

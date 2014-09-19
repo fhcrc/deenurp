@@ -10,7 +10,7 @@ Installation
 ============
 
 The Easy Way
-^^^^^^^^^^^^
+------------
 
 * Install Python 2.7
 * run `bin/bootstrap.sh`
@@ -19,7 +19,7 @@ The Easy Way
 the `deenurp` executable should now be on your `$PATH`
 
 The Hard Way
-^^^^^^^^^^^^
+------------
 
 First, install binary dependencies:
 
@@ -63,70 +63,73 @@ Creating a sequence set for refpkg building
 -------------------------------------------
 
 ``deenurp filter-outliers``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Removes sequences from a reference database that are more than a specified
 distance from the centroid of their tax id.
 
 ``deenurp expand-named``
-^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Expands poorly-represented names in a sequence file by similarity search
 
 ``deenurp cluster-refs``
-^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-Cluster reference sequences, first by tax-id at a specified rank (default:
-species), then by similarity for unnamed sequences or sequences not classified
-to the desired rank.  Serves as input to ``search-sequences``.
+Cluster reference sequences, first by tax-id at a specified rank
+(default: species), then by similarity for unnamed sequences or
+sequences not classified to the desired rank.  Serves as input to
+``search-sequences``.
 
 Selecting sequences for a reference package
 -------------------------------------------
 
 ``deenurp hrefpkg-build``
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Builds a set of hierarchical reference packages.
 
 ``deenurp search-sequences``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Searches a set of sequences against a FASTA file containing possible reference sequences.
+Searches a set of sequences against a FASTA file containing possible
+reference sequences.
 
-This subcommand does searches sequences against a reference FASTA file, saving
-the results and some metadata to a sqlite database for use in
-``select-references``
+This subcommand does searches sequences against a reference FASTA
+file, saving the results and some metadata to a sqlite database for
+use in ``select-references``
 
 ``deenurp select-references``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Given the output of ``search-sequences``, ``select-references`` attempts to find a
-good set of reference sequences.
+Given the output of ``search-sequences``, ``select-references``
+attempts to find a good set of reference sequences.
 
-For each reference cluster  with a minimal amount of sequences having best hits
-to the cluster, (see ``cluster-refs``), selects a set number of sequences to
-serve as references.
+For each reference cluster with a minimal amount of sequences having
+best hits to the cluster, (see ``cluster-refs``), selects a set number
+of sequences to serve as references.
 
 ``deenurp fill-lonely``
-^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Taxa who are the sole descendent of their parent can complicate taxonomic classification.
+Taxa who are the sole descendent of their parent can complicate
+taxonomic classification.
 
-The ``fill-lonely`` subcommand finds some company for these lonely taxa.
+The ``fill-lonely`` subcommand finds some company for these lonely
+taxa.
 
 ``deenurp add-reps``
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
-Fetches sequences from a sequence file which match the taxtable for a reference
-set at a given rank. Useful for adding type strains.
+Fetches sequences from a sequence file which match the taxtable for a
+reference set at a given rank. Useful for adding type strains.
 
 ``deenurp tax2tree``
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
-Runs the ``tax2tree`` program on a reference package, updating the ``seq_info``
-file.
+Runs the ``tax2tree`` program on a reference package, updating the
+``seq_info`` file.
 
-Sequences whose lineage changes are relabeled. The prior ``tax_id`` is added to
-the ``seq_info`` file in the reference package.
+Sequences whose lineage changes are relabeled. The prior ``tax_id`` is
+added to the ``seq_info`` file in the reference package.
 
-.. vim: set ft=rest:
