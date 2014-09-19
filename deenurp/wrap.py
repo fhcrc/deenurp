@@ -69,8 +69,9 @@ def redupfile_of_seqs(sequences, **kwargs):
         tf.close()
         yield tf.name
 
-def fasttree(sequences, output_fp, log_path=None, quiet=True, gtr=False,
-        gamma=False, threads=None, prefix=None):
+
+def fasttree(sequences, output_fp, log_path=None, quiet=True,
+             gtr=False, gamma=False, threads=None, prefix=None):
 
     executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
     if executable == 'FastTreeMP' and not which('FastTreeMP'):
@@ -89,13 +90,19 @@ def fasttree(sequences, output_fp, log_path=None, quiet=True, gtr=False,
         cmd.extend(['-log', log_path])
 
     logging.debug(' '.join(cmd))
-    p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE, env=env)
-    count = SeqIO.write(sequences, p.stdin, 'fasta')
-    assert count
-    p.stdin.close()
-    p.wait()
-    if not p.returncode == 0:
-        raise subprocess.CalledProcessError(p.returncode, cmd)
+
+    with ntf() as stderr:
+        p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE,
+                             stderr=stderr, env=env)
+        count = SeqIO.write(sequences, p.stdin, 'fasta')
+        assert count
+        p.stdin.close()
+        p.wait()
+        if not p.returncode == 0:
+            stderr.seek(0)
+            logging.error(stderr.read())
+            raise subprocess.CalledProcessError(p.returncode, cmd)
+
 
 def guppy_redup(placefile, redup_file, output):
     require_executable('guppy')
