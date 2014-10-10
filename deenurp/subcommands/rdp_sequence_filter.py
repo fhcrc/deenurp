@@ -18,8 +18,10 @@ def count_ambiguous(seq):
 def build_parser(p):
     p.add_argument('fasta_file', help="""sequence file""", type=file_opener('r'))
     p.add_argument('seqinfo_file', help="""Sequence metadata""", type=file_opener('r'))
-    p.add_argument('named_base')
-    p.add_argument('unnamed_base')
+    p.add_argument('--named-seqs', default='named.seqs.fasta', help='[default %(default)s]')
+    p.add_argument('--named-info', default='named.seq_info.fasta', help='[default %(default)s]')
+    p.add_argument('--unnamed-seqs', default='unnamed.seqs.fasta', help='[default %(default)s]')
+    p.add_argument('--unnamed-info', default='unnamed.seq_info.fasta', help='[default %(default)s]')
 
     flt = p.add_argument_group('Filtering options')
     flt.add_argument('-a', '--prop-ambig-cutoff', default=0.01, type=float,
@@ -36,10 +38,10 @@ def action(a):
     with a.fasta_file as fasta_fp, a.seqinfo_file as seqinfo_fp:
         sequences = Counter(SeqIO.parse(fasta_fp, 'fasta'))
         reader = csv.DictReader(seqinfo_fp)
-        with open(a.named_base + '.fasta', 'w') as named_fa_fp, \
-            open(a.named_base + '.seq_info.csv', 'w') as named_si_fp, \
-            open(a.unnamed_base + '.fasta', 'w') as unnamed_fa_fp, \
-            open(a.unnamed_base + '.seq_info.csv', 'w') as unnamed_si_fp:
+        with open(a.named_seqs, 'w') as named_fa_fp, \
+            open(a.named_info, 'w') as named_si_fp, \
+            open(a.unnamed_seqs, 'w') as unnamed_fa_fp, \
+            open(a.unnamed_info, 'w') as unnamed_si_fp:
 
             unnamed_writer = csv.DictWriter(
                 unnamed_si_fp, reader.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
