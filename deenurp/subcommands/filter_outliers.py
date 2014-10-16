@@ -18,9 +18,6 @@ from taxtastic.taxtable import TaxNode
 from .. import config, wrap, util, outliers
 
 DEFAULT_RANK = 'species'
-RSCRIPT_PATH = os.path.join(os.path.dirname(__file__),
-                            '..', 'data', 'find_outliers.R')
-
 DROP = 'drop'
 KEEP = 'keep'
 
