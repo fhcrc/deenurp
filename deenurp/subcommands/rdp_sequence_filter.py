@@ -1,5 +1,8 @@
-"""
-Splits RDP sequence file into named/unnamed sections, filters by length, percent ambiguity.
+"""Splits RDP sequence file into named/unnamed sections, filters by length, percent ambiguity.
+
+Assumes sequences in fasta_file and records in seqinfo_file are in the
+same order.
+
 """
 import csv
 import itertools
@@ -21,7 +24,8 @@ def build_parser(p):
     p.add_argument('--named-seqs', default='named.seqs.fasta', help='[default %(default)s]')
     p.add_argument('--named-info', default='named.seq_info.fasta', help='[default %(default)s]')
     p.add_argument('--unnamed-seqs', default='unnamed.seqs.fasta', help='[default %(default)s]')
-    p.add_argument('--unnamed-info', default='unnamed.seq_info.fasta', help='[default %(default)s]')
+    p.add_argument('--unnamed-info', default='unnamed.seq_info.fasta',
+                   help='[default %(default)s]')
 
     flt = p.add_argument_group('Filtering options')
     flt.add_argument('-a', '--prop-ambig-cutoff', default=0.01, type=float,
@@ -52,7 +56,10 @@ def action(a):
 
             accepted = 0
             rejected = 0
-            for sequence, info in itertools.izip_longest(sequences, reader):
+            for sequence, info in itertools.izip(sequences, reader):
+            # for sequence, info in itertools.izip_longest(sequences, reader):
+                assert sequence.id == info['seqname']
+
                 # Check quality
                 l = len(sequence)
                 ambig_prop = count_ambiguous(str(sequence.seq)) / float(l)
