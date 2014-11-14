@@ -157,7 +157,11 @@ while read line; do
 done < "$DEENURP/requirements.txt"
 
 # install deenurp
-pip install -e "$DEENURP"
+if [[ -z "$WHEELHOUSE" ]]; then
+  pip install -e "$DEENURP"
+else
+  pip install --use-wheel --find-links="$WHEELHOUSE" -e "$DEENURP"
+fi
 
 # correct any more shebang lines
 $PYTHON src/virtualenv-${VENV_VERSION}/virtualenv.py --relocatable $venv
