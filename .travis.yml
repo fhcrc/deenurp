@@ -12,3 +12,4 @@ script:
 notifications:
   email:
     - noah.hoffman@gmail.com
+    - crosenth@uw.edu
