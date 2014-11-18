@@ -148,13 +148,13 @@ fi
 
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
-grep -v -E '^#' "$DEENURP/requirements.txt" | while read pkg; do
+while read line; do
     if [[ -z "$WHEELHOUSE" ]]; then
-	pip install -U $pkg
+	pip install -U "$line"
     else
-	pip install --use-wheel --find-links="$WHEELHOUSE" $pkg
+	pip install --use-wheel --find-links="$WHEELHOUSE" "$line"
     fi
-done
+done < "$DEENURP/requirements.txt"
 
 # install deenurp
 if [[ -z "$WHEELHOUSE" ]]; then
