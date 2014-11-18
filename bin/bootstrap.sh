@@ -43,6 +43,7 @@ PPLACER_BUILD=1.1.alpha16
 INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
+MUSCLE_VERSION=3.8.31
 
 # Create a virtualenv using a specified version of the virtualenv
 # source. This also provides setuptools and pip. Inspired by
@@ -144,6 +145,22 @@ if [ ! -f $venv/bin/raxmlHPC-SSE3 ] | [ ! -f $venv/bin/raxmlHPC-PTHREADS-SSE3 ];
     )
 else
     echo "raxml is already installed: $(raxmlHPC-SSE3 | grep RAxML)"
+fi
+
+# install MUSCLE
+muscle_is_installed(){
+    $venv/bin/muscle -version | grep -q "$MUSCLE_VERSION"
+}
+
+if muscle_is_installed; then
+    echo -n "muscle is already installed: "
+    $venv/bin/muscle -version
+else
+    (cd src && \
+	    wget -N http://www.drive5.com/muscle/downloads${MUSCLE_VERSION}/muscle${MUSCLE_VERSION}_src.tar.gz && \
+	    tar -xf muscle${MUSCLE_VERSION}_src.tar.gz && \
+	    cd muscle${MUSCLE_VERSION}/src && \
+	    ./mk && cp muscle $venv/bin)
 fi
 
 # install python requirements; note that `pip install -r
