@@ -13,7 +13,6 @@ except ImportError:
     use_setuptools()
     from setuptools import setup, find_packages, Command
 
-
 class run_audit(Command):
     """Audits source code using PyFlakes for following issues:
         - Names which are used but not defined or used before they are defined.
@@ -29,8 +28,7 @@ class run_audit(Command):
         pass
 
     def run(self):
-        import os
-        import sys
+        import os, sys
         try:
             import pyflakes.scripts.pyflakes as flakes
         except ImportError:
@@ -43,21 +41,19 @@ class run_audit(Command):
         for dir in dirs:
             for root, _, files in os.walk(dir):
                 for file in files:
-                    if file != '__init__.py' and file.endswith('.py'):
+                    if file != '__init__.py' and file.endswith('.py') :
                         warns += flakes.checkPath(os.path.join(root, file))
         if warns > 0:
             print "Audit finished with total %d warnings." % warns
         else:
             print "No problems found in sourcecode."
 
-install_requires = ['taxtastic==0.5.2', 'peasel==0.3.1',
-                    'futures>=2.0', 'biopython>=1.58']
+install_requires = []
 
 setup(name='deenurp',
       version='0.0.3',
       package_data={'deenurp': ['data/*', 'test/data/*']},
-      entry_points={'console_scripts': {
-          'deenurp = deenurp.scripts.deenurp:main'}},
+      entry_points={'console_scripts': {'deenurp = deenurp.scripts.deenurp:main'}},
       install_requires=install_requires,
       cmdclass={'audit': run_audit},
       test_suite='deenurp.test.suite',
