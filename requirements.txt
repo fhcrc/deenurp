@@ -1,1 +1,7 @@
-git+https://github.com/biocore/tax2tree.git#egg=tax2tree
+numpy>=1.5.0
+biopython>=1.58
+cogent>=1.5.1
+svn+https://svn.code.sf.net/p/tax2tree/code/trunk
+git+https://github.com/cmccoy/peasel.git@b1d5783d8d6d56cb0274e7977d093583c9c5f968
+taxtastic==0.5.2
+futures>=2.0
