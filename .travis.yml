@@ -2,9 +2,6 @@ language: python
 python:
   - "2.7"
 
-before_install:
-  - sudo apt-get build-dep python-numpy
-
 install:
   - "bin/bootstrap.sh $VIRTUAL_ENV"
 
@@ -14,4 +11,5 @@ script:
 
 notifications:
   email:
+    - noah.hoffman@gmail.com
     - crosenth@uw.edu
