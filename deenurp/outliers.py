@@ -11,6 +11,7 @@ import numpy
 
 log = logging.getLogger(__name__)
 
+
 def read_dists(fobj):
     """
     Read interleaved phylip distance matrix from file-like object fobj
@@ -49,6 +50,7 @@ def fasttree_dists(fasta):
         taxa, distmat = read_dists(stdout)
 
     return taxa, distmat
+
 
 def outliers(distmat, cutoff, prune_min=2):
     """
