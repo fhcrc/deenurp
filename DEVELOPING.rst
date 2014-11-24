@@ -34,6 +34,8 @@ feature is complete:
 PyPi
 ----
 
+(not on PyPi yet...)
+
 
 Make sure to have updated the version string in ``setup.py`` first.
 
