@@ -2,6 +2,12 @@
  Changes for deenurp
 =====================
 
+0.0.4
+=====
+
+ * ``filter-outliers`` can perform alignments using either cmalign or muscle
+
+
 0.0.3
 =====
 

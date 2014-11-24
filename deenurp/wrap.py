@@ -181,6 +181,7 @@ def _require_cmalign_11(cmalign='cmalign'):
                 'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
         raise MissingDependencyError(msg)
 
+
 def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     cmd = ['cmalign']
     require_executable(cmd[0])
@@ -198,16 +199,38 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
         # TODO: preserve output files (input_file, output_file)
         raise subprocess.CalledProcessError(p.returncode, error)
 
+
 def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
     """
     Run cmalign
     """
-    with as_fasta(sequences) as fasta, \
-         maybe_tempfile(output, prefix='cmalign', suffix='.sto', dir='.') as tf:
+    with as_fasta(sequences) as fasta, maybe_tempfile(
+            output, prefix='cmalign', suffix='.sto', dir='.') as tf:
+
         cmalign_files(fasta, tf.name, cm=cm, cpu=cpu)
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
+
+
+def muscle_files(input_file, output_file, maxiters=2):
+    cmd = ['muscle']
+    require_executable(cmd[0])
+
+    cmd.extend(['-in', input_file])
+    cmd.extend(['-out', output_file])
+
+    # TODO: set value based on number of sequences?
+    cmd.extend(['-maxiters', str(maxiters)])
+
+    logging.debug(' '.join(cmd))
+    p = subprocess.Popen(cmd,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logging.debug(p.stdout.read().strip())
+    error = p.stderr.read().strip()
+    if p.wait() != 0:
+        # TODO: preserve output files (input_file, output_file)
+        raise subprocess.CalledProcessError(p.returncode, error)
 
 
 def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):

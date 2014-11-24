@@ -3,10 +3,18 @@
 set -e
 
 rm -rf output
-mkdir output
 
 BASE=../rdp_10_30_named1200bp_subset
 DEENURP=${DEENURP-../../deenurp.py}
-$DEENURP filter-outliers \
-	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
-	 output/filtered.fasta --filtered-seqinfo output/filtered.seqinfo.csv
+
+out=output/cmalign
+mkdir -p $out
+time $DEENURP filter-outliers --aligner cmalign \
+     $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
+     $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv
+
+out=output/muscle
+mkdir -p $out
+time $DEENURP filter-outliers --aligner muscle \
+     $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
+     $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv

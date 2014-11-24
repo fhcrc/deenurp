@@ -80,9 +80,14 @@ class TestFindOutliers(unittest.TestCase):
 class TestFilterSequences(unittest.TestCase):
 
     def test01(self):
-        fa = data_path('test_db.fasta')
-        to_prune = filter_sequences(fa, '53635', 0.015)
-        self.assertEqual(len(to_prune), 16)
+        fa = data_path('test_db_head.fasta')
+        to_prune = filter_sequences(fa, '53635', 0.015, aligner='cmalign')
+        self.assertEqual(len(to_prune), 5)
+
+    def test02(self):
+        fa = data_path('test_db_head.fasta')
+        to_prune = filter_sequences(fa, '53635', 0.015, aligner='muscle')
+        self.assertEqual(len(to_prune), 5)
 
 
 def suite():

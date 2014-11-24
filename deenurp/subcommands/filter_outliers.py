@@ -18,6 +18,8 @@ from taxtastic.taxtable import TaxNode
 from .. import config, wrap, util, outliers
 
 DEFAULT_RANK = 'species'
+DEFAULT_ALIGNER = 'muscle'
+DEFAULT_MAXITERS = 2
 DROP = 'drop'
 KEEP = 'keep'
 
@@ -37,8 +39,14 @@ def build_parser(p):
     p.add_argument('--log', help="""Log path""", type=argparse.FileType('w'))
     p.add_argument('--distance-cutoff', type=float, default=0.015,
                    help="""Distance cutoff from cluster centroid [default:
-            %(default)f]""")
-    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS)
+                   %(default)f]""")
+    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
+                   help="""number of taxa to process concurrently (one
+                   process per multiple alignment)""")
+    p.add_argument('--aligner', help='multiple alignment tool',
+                   default=DEFAULT_ALIGNER, choices=['cmalign', 'muscle'])
+    p.add_argument('--maxiters', default=DEFAULT_MAXITERS, type=int,
+                   help='Value for muscle -maxiters (ignored if using cmalign)')
 
     rare_group = p.add_argument_group("Rare taxa")
     rare_group.add_argument('--min-seqs-for-filtering', type=int, default=3, help="""Minimum
@@ -68,19 +76,27 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
                 yield sequence_id
 
 
-def filter_sequences(sequence_file, tax_id, cutoff):
+def filter_sequences(sequence_file, tax_id, cutoff,
+                     aligner=DEFAULT_ALIGNER, maxiters=DEFAULT_MAXITERS):
     """
     Return a list of sequence names identifying outliers.
     """
 
+    assert aligner in {'cmalign', 'muscle'}
+
     prefix = '{}_'.format(tax_id)
 
-    with util.ntf(prefix=prefix, suffix='.sto') as a_sto, \
+    with util.ntf(prefix=prefix, suffix='.aln') as a_sto, \
             util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
+
         # Align
-        wrap.cmalign_files(sequence_file, a_sto.name, cpu=1)
-        # FastTree requires FASTA
-        SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
+        if aligner == 'cmalign':
+            wrap.cmalign_files(sequence_file, a_sto.name, cpu=1)
+            # FastTree requires FASTA
+            SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
+        elif aligner == 'muscle':
+            wrap.muscle_files(sequence_file, a_fasta.name, maxiters=maxiters)
+
         a_fasta.flush()
 
         taxa, distmat = outliers.fasttree_dists(a_fasta.name)
@@ -91,7 +107,8 @@ def filter_sequences(sequence_file, tax_id, cutoff):
         return [t for t, o in zip(taxa, is_out) if o]
 
 
-def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
+def filter_worker(sequence_file, node, seqs, distance_cutoff, aligner=DEFAULT_ALIGNER,
+                  maxiters=DEFAULT_MAXITERS, log_taxid=None):
     """
     Worker task for running filtering tasks.
 
@@ -112,7 +129,8 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff, log_taxid=None):
         # Extract sequences
         wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
-        prune = frozenset(filter_sequences(tf.name, node.tax_id, distance_cutoff))
+        prune = frozenset(filter_sequences(tf.name, node.tax_id, distance_cutoff,
+                                           aligner=aligner, maxiters=maxiters))
         assert not prune - seqs
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
@@ -183,6 +201,8 @@ def action(a):
                                     node=node,
                                     seqs=seqs,
                                     distance_cutoff=a.distance_cutoff,
+                                    aligner=a.aligner,
+                                    maxiters=a.maxiters,
                                     log_taxid=log_taxid)
                 futs[f] = {'n_seqs': len(seqs), 'node': node}
 
