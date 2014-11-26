@@ -76,6 +76,32 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
                 yield sequence_id
 
 
+def distmat_muscle(sequence_file, prefix, maxiters=DEFAULT_MAXITERS):
+
+    with util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
+        wrap.muscle_files(sequence_file, a_fasta.name, maxiters=maxiters)
+        a_fasta.flush()
+
+        taxa, distmat = outliers.fasttree_dists(a_fasta.name)
+
+    return taxa, distmat
+
+
+def distmat_cmalign(sequence_file, prefix):
+
+    with util.ntf(prefix=prefix, suffix='.aln') as a_sto, \
+            util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
+
+        wrap.cmalign_files(sequence_file, a_sto.name, cpu=1)
+        # FastTree requires FASTA
+        SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
+        a_fasta.flush()
+
+        taxa, distmat = outliers.fasttree_dists(a_fasta.name)
+
+    return taxa, distmat
+
+
 def filter_sequences(sequence_file, tax_id, cutoff,
                      aligner=DEFAULT_ALIGNER, maxiters=DEFAULT_MAXITERS):
     """
@@ -86,25 +112,15 @@ def filter_sequences(sequence_file, tax_id, cutoff,
 
     prefix = '{}_'.format(tax_id)
 
-    with util.ntf(prefix=prefix, suffix='.aln') as a_sto, \
-            util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
+    if aligner == 'cmalign':
+        taxa, distmat = distmat_cmalign(sequence_file, prefix)
+    elif aligner == 'muscle':
+        taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
 
-        # Align
-        if aligner == 'cmalign':
-            wrap.cmalign_files(sequence_file, a_sto.name, cpu=1)
-            # FastTree requires FASTA
-            SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
-        elif aligner == 'muscle':
-            wrap.muscle_files(sequence_file, a_fasta.name, maxiters=maxiters)
+    is_out = outliers.outliers(distmat, cutoff)
+    assert len(is_out) == len(taxa)
 
-        a_fasta.flush()
-
-        taxa, distmat = outliers.fasttree_dists(a_fasta.name)
-        is_out = outliers.outliers(distmat, cutoff)
-
-        assert len(is_out) == len(taxa)
-
-        return [t for t, o in zip(taxa, is_out) if o]
+    return [t for t, o in zip(taxa, is_out) if o]
 
 
 def filter_worker(sequence_file, node, seqs, distance_cutoff, aligner=DEFAULT_ALIGNER,
