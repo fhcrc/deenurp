@@ -5,9 +5,10 @@ import unittest
 
 from Bio import SeqIO
 
+import deenurp
 from deenurp import wrap
 from deenurp.test import util
-from deenurp.util import which
+from deenurp.util import which, MissingDependencyError
 
 @unittest.skipUnless(which('cmalign'), "cmalign not found.")
 class CmAlignTestCase(unittest.TestCase):
@@ -71,3 +72,27 @@ def suite():
         s.addTests(unittest.makeSuite(cls))
 
     return s
+
+
+try:
+    wrap.require_executable(wrap.USEARCH)
+    wrap._require_usearch6(wrap.USEARCH)
+except MissingDependencyError, e:
+    usearch_available = False
+else:
+    usearch_available = True
+
+@unittest.skipUnless(usearch_available, "{} not found.".format(wrap.USEARCH))
+class UsearchTestCase(unittest.TestCase):
+    def setUp(self):
+        self.sequencefile = util.data_path('test_input.fasta')
+
+    def test_require_usearch6(self):
+        wrap._require_usearch6()
+
+    def test_usearch_allpairs_files(self):
+        with deenurp.util.ntf(suffix='.blast6out') as outfile:
+            wrap.usearch_allpairs_files(self.sequencefile, outfile.name)
+            self.assertTrue(os.path.exists(outfile.name))
+
+        self.assertFalse(os.path.exists(outfile.name))

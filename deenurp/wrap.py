@@ -17,6 +17,7 @@ from taxtastic.refpkg import Refpkg
 from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable, MissingDependencyError
 
 DEFAULT_CMALIGN_THREADS = 1
+USEARCH = 'usearch6'
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -58,6 +59,7 @@ def as_refpkg(sequences, name='temp.refpkg', threads=None):
             rp.update_file('aln_sto', f.name)
         logging.debug("Reference package written to %s", rp.path)
         yield rp
+
 
 @contextlib.contextmanager
 def redupfile_of_seqs(sequences, **kwargs):
@@ -110,6 +112,7 @@ def guppy_redup(placefile, redup_file, output):
     logging.debug(' '.join(cmd))
     subprocess.check_call(cmd)
 
+
 def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, quiet=True):
     """
     Run pplacer on the provided refpkg
@@ -135,8 +138,9 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
 
     return jplace
 
+
 def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_mass=True,
-        always_include=None):
+                  always_include=None):
     """
     Run rppr min_adcl on the given jplace file, cutting to the given number of leaves
     Returns the names of the leaves *to remove*.
@@ -154,8 +158,8 @@ def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_m
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
-def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
-        always_include=None):
+
+def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam', always_include=None):
     """
     Run rppr min_adcl_tree on the given newick tree file, cutting to the given number of leaves.
 
@@ -169,6 +173,7 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam',
     output = subprocess.check_output(cmd)
     return output.splitlines()
 
+
 def _require_cmalign_11(cmalign='cmalign'):
     """
     Check for cmalign version 1.1, raising an error if not found
@@ -178,7 +183,7 @@ def _require_cmalign_11(cmalign='cmalign'):
     o = subprocess.check_output(cmd)
     if version_str not in o:
         msg = ('cmalign 1.1 not found. '
-                'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
+               'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
         raise MissingDependencyError(msg)
 
 
@@ -191,8 +196,7 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
         cmd.extend(['--cpu', str(cpu)])
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
-    p = subprocess.Popen(cmd,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     logging.debug(p.stdout.read().strip())
     error = p.stderr.read().strip()
     if p.wait() != 0:
@@ -211,6 +215,36 @@ def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
 
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
+
+
+def _require_usearch6(usearch=USEARCH):
+    """
+    Check for usearch version 6, raising an error if not found
+    """
+
+    version_str = 'v6.'
+    cmd = [usearch, '-version']
+    o = subprocess.check_output(cmd)
+    if not o.split()[-1].startswith(version_str):
+        msg = ('usearch6 not found. '
+               'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
+        raise MissingDependencyError(msg)
+
+
+def usearch_allpairs_files(input_file, output_file, executable=USEARCH):
+    """
+    Run ``usearch -allpairs_global``
+    """
+
+    require_executable(executable)
+    cmd = [executable, '-allpairs_global', input_file, '-blast6out', output_file]
+    logging.info(' '.join(cmd))
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logging.debug(p.stdout.read().strip())
+    error = p.stderr.read().strip()
+    if p.wait() != 0:
+        # TODO: preserve output files (input_file, output_file)
+        raise subprocess.CalledProcessError(p.returncode, error)
 
 
 def muscle_files(input_file, output_file, maxiters=2):
