@@ -4,6 +4,7 @@ modules = [
     'test_outliers',
     'test_search',
     'test_subcommand_hrefpkg_build',
+    'test_subcommand_filter_outliers',
     'test_util',
     'test_wrap',
 ]

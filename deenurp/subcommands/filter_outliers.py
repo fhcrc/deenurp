@@ -12,6 +12,7 @@ import sys
 
 from concurrent import futures
 
+import numpy
 from Bio import SeqIO
 from taxtastic.taxtable import TaxNode
 
@@ -45,6 +46,8 @@ def build_parser(p):
                    process per multiple alignment)""")
     p.add_argument('--aligner', help='multiple alignment tool',
                    default=DEFAULT_ALIGNER, choices=['cmalign', 'muscle'])
+    p.add_argument('--executable',
+                   help='Optional absolute or relative path to the alignment tool')
     p.add_argument('--maxiters', default=DEFAULT_MAXITERS, type=int,
                    help='Value for muscle -maxiters (ignored if using cmalign)')
 
@@ -100,6 +103,35 @@ def distmat_cmalign(sequence_file, prefix):
         taxa, distmat = outliers.fasttree_dists(a_fasta.name)
 
     return taxa, distmat
+
+
+def parse_usearch_allpairs(filename):
+    """Read output of ``usearch -allpairs_global -blast6out`` and return
+    a distance matrix.
+
+    """
+
+    # TODO: there's probably a better way to specify the string types
+    data = numpy.loadtxt(filename, usecols=(0, 1, 2),
+                         dtype={'names': ('query', 'target', 'pct'),
+                                'formats': ('S100', 'S100', 'f4')})
+
+    return data
+
+
+    dists = 1 - data['pct']/100
+    print numpy.sqrt((len(dists) - 1) + len(dists))
+
+    # print numpy.triu_indices
+
+
+def distmat_usearch(sequence_file, prefix, usearch=wrap.USEARCH):
+
+    with util.ntf(prefix=prefix, suffix='.blast6out') as uc:
+        wrap.usearch_allpairs_files(sequence_file, uc.name)
+        uc.flush()
+
+
 
 
 def filter_sequences(sequence_file, tax_id, cutoff,
