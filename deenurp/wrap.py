@@ -226,18 +226,19 @@ def _require_usearch6(usearch=USEARCH):
     cmd = [usearch, '-version']
     o = subprocess.check_output(cmd)
     if not o.split()[-1].startswith(version_str):
-        msg = ('usearch6 not found. '
-               'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
+        msg = ('usearch v6 not found. '
+               'Expected {0} in output of "{1}", got:\n{2}').format(
+                   version_str, ' '.join(cmd), o)
         raise MissingDependencyError(msg)
 
 
 def usearch_allpairs_files(input_file, output_file, executable=USEARCH):
     """
-    Run ``usearch -allpairs_global``
+    Run ``usearch -allpairs_local``
     """
 
     require_executable(executable)
-    cmd = [executable, '-allpairs_global', input_file, '-blast6out', output_file]
+    cmd = [executable, '-allpairs_local', input_file, '-blast6out', output_file]
     logging.info(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     logging.debug(p.stdout.read().strip())

@@ -9,10 +9,13 @@ import logging
 import os
 import os.path
 import sys
+import shutil
+import logging
 
 from concurrent import futures
-
 import numpy
+import pandas as pd
+
 from Bio import SeqIO
 from taxtastic.taxtable import TaxNode
 
@@ -23,6 +26,8 @@ DEFAULT_ALIGNER = 'muscle'
 DEFAULT_MAXITERS = 2
 DROP = 'drop'
 KEEP = 'keep'
+BLAST6NAMES = ['query', 'target', 'pct_id', 'align_len', 'mismatches', 'gaps',
+               'qstart', 'qend', 'tstart', 'tend', 'evalue', 'bit_score']
 
 
 def build_parser(p):
@@ -45,19 +50,22 @@ def build_parser(p):
                    help="""number of taxa to process concurrently (one
                    process per multiple alignment)""")
     p.add_argument('--aligner', help='multiple alignment tool',
-                   default=DEFAULT_ALIGNER, choices=['cmalign', 'muscle'])
+                   default=DEFAULT_ALIGNER,
+                   choices=['cmalign', 'muscle', 'usearch'])
     p.add_argument('--executable',
                    help='Optional absolute or relative path to the alignment tool')
     p.add_argument('--maxiters', default=DEFAULT_MAXITERS, type=int,
                    help='Value for muscle -maxiters (ignored if using cmalign)')
 
     rare_group = p.add_argument_group("Rare taxa")
-    rare_group.add_argument('--min-seqs-for-filtering', type=int, default=3, help="""Minimum
-            number of sequences perform distance-based medoid-filtering on [default:
-            %(default)d]""")
-    rare_group.add_argument('--rare-taxon-action', choices=(KEEP, DROP), default=KEEP,
-                            help="""Action to perform when a taxon has < '--min-seqs-to-filter'
-            representatives. [default: %(default)s]""")
+    rare_group.add_argument(
+        '--min-seqs-for-filtering', type=int, default=5,
+        help="""Minimum number of sequences perform distance-based
+            medoid-filtering on [default: %(default)d]""")
+    rare_group.add_argument(
+        '--rare-taxon-action', choices=(KEEP, DROP), default=KEEP,
+        help="""Action to perform when a taxon has <
+            '--min-seqs-to-filter' representatives. [default: %(default)s]""")
 
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
@@ -105,42 +113,73 @@ def distmat_cmalign(sequence_file, prefix):
     return taxa, distmat
 
 
-def parse_usearch_allpairs(filename):
-    """Read output of ``usearch -allpairs_global -blast6out`` and return
-    a distance matrix.
+class UsearchError(Exception):
+    pass
+
+
+def parse_usearch_allpairs(filename, seqnames):
+    """Read output of ``usearch -allpairs_global -blast6out`` and return a
+    square distance matrix. ``seqnames`` determines the marginal order
+    of sequences in the matrix.
 
     """
 
-    # TODO: there's probably a better way to specify the string types
-    data = numpy.loadtxt(filename, usecols=(0, 1, 2),
-                         dtype={'names': ('query', 'target', 'pct'),
-                                'formats': ('S100', 'S100', 'f4')})
+    data = pd.io.parsers.read_table(filename, header=None, names=BLAST6NAMES)
+    data['dist'] = pd.Series(1.0 - data['pct_id'] / 100.0, index=data.index)
 
-    return data
+    # for each sequence pair, select the longest alignment if there is
+    # more than one.
+    data = data.groupby(['query', 'target']).filter(
+        lambda x: x['align_len'] == max(x['align_len']))
 
+    if set(seqnames) != set(data['query']) | set(data['target']):
+        raise UsearchError(
+            'some sequences are missing from the output ({})'.format(filename))
 
-    dists = 1 - data['pct']/100
-    print numpy.sqrt((len(dists) - 1) + len(dists))
+    nseqs = len(seqnames)
+    if (nseqs * (nseqs - 1)) / 2 != data.shape[0]:
+        raise UsearchError(
+            'not all pairwise comparisons are represented ({})'.format(filename))
 
-    # print numpy.triu_indices
+    distmat = numpy.repeat(0.0, nseqs ** 2)
+    distmat.shape = (nseqs, nseqs)
+    ii = pd.match(data['query'], seqnames)
+    jj = pd.match(data['target'], seqnames)
+    distmat[ii, jj] = data['dist']
+    distmat[jj, ii] = data['dist']
+
+    # from IPython import embed; embed()
+    return distmat
 
 
 def distmat_usearch(sequence_file, prefix, usearch=wrap.USEARCH):
 
-    with util.ntf(prefix=prefix, suffix='.blast6out') as uc:
-        wrap.usearch_allpairs_files(sequence_file, uc.name)
+    with open(sequence_file) as sf, util.ntf(
+            prefix=prefix, suffix='.blast6out') as uc:
+
+        wrap.usearch_allpairs_files(sequence_file, uc.name, usearch)
         uc.flush()
 
+        taxa = [seq.id for seq in SeqIO.parse(sf, 'fasta')]
+        try:
+            distmat = parse_usearch_allpairs(uc.name, taxa)
+        except UsearchError, e:
+            logging.error(e)
+            shutil.copy(sequence_file, '.')
+            raise UsearchError
 
+    return taxa, distmat
 
 
 def filter_sequences(sequence_file, tax_id, cutoff,
-                     aligner=DEFAULT_ALIGNER, maxiters=DEFAULT_MAXITERS):
+                     aligner=DEFAULT_ALIGNER,
+                     maxiters=DEFAULT_MAXITERS,
+                     usearch=wrap.USEARCH):
     """
     Return a list of sequence names identifying outliers.
     """
 
-    assert aligner in {'cmalign', 'muscle'}
+    assert aligner in {'cmalign', 'muscle', 'usearch'}
 
     prefix = '{}_'.format(tax_id)
 
@@ -148,6 +187,8 @@ def filter_sequences(sequence_file, tax_id, cutoff,
         taxa, distmat = distmat_cmalign(sequence_file, prefix)
     elif aligner == 'muscle':
         taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
+    elif aligner == 'usearch':
+        taxa, distmat = distmat_usearch(sequence_file, prefix, usearch)
 
     is_out = outliers.outliers(distmat, cutoff)
     assert len(is_out) == len(taxa)
@@ -155,8 +196,11 @@ def filter_sequences(sequence_file, tax_id, cutoff,
     return [t for t, o in zip(taxa, is_out) if o]
 
 
-def filter_worker(sequence_file, node, seqs, distance_cutoff, aligner=DEFAULT_ALIGNER,
-                  maxiters=DEFAULT_MAXITERS, log_taxid=None):
+def filter_worker(sequence_file, node, seqs, distance_cutoff,
+                  aligner=DEFAULT_ALIGNER,
+                  maxiters=DEFAULT_MAXITERS,
+                  usearch=wrap.USEARCH,
+                  log_taxid=None):
     """
     Worker task for running filtering tasks.
 
@@ -224,9 +268,12 @@ def action(a):
 
         # Filter each tax_id, running in ``--threads`` tasks in parallel
         with futures.ThreadPoolExecutor(a.threads) as executor:
+
+            # execute a pool of tasks
             futs = {}
             for i, node in enumerate(nodes):
                 seqs = frozenset(node.subtree_sequence_ids())
+
                 if not seqs:
                     logging.debug("No sequences for %s (%s)", node.tax_id, node.name)
                     if log_taxid:
@@ -240,10 +287,12 @@ def action(a):
                         continue
                     elif a.rare_taxon_action == KEEP:
                         kept_ids |= seqs
+                        continue
                     else:
                         raise ValueError("Unknown action: {0}".format(
                             a.rare_taxon_action))
 
+                print node
                 f = executor.submit(filter_worker,
                                     sequence_file=a.sequence_file,
                                     node=node,
@@ -254,6 +303,7 @@ def action(a):
                                     log_taxid=log_taxid)
                 futs[f] = {'n_seqs': len(seqs), 'node': node}
 
+            # log results for each tax_id
             complete = 0
             while futs:
                 done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
