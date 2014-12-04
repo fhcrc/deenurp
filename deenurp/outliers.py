@@ -52,19 +52,23 @@ def fasttree_dists(fasta):
     return taxa, distmat
 
 
-def outliers(distmat, cutoff, prune_min=2):
-    """
-    Given pairwise distance matrix `distmat`, identify elements with a
-    distance to the centrid element of > cutoff. Returns a boolean
-    vector corresponding to the margin of`distmat`. `prune_min`
-    defines a minimal edge length for `distmat` below which no
-    sequences will be pruned (raises AssertionError if `prune_min` <
-    2).
+def outliers(distmat, cutoff, min_size=3):
+    """Given pairwise distance matrix `distmat`, identify elements with a
+    distance to the centrid element of > cutoff. Does not attempt to
+    prune if margin of distmat is < min_size.
+
+    Returns (medoid, dists, to_prune):
+
+    * medoid - the index of the centermost element
+    * dists - a vector of distances to the medoid
+    * to_prune - a boolean vector corresponding to the margin of `distmat`
+      where True identifies outliers.
+
     """
 
-    assert prune_min >= 2
-
-    if distmat.shape[0] <= 2:
+    if distmat.shape[0] < min_size:
+        medoid = numpy.nan
+        dists = numpy.repeat(numpy.nan, distmat.shape[0])
         to_prune = numpy.repeat(False, distmat.shape[0])
     else:
         # index of most central element.
@@ -72,11 +76,6 @@ def outliers(distmat, cutoff, prune_min=2):
 
         # distance from each element to most central element
         dists = distmat[medoid, :]
-
         to_prune = dists > cutoff
 
-        # If all but medoid pruned, all should be pruned
-        if sum(to_prune) == distmat.shape[0] - 1:
-            to_prune = numpy.repeat(True, distmat.shape[0])
-
-    return to_prune
+    return medoid, dists, to_prune

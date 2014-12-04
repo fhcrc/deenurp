@@ -127,10 +127,12 @@ def parse_usearch_allpairs(filename, seqnames):
     data = pd.io.parsers.read_table(filename, header=None, names=BLAST6NAMES)
     data['dist'] = pd.Series(1.0 - data['pct_id'] / 100.0, index=data.index)
 
+    # from IPython import embed; embed()
+
     # for each sequence pair, select the longest alignment if there is
-    # more than one.
-    data = data.groupby(['query', 'target']).filter(
-        lambda x: x['align_len'] == max(x['align_len']))
+    # more than one (chooses first occurrence if there are two the same length).
+    maxidx = data.groupby(['query', 'target']).apply(lambda x: x['align_len'].idxmax())
+    data = data.iloc[maxidx]
 
     if set(seqnames) != set(data['query']) | set(data['target']):
         raise UsearchError(
@@ -148,7 +150,6 @@ def parse_usearch_allpairs(filename, seqnames):
     distmat[ii, jj] = data['dist']
     distmat[jj, ii] = data['dist']
 
-    # from IPython import embed; embed()
     return distmat
 
 
@@ -190,10 +191,16 @@ def filter_sequences(sequence_file, tax_id, cutoff,
     elif aligner == 'usearch':
         taxa, distmat = distmat_usearch(sequence_file, prefix, usearch)
 
-    is_out = outliers.outliers(distmat, cutoff)
+    medoid, dists, is_out = outliers.outliers(distmat, cutoff)
     assert len(is_out) == len(taxa)
 
-    return [t for t, o in zip(taxa, is_out) if o]
+    result = pd.DataFrame({
+        'seqname': taxa,
+        'centroid': numpy.repeat(taxa[medoid], len(taxa)),
+        'dist': dists,
+        'is_out': is_out}, index=taxa)
+
+    return result
 
 
 def filter_worker(sequence_file, node, seqs, distance_cutoff,
@@ -221,8 +228,11 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff,
         # Extract sequences
         wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
-        prune = frozenset(filter_sequences(tf.name, node.tax_id, distance_cutoff,
-                                           aligner=aligner, maxiters=maxiters))
+
+        filtered = filter_sequences(tf.name, node.tax_id, distance_cutoff,
+                                   aligner=aligner, maxiters=maxiters)
+
+        prune = frozenset(filtered.seqname[filtered.is_out])
         assert not prune - seqs
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs), len(seqs - prune),
@@ -269,7 +279,7 @@ def action(a):
         # Filter each tax_id, running in ``--threads`` tasks in parallel
         with futures.ThreadPoolExecutor(a.threads) as executor:
 
-            # execute a pool of tasks
+            # dispatch a pool of tasks
             futs = {}
             for i, node in enumerate(nodes):
                 seqs = frozenset(node.subtree_sequence_ids())
@@ -292,7 +302,6 @@ def action(a):
                         raise ValueError("Unknown action: {0}".format(
                             a.rare_taxon_action))
 
-                print node
                 f = executor.submit(filter_worker,
                                     sequence_file=a.sequence_file,
                                     node=node,
@@ -303,7 +312,7 @@ def action(a):
                                     log_taxid=log_taxid)
                 futs[f] = {'n_seqs': len(seqs), 'node': node}
 
-            # log results for each tax_id
+            # log results for each tax_id as tasks complete
             complete = 0
             while futs:
                 done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
