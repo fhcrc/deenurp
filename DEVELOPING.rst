@@ -28,14 +28,13 @@ feature is complete:
 - create a git tag for the release, using format 'vmajor.minor.release' (eg, v0.2.0)
 - ``git push origin master``
 - ``git push --tags``
-- update PyPi (see below)
+- someday: update PyPi (see below)
 
 
 PyPi
 ----
 
-(not on PyPi yet...)
-
+(not on PyPi yet, but when it is...)
 
 Make sure to have updated the version string in ``setup.py`` first.
 
