@@ -2,7 +2,10 @@ import unittest
 
 from Bio import SeqIO
 
+from deenurp import wrap
 from deenurp.subcommands import filter_outliers
+from deenurp.util import which, MissingDependencyError
+
 from deenurp.test import util
 
 
@@ -19,6 +22,7 @@ class FilterOutliersFunctions(unittest.TestCase):
         distmat = filter_outliers.parse_usearch_allpairs(filename, seqnames)
         self.assertEqual(len(seqnames), distmat.shape[0])
 
+    @unittest.skipUnless(which(wrap.USEARCH), "{} not found.".format(wrap.USEARCH))
     def test_distmat_usearch(self):
         infile = util.data_path('e_faecalis.head.fasta')
         taxa, distmat = filter_outliers.distmat_usearch(infile, 'foo')
