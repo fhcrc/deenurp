@@ -58,7 +58,7 @@ class TestFindOutliers(unittest.TestCase):
     def test01(self):
         with open(data_path('e_faecium.distmat')) as f:
             taxa, mat = outliers.read_dists(f)
-            is_outlier = outliers.outliers(mat, cutoff=0.015)
+            _, _, is_outlier = outliers.outliers(mat, cutoff=0.015)
             out = {t for t, o in zip(taxa, is_outlier) if o}
             self.assertEqual(len(out), 7)
 
@@ -70,10 +70,10 @@ class TestFindOutliers(unittest.TestCase):
 
         mat = numpy.matrix([0, 0.02, 0.02, 0])
         mat.shape = (2, 2)
-        is_outlier = outliers.outliers(mat, cutoff=0.015)
+        _, _, is_outlier = outliers.outliers(mat, cutoff=0.015)
         self.assertFalse(any(is_outlier))
 
-        is_outlier = outliers.outliers(mat, cutoff=0.025)
+        _, _, is_outlier = outliers.outliers(mat, cutoff=0.025)
         self.assertFalse(any(is_outlier))
 
 
@@ -82,12 +82,18 @@ class TestFilterSequences(unittest.TestCase):
     def test01(self):
         fa = data_path('test_db_head.fasta')
         to_prune = filter_sequences(fa, '53635', 0.015, aligner='cmalign')
-        self.assertEqual(len(to_prune), 5)
+        self.assertEqual(sum(to_prune['is_out']), 5)
 
     def test02(self):
         fa = data_path('test_db_head.fasta')
         to_prune = filter_sequences(fa, '53635', 0.015, aligner='muscle')
-        self.assertEqual(len(to_prune), 5)
+        self.assertEqual(sum(to_prune['is_out']), 5)
+
+    def test03(self):
+        fa = data_path('test_db_head.fasta')
+        to_prune = filter_sequences(fa, '53635', 0.015, aligner='usearch')
+        self.assertEqual(sum(to_prune['is_out']), 5)
+
 
 
 def suite():

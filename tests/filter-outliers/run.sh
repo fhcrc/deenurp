@@ -11,10 +11,19 @@ out=output/cmalign
 mkdir -p $out
 time $DEENURP filter-outliers --aligner cmalign \
      $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
-     $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv
+     $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv \
+     --detailed-seqinfo $out/filtered.details.csv
 
 out=output/muscle
 mkdir -p $out
 time $DEENURP filter-outliers --aligner muscle \
      $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
-     $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv
+     $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv \
+     --detailed-seqinfo $out/filtered.details.csv
+
+out=output/usearch
+mkdir -p $out
+time $DEENURP filter-outliers --aligner usearch \
+     $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
+     $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv \
+     --detailed-seqinfo $out/filtered.details.csv
