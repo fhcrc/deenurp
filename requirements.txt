@@ -1,7 +1,8 @@
-numpy>=1.5.0
-biopython>=1.58
+numpy==1.9.1
+pandas==0.15.1
+biopython==1.64
 cogent>=1.5.1
 svn+https://svn.code.sf.net/p/tax2tree/code/trunk
 git+https://github.com/cmccoy/peasel.git@b1d5783d8d6d56cb0274e7977d093583c9c5f968
-taxtastic==0.5.2
+taxtastic==0.5.3
 futures>=2.0
