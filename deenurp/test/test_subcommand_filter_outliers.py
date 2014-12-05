@@ -1,6 +1,5 @@
 import unittest
 
-import pandas as pd
 from Bio import SeqIO
 
 from deenurp.subcommands import filter_outliers

@@ -21,9 +21,11 @@ time $DEENURP filter-outliers --aligner muscle \
      $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv \
      --detailed-seqinfo $out/filtered.details.csv
 
+if [[ -n $(which usearch6) ]]; then
 out=output/usearch
 mkdir -p $out
 time $DEENURP filter-outliers --aligner usearch \
      $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
      $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv \
      --detailed-seqinfo $out/filtered.details.csv
+fi
