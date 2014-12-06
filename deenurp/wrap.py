@@ -9,15 +9,18 @@ import logging
 import os
 import os.path
 import subprocess
+import sys
 
 from Bio import SeqIO
 import peasel
 from taxtastic.refpkg import Refpkg
 
-from .util import as_fasta, ntf, tempdir, nothing, maybe_tempfile, which, require_executable, MissingDependencyError
+from .util import (as_fasta, ntf, tempdir, nothing, maybe_tempfile,
+                   which, require_executable, MissingDependencyError)
 
 DEFAULT_CMALIGN_THREADS = 1
 USEARCH = 'usearch6'
+VSEARCH = 'vsearch'
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -28,10 +31,11 @@ CM = data_path('RRNA_16S_BACTERIA.cm')
 
 @contextlib.contextmanager
 def as_refpkg(sequences, name='temp.refpkg', threads=None):
-    """
-    Context manager yielding a temporary reference package for a collection of aligned sequences.
+    """Context manager yielding a temporary reference package for a
+    collection of aligned sequences.
 
     Builds a tree with FastTree, creates a reference package, yields.
+
     """
     sequences = list(sequences)
     with ntf(prefix='fasttree-', suffix='.log') as log_fp, \
@@ -40,7 +44,8 @@ def as_refpkg(sequences, name='temp.refpkg', threads=None):
 
         log_fp.close()
 
-        fasttree(sequences, log_path=log_fp.name, output_fp=tree_fp, gtr=True, threads=threads)
+        fasttree(sequences, log_path=log_fp.name, output_fp=tree_fp, gtr=True,
+                 threads=threads)
         tree_fp.close()
 
         rp = Refpkg(refpkg_dir(name), create=True)
@@ -113,9 +118,10 @@ def guppy_redup(placefile, redup_file, output):
     subprocess.check_call(cmd)
 
 
-def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, quiet=True):
-    """
-    Run pplacer on the provided refpkg
+def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None,
+            threads=2, quiet=True):
+    """Run pplacer on the provided refpkg
+
     """
     require_executable('pplacer')
     cmd = ['pplacer', '-j', str(threads), '-c', refpkg, alignment]
@@ -139,8 +145,8 @@ def pplacer(refpkg, alignment, posterior_prob=False, out_dir=None, threads=2, qu
     return jplace
 
 
-def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_mass=True,
-                  always_include=None):
+def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False,
+                  point_mass=True, always_include=None):
     """
     Run rppr min_adcl on the given jplace file, cutting to the given number of leaves
     Returns the names of the leaves *to remove*.
@@ -160,10 +166,11 @@ def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False, point_m
 
 
 def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam', always_include=None):
-    """
-    Run rppr min_adcl_tree on the given newick tree file, cutting to the given number of leaves.
+    """Run rppr min_adcl_tree on the given newick tree file, cutting to
+    the given number of leaves.
 
     Returns the names of the leaves *to remove*.
+
     """
     cmd = ['rppr', 'min_adcl_tree', '--algorithm', algorithm, newick_file, '--leaves',
            str(leaves)]
@@ -183,7 +190,8 @@ def _require_cmalign_11(cmalign='cmalign'):
     o = subprocess.check_output(cmd)
     if version_str not in o:
         msg = ('cmalign 1.1 not found. '
-               'Expected {0} in output of "{1}", got:\n{2}').format(version_str, ' '.join(cmd), o)
+               'Expected {0} in output of "{1}", got:\n{2}').format(
+                   version_str, ' '.join(cmd), o)
         raise MissingDependencyError(msg)
 
 
@@ -232,12 +240,37 @@ def _require_usearch6(usearch=USEARCH):
         raise MissingDependencyError(msg)
 
 
-def usearch_allpairs_files(input_file, output_file, executable=USEARCH):
-    """
-    Run ``usearch -allpairs_local``
+def vsearch_allpairs_files(input_file, output_file, executable=VSEARCH,
+                           threads=0, iddef=2):
+    """Use vsearch to calculate all pairwise distances.
+
     """
 
     require_executable(executable)
+    cmd = [executable,
+           '--usearch_global', input_file,
+           '--db', input_file,
+           '--strand', 'plus',
+           '--id', '0',
+           '--maxaccepts', str(sys.maxint),
+           '--threads', str(threads),
+           '--iddef', str(iddef),
+           '--blast6out', output_file]
+    logging.info(' '.join(cmd))
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logging.debug(p.stdout.read().strip())
+    error = p.stderr.read().strip()
+    if p.wait() != 0:
+        # TODO: preserve output files (input_file, output_file)
+        raise subprocess.CalledProcessError(p.returncode, error)
+
+
+def usearch_allpairs_files(input_file, output_file, executable=USEARCH):
+    """Run ``usearch -allpairs_local``
+
+    """
+
+    _require_usearch6(executable)
     cmd = [executable, '-allpairs_local', input_file, '-blast6out', output_file]
     logging.info(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

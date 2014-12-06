@@ -10,6 +10,7 @@ from deenurp import wrap
 from deenurp.test import util
 from deenurp.util import which, MissingDependencyError
 
+
 @unittest.skipUnless(which('cmalign'), "cmalign not found.")
 class CmAlignTestCase(unittest.TestCase):
     def setUp(self):
@@ -32,6 +33,7 @@ class CMTestCase(unittest.TestCase):
     def test_find_cm(self):
         self.assertTrue(os.path.isfile(wrap.CM))
 
+
 @unittest.skipUnless(which('FastTree'), "FastTree not found")
 class AsRefpkgTestCase(unittest.TestCase):
     def setUp(self):
@@ -45,6 +47,7 @@ class AsRefpkgTestCase(unittest.TestCase):
             if which('rppr'):
                 out = subprocess.check_output(['rppr', 'check', '-c', refpkg.path])
                 self.assertTrue('OK!' in out, out)
+
 
 @unittest.skipUnless(which('rppr'), "rppr not found")
 class RpprMinAdclTreeTestCase(unittest.TestCase):
@@ -82,6 +85,7 @@ except MissingDependencyError, e:
 else:
     usearch_available = True
 
+
 @unittest.skipUnless(usearch_available, "{} not found.".format(wrap.USEARCH))
 class UsearchTestCase(unittest.TestCase):
     def setUp(self):
@@ -96,3 +100,25 @@ class UsearchTestCase(unittest.TestCase):
             self.assertTrue(os.path.exists(outfile.name))
 
         self.assertFalse(os.path.exists(outfile.name))
+
+
+try:
+    wrap.require_executable(wrap.VSEARCH)
+except MissingDependencyError, e:
+    vsearch_available = False
+else:
+    vsearch_available = True
+
+
+@unittest.skipUnless(vsearch_available, "{} not found.".format(wrap.VSEARCH))
+class VsearchTestCase(unittest.TestCase):
+    def setUp(self):
+        self.sequencefile = util.data_path('test_input.fasta')
+
+    def test_vsearch_allpairs_files(self):
+        with deenurp.util.ntf(suffix='.blast6out') as outfile:
+            wrap.vsearch_allpairs_files(self.sequencefile, outfile.name)
+            self.assertTrue(os.path.exists(outfile.name))
+
+        self.assertFalse(os.path.exists(outfile.name))
+
