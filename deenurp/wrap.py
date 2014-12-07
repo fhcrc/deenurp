@@ -19,8 +19,12 @@ from .util import (as_fasta, ntf, tempdir, nothing, maybe_tempfile,
                    which, require_executable, MissingDependencyError)
 
 DEFAULT_CMALIGN_THREADS = 1
+
 USEARCH = 'usearch6'
+
 VSEARCH = 'vsearch'
+VSEARCH_IDDEF = 2
+DEFAULT_VSEARCH_THREADS = 1
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -241,7 +245,7 @@ def _require_usearch6(usearch=USEARCH):
 
 
 def vsearch_allpairs_files(input_file, output_file, executable=VSEARCH,
-                           threads=0, iddef=2):
+                           threads=DEFAULT_VSEARCH_THREADS, iddef=VSEARCH_IDDEF):
     """Use vsearch to calculate all pairwise distances.
 
     """

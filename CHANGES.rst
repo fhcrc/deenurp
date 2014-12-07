@@ -5,10 +5,12 @@
 0.0.4
 =====
 
- * ``filter-outliers`` can perform alignments using cmalign, muscle, or usearch
- * add ``filter-outliers --detailed-seqinfo`` identifying centroid, distance from centroid, etc
+ * ``filter-outliers`` can perform alignments using cmalign, muscle,
+   usearch, or vsearch
+ * add ``filter-outliers --detailed-seqinfo`` identifying centroid,
+   distance from centroid, etc
  * uses pandas internally
- * installs muscle
+ * installs muscle and vsearch
 
 
 0.0.3

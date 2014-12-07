@@ -53,7 +53,7 @@ def build_parser(p):
                    process per multiple alignment)""")
     p.add_argument('--aligner', help='multiple alignment tool',
                    default=DEFAULT_ALIGNER,
-                   choices=['cmalign', 'muscle', 'usearch'])
+                   choices=['cmalign', 'muscle', 'usearch', 'vsearch'])
     p.add_argument('--executable',
                    help='Optional absolute or relative path to the alignment tool')
     p.add_argument('--maxiters', default=DEFAULT_MAXITERS, type=int,
@@ -141,26 +141,41 @@ def parse_usearch_allpairs(filename, seqnames):
             'some sequences are missing from the output ({})'.format(filename))
 
     nseqs = len(seqnames)
-    if (nseqs * (nseqs - 1)) / 2 != data.shape[0]:
-        raise UsearchError(
-            'not all pairwise comparisons are represented ({})'.format(filename))
-
     distmat = numpy.repeat(0.0, nseqs ** 2)
     distmat.shape = (nseqs, nseqs)
     ii = pd.match(data['query'], seqnames)
     jj = pd.match(data['target'], seqnames)
-    distmat[ii, jj] = data['dist']
-    distmat[jj, ii] = data['dist']
+
+    # usearch_allpairs_files returns comparisons corresponding to a
+    # triangular matrix, whereas vsearch_allpairs_files returns all
+    # comparisons. Here we convert both to a square matrix.
+    if data.shape[0] == nseqs * nseqs:
+        distmat[ii, jj] = data['dist']
+    elif data.shape[0] == (nseqs * (nseqs - 1)) / 2:
+        distmat[ii, jj] = data['dist']
+        distmat[jj, ii] = data['dist']
+    else:
+        raise UsearchError(
+            'not all pairwise comparisons are represented ({})'.format(filename))
 
     return distmat
 
 
-def distmat_usearch(sequence_file, prefix, usearch=wrap.USEARCH):
+def distmat_pairwise(sequence_file, prefix, aligner, executable):
+    """Calculate a distance matrix using either usearch or vsearch.
+
+    """
+
+    assert aligner in {'usearch', 'vsearch'}, 'invalid aligner'
 
     with open(sequence_file) as sf, util.ntf(
             prefix=prefix, suffix='.blast6out') as uc:
 
-        wrap.usearch_allpairs_files(sequence_file, uc.name, usearch)
+        if aligner == 'usearch':
+            wrap.usearch_allpairs_files(sequence_file, uc.name, executable)
+        elif aligner == 'vsearch':
+            wrap.vsearch_allpairs_files(sequence_file, uc.name, executable)
+
         uc.flush()
 
         taxa = [seq.id for seq in SeqIO.parse(sf, 'fasta')]
@@ -175,14 +190,12 @@ def distmat_usearch(sequence_file, prefix, usearch=wrap.USEARCH):
 
 
 def filter_sequences(sequence_file, tax_id, cutoff,
-                     aligner=DEFAULT_ALIGNER,
-                     maxiters=DEFAULT_MAXITERS,
-                     usearch=wrap.USEARCH):
+                     aligner, executable, maxiters=DEFAULT_MAXITERS):
     """
     Return a list of sequence names identifying outliers.
     """
 
-    assert aligner in {'cmalign', 'muscle', 'usearch'}
+    assert aligner in {'cmalign', 'muscle', 'usearch', 'vsearch'}, 'invalid aligner'
 
     prefix = '{}_'.format(tax_id)
 
@@ -190,8 +203,8 @@ def filter_sequences(sequence_file, tax_id, cutoff,
         taxa, distmat = distmat_cmalign(sequence_file, prefix)
     elif aligner == 'muscle':
         taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
-    elif aligner == 'usearch':
-        taxa, distmat = distmat_usearch(sequence_file, prefix, usearch)
+    elif aligner in {'usearch', 'vsearch'}:
+        taxa, distmat = distmat_pairwise(sequence_file, prefix, aligner, executable)
 
     medoid, dists, is_out = outliers.outliers(distmat, cutoff)
     assert len(is_out) == len(taxa)
@@ -221,9 +234,8 @@ def mock_filter(seqs, keep):
 
 
 def filter_worker(sequence_file, node, seqs, distance_cutoff,
-                  aligner=DEFAULT_ALIGNER,
+                  aligner, executable,
                   maxiters=DEFAULT_MAXITERS,
-                  usearch=wrap.USEARCH,
                   log_taxid=None):
     """
     Worker task for running filtering tasks.
@@ -233,7 +245,9 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff,
     :node: Taxonomic node being filtered
     :seqs: set containing the names of sequences to keep
     :distance_cutoff: Distance cutoff for medoid filtering
-    :sfetch_lock: Lock to acquire to retrieving sequences from ``sequence_file``
+    :aligner: name of alignment program
+    :executable: name or path of executable
+    :maxiters: value of this parameter to pass to muscle
     :log_taxid: Optional function to log tax_id activity.
 
     :returns: Set of sequences to *keep*
@@ -246,8 +260,9 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff,
         wrap.esl_sfetch(sequence_file, seqs, tf)
         tf.flush()
 
-        filtered = filter_sequences(tf.name, node.tax_id, distance_cutoff,
-                                    aligner=aligner, maxiters=maxiters)
+        filtered = filter_sequences(
+            tf.name, node.tax_id, distance_cutoff,
+            aligner=aligner, executable=executable, maxiters=maxiters)
 
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs),
@@ -271,7 +286,13 @@ def action(a):
     # Load sequences into taxonomy
     with open(a.seqinfo_file) as fp:
         taxonomy.populate_from_seqinfo(fp)
-        logging.info('Added %d sequences', sum(1 for i in taxonomy.subtree_sequence_ids()))
+        logging.info('Added %d sequences',
+                     sum(1 for i in taxonomy.subtree_sequence_ids()))
+
+    executable = a.executable or {'cmalign': 'cmalign',
+                                  'muscle': 'muscle',
+                                  'usearch': wrap.USEARCH,
+                                  'vsearch': wrap.VSEARCH}[a.aligner]
 
     outcomes = []  # accumulate DatFrame objects
 
@@ -330,6 +351,7 @@ def action(a):
                                         seqs=seqs,
                                         distance_cutoff=a.distance_cutoff,
                                         aligner=a.aligner,
+                                        executable=executable,
                                         maxiters=a.maxiters,
                                         log_taxid=log_taxid)
 

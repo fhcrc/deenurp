@@ -44,28 +44,33 @@ INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
+VSEARCH_VERSION=1.0.3
 
-# Create a virtualenv using a specified version of the virtualenv
-# source. This also provides setuptools and pip. Inspired by
-# http://eli.thegreenplace.net/2013/04/20/bootstrapping-virtualenv/
-VENV_URL='http://pypi.python.org/packages/source/v/virtualenv'
-
-# download virtualenv source if necessary
-if [ ! -f src/virtualenv-${VENV_VERSION}/virtualenv.py ]; then
-    (cd src && \
-	wget -N ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
-	tar -xf virtualenv-${VENV_VERSION}.tar.gz)
-fi
-
-# create virtualenv if necessary
-if [ ! -f $venv/bin/activate ]; then
-    $PYTHON src/virtualenv-${VENV_VERSION}/virtualenv.py $venv
-    $PYTHON src/virtualenv-${VENV_VERSION}/virtualenv.py --relocatable $venv
+# create virtualenv if necessary, downloading source if available
+# version is not up to date.
+VENV_URL="https://pypi.python.org/packages/source/v/virtualenv"
+if [[ ! -f "${venv:?}/bin/activate" ]]; then
+    # if the system virtualenv is up to date, use it
+    if check_version virtualenv $VENV_VERSION; then
+	echo "using $(which virtualenv) (version $(virtualenv --version))"
+    	virtualenv "$venv"
+    else
+	echo "downloading virtualenv version $VENV_VERSION"
+	if [[ ! -f src/virtualenv-${VENV_VERSION}/virtualenv.py ]]; then
+	    mkdir -p src
+	    (cd src && \
+		wget -N ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
+		tar -xf virtualenv-${VENV_VERSION}.tar.gz)
+	fi
+	"$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py "$venv"
+    fi
 else
-    echo "found existing virtualenv $venv"
+    echo "virtualenv $venv already exists"
 fi
 
 source $venv/bin/activate
+# make relocatable (necessary to prevent long shebang lines)
+virtualenv --relocatable $venv
 
 # full path; set by activate
 venv=$VIRTUAL_ENV
@@ -147,6 +152,22 @@ else
     echo "raxml is already installed: $(raxmlHPC-SSE3 | grep RAxML)"
 fi
 
+# install VSEARCH
+vsearch_is_installed(){
+    $venv/bin/vsearch --version | grep -q "$VSEARCH_VERSION"
+}
+
+if vsearch_is_installed; then
+    echo -n "vsearch is already installed: "
+    $venv/bin/vsearch --version
+else
+    (cd src && \
+	    wget -N https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64 && \
+	    mv vsearch-${VSEARCH_VERSION}-linux-x86_64 $venv/bin && \
+	    chmod +x $venv/bin/vsearch-${VSEARCH_VERSION}-linux-x86_64 && \
+	    ln -f $venv/bin/vsearch-${VSEARCH_VERSION}-linux-x86_64 $venv/bin/vsearch)
+fi
+
 # install MUSCLE
 muscle_is_installed(){
     $venv/bin/muscle -version | grep -q "$MUSCLE_VERSION"
@@ -177,4 +198,4 @@ done < "$DEENURP/requirements.txt"
 pip install -e "$DEENURP"
 
 # correct any more shebang lines
-$PYTHON src/virtualenv-${VENV_VERSION}/virtualenv.py --relocatable $venv
+virtualenv --relocatable $venv
