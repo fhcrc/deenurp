@@ -19,11 +19,13 @@ import pandas as pd
 from Bio import SeqIO
 from taxtastic.taxtable import TaxNode
 
-from .. import config, wrap, util, outliers
+from deenurp import config, wrap, util, outliers
+from deenurp.wrap import (CMALIGN_THREADS, MUSCLE_MAXITERS,
+                          USEARCH,
+                          VSEARCH, VSEARCH_IDDEF, VSEARCH_THREADS)
 
 DEFAULT_RANK = 'species'
 DEFAULT_ALIGNER = 'cmalign'
-DEFAULT_MAXITERS = 2  # for muscle
 DROP = 'drop'
 KEEP = 'keep'
 BLAST6NAMES = ['query', 'target', 'pct_id', 'align_len', 'mismatches', 'gaps',
@@ -51,13 +53,21 @@ def build_parser(p):
     p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
                    help="""number of taxa to process concurrently (one
                    process per multiple alignment)""")
-    p.add_argument('--aligner', help='multiple alignment tool',
-                   default=DEFAULT_ALIGNER,
-                   choices=['cmalign', 'muscle', 'usearch', 'vsearch'])
-    p.add_argument('--executable',
-                   help='Optional absolute or relative path to the alignment tool')
-    p.add_argument('--maxiters', default=DEFAULT_MAXITERS, type=int,
-                   help='Value for muscle -maxiters (ignored if using cmalign)')
+
+    aligner_options = p.add_argument_group("Aligner-specific options")
+    aligner_options.add_argument(
+        '--aligner', help='multiple alignment tool [%(default)s]',
+        default=DEFAULT_ALIGNER,
+        choices=['cmalign', 'muscle', 'usearch', 'vsearch'])
+    aligner_options.add_argument(
+        '--executable',
+        help='Optional absolute or relative path to the alignment tool executable')
+    aligner_options.add_argument(
+        '--maxiters', default=MUSCLE_MAXITERS, type=int,
+        help='muscle: value for -maxiters [%(default)s]')
+    aligner_options.add_argument(
+        '--iddef', default=VSEARCH_IDDEF, type=int, choices=[0, 1, 2, 3, 4],
+        help='vsearch: method for calculating pairwise identity [%(default)s]')
 
     rare_group = p.add_argument_group("Rare taxa")
     rare_group.add_argument(
@@ -89,7 +99,7 @@ def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
                 yield sequence_id
 
 
-def distmat_muscle(sequence_file, prefix, maxiters=DEFAULT_MAXITERS):
+def distmat_muscle(sequence_file, prefix, maxiters=MUSCLE_MAXITERS):
 
     with util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
         wrap.muscle_files(sequence_file, a_fasta.name, maxiters=maxiters)
@@ -100,12 +110,12 @@ def distmat_muscle(sequence_file, prefix, maxiters=DEFAULT_MAXITERS):
     return taxa, distmat
 
 
-def distmat_cmalign(sequence_file, prefix):
+def distmat_cmalign(sequence_file, prefix, cpu=CMALIGN_THREADS):
 
     with util.ntf(prefix=prefix, suffix='.aln') as a_sto, \
             util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
 
-        wrap.cmalign_files(sequence_file, a_sto.name, cpu=1)
+        wrap.cmalign_files(sequence_file, a_sto.name, cpu=cpu)
         # FastTree requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
         a_fasta.flush()
@@ -137,6 +147,7 @@ def parse_usearch_allpairs(filename, seqnames):
     data = data.iloc[maxidx]
 
     if set(seqnames) != set(data['query']) | set(data['target']):
+        # shutil.copy(filename, '.')
         raise UsearchError(
             'some sequences are missing from the output ({})'.format(filename))
 
@@ -161,12 +172,14 @@ def parse_usearch_allpairs(filename, seqnames):
     return distmat
 
 
-def distmat_pairwise(sequence_file, prefix, aligner, executable):
+def distmat_pairwise(sequence_file, prefix, aligner,
+                     executable=None, iddef=VSEARCH_IDDEF, threads=VSEARCH_THREADS):
     """Calculate a distance matrix using either usearch or vsearch.
 
     """
 
     assert aligner in {'usearch', 'vsearch'}, 'invalid aligner'
+    executable = executable or {'usearch': USEARCH, 'vsearch': VSEARCH}[aligner]
 
     with open(sequence_file) as sf, util.ntf(
             prefix=prefix, suffix='.blast6out') as uc:
@@ -174,7 +187,8 @@ def distmat_pairwise(sequence_file, prefix, aligner, executable):
         if aligner == 'usearch':
             wrap.usearch_allpairs_files(sequence_file, uc.name, executable)
         elif aligner == 'vsearch':
-            wrap.vsearch_allpairs_files(sequence_file, uc.name, executable)
+            wrap.vsearch_allpairs_files(sequence_file, uc.name, executable,
+                                        iddef=iddef, threads=threads)
 
         uc.flush()
 
@@ -189,8 +203,8 @@ def distmat_pairwise(sequence_file, prefix, aligner, executable):
     return taxa, distmat
 
 
-def filter_sequences(sequence_file, tax_id, cutoff,
-                     aligner, executable, maxiters=DEFAULT_MAXITERS):
+def filter_sequences(sequence_file, tax_id, cutoff, aligner, executable,
+                     maxiters=MUSCLE_MAXITERS, iddef=VSEARCH_IDDEF):
     """
     Return a list of sequence names identifying outliers.
     """
@@ -204,7 +218,8 @@ def filter_sequences(sequence_file, tax_id, cutoff,
     elif aligner == 'muscle':
         taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
     elif aligner in {'usearch', 'vsearch'}:
-        taxa, distmat = distmat_pairwise(sequence_file, prefix, aligner, executable)
+        taxa, distmat = distmat_pairwise(
+            sequence_file, prefix, aligner, executable, iddef)
 
     medoid, dists, is_out = outliers.outliers(distmat, cutoff)
     assert len(is_out) == len(taxa)
@@ -234,8 +249,7 @@ def mock_filter(seqs, keep):
 
 
 def filter_worker(sequence_file, node, seqs, distance_cutoff,
-                  aligner, executable,
-                  maxiters=DEFAULT_MAXITERS,
+                  aligner, executable, maxiters, iddef,
                   log_taxid=None):
     """
     Worker task for running filtering tasks.
@@ -262,7 +276,7 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff,
 
         filtered = filter_sequences(
             tf.name, node.tax_id, distance_cutoff,
-            aligner=aligner, executable=executable, maxiters=maxiters)
+            aligner=aligner, executable=executable, maxiters=maxiters, iddef=iddef)
 
         if log_taxid:
             log_taxid(node.tax_id, node.name, len(seqs),
@@ -334,15 +348,9 @@ def action(a):
                     continue
                 elif len(seqs) < a.min_seqs_for_filtering:
                     logging.debug('%d sequence(s) for %s (%s) [action: %s]',
-                                  len(seqs), node.tax_id, node.name,
-                                  a.rare_taxon_action)
-                    if a.rare_taxon_action == DROP:
-                        f = executor.submit(mock_filter, seqs=list(seqs), keep=False)
-                    elif a.rare_taxon_action == KEEP:
-                        f = executor.submit(mock_filter, seqs=list(seqs), keep=True)
-                    else:
-                        raise ValueError("Unknown action: {0}".format(
-                            a.rare_taxon_action))
+                                  len(seqs), node.tax_id, node.name, a.rare_taxon_action)
+                    f = executor.submit(mock_filter, seqs=list(seqs),
+                                        keep=a.rare_taxon_action == KEEP)
                 else:
                     # `f` is a DataFrame (output of filter_sequences)
                     f = executor.submit(filter_worker,
@@ -353,6 +361,7 @@ def action(a):
                                         aligner=a.aligner,
                                         executable=executable,
                                         maxiters=a.maxiters,
+                                        iddef=a.iddef,
                                         log_taxid=log_taxid)
 
                 futs[f] = {'n_seqs': len(seqs), 'node': node}

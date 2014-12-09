@@ -18,13 +18,15 @@ from taxtastic.refpkg import Refpkg
 from .util import (as_fasta, ntf, tempdir, nothing, maybe_tempfile,
                    which, require_executable, MissingDependencyError)
 
-DEFAULT_CMALIGN_THREADS = 1
+CMALIGN_THREADS = 1
+
+MUSCLE_MAXITERS = 2
 
 USEARCH = 'usearch6'
 
 VSEARCH = 'vsearch'
 VSEARCH_IDDEF = 2
-DEFAULT_VSEARCH_THREADS = 1
+VSEARCH_THREADS = 1
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -199,7 +201,7 @@ def _require_cmalign_11(cmalign='cmalign'):
         raise MissingDependencyError(msg)
 
 
-def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
+def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
     cmd = ['cmalign']
     require_executable(cmd[0])
     _require_cmalign_11(cmd[0])
@@ -216,7 +218,7 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
         raise subprocess.CalledProcessError(p.returncode, error)
 
 
-def cmalign(sequences, output=None, cm=CM, cpu=DEFAULT_CMALIGN_THREADS):
+def cmalign(sequences, output=None, cm=CM, cpu=CMALIGN_THREADS):
     """
     Run cmalign
     """
@@ -245,7 +247,7 @@ def _require_usearch6(usearch=USEARCH):
 
 
 def vsearch_allpairs_files(input_file, output_file, executable=VSEARCH,
-                           threads=DEFAULT_VSEARCH_THREADS, iddef=VSEARCH_IDDEF):
+                           threads=VSEARCH_THREADS, iddef=VSEARCH_IDDEF):
     """Use vsearch to calculate all pairwise distances.
 
     """
@@ -285,7 +287,7 @@ def usearch_allpairs_files(input_file, output_file, executable=USEARCH):
         raise subprocess.CalledProcessError(p.returncode, error)
 
 
-def muscle_files(input_file, output_file, maxiters=2):
+def muscle_files(input_file, output_file, maxiters=MUSCLE_MAXITERS):
     cmd = ['muscle']
     require_executable(cmd[0])
 
