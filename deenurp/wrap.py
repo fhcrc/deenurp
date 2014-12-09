@@ -10,6 +10,8 @@ import os
 import os.path
 import subprocess
 import sys
+import re
+from distutils.version import LooseVersion
 
 from Bio import SeqIO
 import peasel
@@ -25,6 +27,7 @@ MUSCLE_MAXITERS = 2
 USEARCH = 'usearch6'
 
 VSEARCH = 'vsearch'
+VSEARCH_VERSION = '1.0.4'
 VSEARCH_IDDEF = 2
 VSEARCH_THREADS = 1
 
@@ -246,6 +249,22 @@ def _require_usearch6(usearch=USEARCH):
         raise MissingDependencyError(msg)
 
 
+def _require_vsearch_version(vsearch=VSEARCH, version=VSEARCH_VERSION):
+    """
+    Check for vsearch with a version >= `version`
+    """
+
+    cmd = [vsearch, '--version']
+    o = subprocess.check_output(cmd)
+
+    vsearch = re.search(r'^vsearch v(?P<vstr>\d+\.\d+\.[^_]+)', o)
+    ver = vsearch.groupdict()['vstr']
+
+    if LooseVersion(ver) < LooseVersion(version):
+        raise MissingDependencyError(
+            'vsearch version >= v{} is required, got v{}'.format(version, ver))
+
+
 def vsearch_allpairs_files(input_file, output_file, executable=VSEARCH,
                            threads=VSEARCH_THREADS, iddef=VSEARCH_IDDEF):
     """Use vsearch to calculate all pairwise distances.
@@ -253,15 +272,16 @@ def vsearch_allpairs_files(input_file, output_file, executable=VSEARCH,
     """
 
     require_executable(executable)
+    _require_vsearch_version()
+
     cmd = [executable,
-           '--usearch_global', input_file,
-           '--db', input_file,
+           '--allpairs_global', input_file,
            '--strand', 'plus',
            '--id', '0',
-           '--maxaccepts', str(sys.maxint),
            '--threads', str(threads),
            '--iddef', str(iddef),
            '--blast6out', output_file]
+
     logging.info(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     logging.debug(p.stdout.read().strip())

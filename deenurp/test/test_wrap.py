@@ -115,10 +115,19 @@ class VsearchTestCase(unittest.TestCase):
     def setUp(self):
         self.sequencefile = util.data_path('test_input.fasta')
 
+    def test_vsearch_version_pass(self):
+        wrap._require_vsearch_version()
+
+    def test_vsearch_version_fail(self):
+        self.assertRaises(MissingDependencyError,
+                          wrap._require_vsearch_version, version='1.9')
+
     def test_vsearch_allpairs_files(self):
-        with deenurp.util.ntf(suffix='.blast6out') as outfile:
+        with deenurp.util.ntf(suffix='.blast6out', mode='rw') as outfile:
             wrap.vsearch_allpairs_files(self.sequencefile, outfile.name)
             self.assertTrue(os.path.exists(outfile.name))
+            outfile.flush()
+            outfile.seek(0)
+            self.assertEqual(len(outfile.readlines()), 45)
 
         self.assertFalse(os.path.exists(outfile.name))
-
