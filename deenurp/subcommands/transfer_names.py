@@ -1,5 +1,5 @@
 """
-Transfer names from some sequences to best-matching sequences in a reference package
+Transfer names from some sequences to best-matching sequences in a reference package.
 """
 
 import argparse

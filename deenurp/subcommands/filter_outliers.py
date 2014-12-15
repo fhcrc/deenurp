@@ -1,6 +1,5 @@
 """
-Filter sequences at the species level, whose distance from the species medoid
-is above some threshold.
+Filter sequences based on distance from the centroid of a taxon.
 """
 
 import argparse

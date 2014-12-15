@@ -1,6 +1,7 @@
 """
-Run tax2tree on a reference package, updating the seq_info file
+Add missing taxonomic annotations to a reference package using tax2tree.
 """
+
 from functools import partial
 
 from taxtastic import refpkg

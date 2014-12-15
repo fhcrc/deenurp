@@ -1,6 +1,5 @@
 """
-Find selected taxa which are the sole descendent of their parent, add
-additional 'nearby' taxa.
+Add taxa of the same rank to sole descendents of their parent taxon.
 """
 
 import argparse

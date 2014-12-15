@@ -4,6 +4,7 @@ import sys
 
 from .. import subcommands
 
+
 def main(argv=sys.argv[1:]):
     action, arguments = parse_arguments(argv)
 
@@ -23,32 +24,37 @@ def main(argv=sys.argv[1:]):
 
     return action(arguments)
 
+
 def parse_arguments(argv):
     """
     Extract command-line arguments for different actions.
     """
-    parser = argparse.ArgumentParser(description="deenurp pipeline",
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="deenurp pipeline",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('-v', '--verbose', dest='verbosity',
-            action='count', default=0,
-            help="Be more verbose. Specify -vv or -vvv for even more")
-    parser.add_argument('-q', '--quiet', action='store_const', const=0,
-            dest='verbosity', help="Suppress output")
+    parser.add_argument(
+        '-v', '--verbose', dest='verbosity', action='count', default=0,
+        help="Be more verbose. Specify -vv or -vvv for even more")
+    parser.add_argument(
+        '-q', '--quiet', action='store_const', const=0, dest='verbosity',
+        help="Suppress output")
 
     # Subparsers
     subparsers = parser.add_subparsers(dest='subparser_name')
 
-    parser_help = subparsers.add_parser('help',
-            help='Detailed help for actions using help <action>')
+    parser_help = subparsers.add_parser(
+        'help', help='Detailed help for actions using help <action>')
 
     parser_help.add_argument('action')
 
     # Add actions
     actions = {}
     for name, mod in subcommands.itermodules():
-        subparser = subparsers.add_parser(name, help=mod.__doc__,
-                description=mod.__doc__)
+        subparser = subparsers.add_parser(
+            name, help=mod.__doc__.lstrip().split('\n', 1)[0],
+            description=mod.__doc__,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
         mod.build_parser(subparser)
         actions[name] = mod.action
 

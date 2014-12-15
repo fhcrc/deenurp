@@ -1,5 +1,4 @@
-"""Search a set of sequences against a sequence database for reference package
-candidates.
+"""Search a set of sequences against a sequence database for reference package candidates.
 
 The search algorithm is as follows:
 

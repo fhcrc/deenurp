@@ -1,7 +1,7 @@
 """
-Given a compressed file of GenBank records, generates a CSV file mapping from
-sequence ID to tax_id, and a FASTA file with the sequences.
+Extract sequences and annotation from a file of GenBank records.
 """
+
 import argparse
 import csv
 import gzip
