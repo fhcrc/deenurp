@@ -2,16 +2,14 @@
  Changes for deenurp
 =====================
 
-0.0.4
-=====
+0.1.0 (planned)
+===============
 
- * ``filter-outliers`` can perform alignments using cmalign, muscle,
-   usearch, or vsearch
- * add ``filter-outliers --detailed-seqinfo`` identifying centroid,
-   distance from centroid, etc
- * uses pandas internally
+ * ``filter-outliers`` can perform alignments using cmalign, muscle, or vsearch
+ * add ``filter-outliers --detailed-seqinfo`` identifying centroid, distance from centroid, etc
+ * adds a dependency on pandas
  * installs muscle and vsearch
-
+ * add subcommand ``deenurp pairwise-distances``
 
 0.0.3
 =====
