@@ -15,7 +15,7 @@ for aligner in cmalign muscle vsearch usearch; do
 
     out=output/$aligner
     mkdir -p $out
-    echo time $DEENURP filter-outliers --aligner $aligner \
+    time $DEENURP filter-outliers --aligner $aligner \
 	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
 	 $out/filtered.fasta --filtered-seqinfo $out/filtered.seqinfo.csv \
 	 --detailed-seqinfo $out/filtered.details.csv
