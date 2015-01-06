@@ -1,5 +1,6 @@
 """Calculate a matrix of pairwise distances from unaligned sequences.
 
+Output is a csv file with column labels corresponding to names in `seqs`
 """
 
 from os.path import basename, splitext
@@ -22,7 +23,7 @@ def build_parser(parser):
         help='vsearch: method for calculating pairwise identity [%(default)s]')
     parser.add_argument(
         '--threads', type=int, default=1,
-        help="""number of threads (cmaling and vsearch only)""")
+        help="""number of threads (cmalign and vsearch only)""")
 
 
 def action(args):
