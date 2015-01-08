@@ -44,7 +44,7 @@ INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
-VSEARCH_VERSION=1.0.6
+VSEARCH_VERSION=1.0.7
 
 # create virtualenv if necessary, downloading source if available
 # version is not up to date.
