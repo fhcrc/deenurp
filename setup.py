@@ -1,3 +1,16 @@
+import subprocess
+import os
+import sys
+
+subprocess.call(
+    ('mkdir -p deenurp/data && '
+     'git describe --tags --dirty > deenurp/data/ver.tmp'
+     '&& mv deenurp/data/ver.tmp deenurp/data/ver '
+     '|| rm -f deenurp/data/ver.tmp'),
+    shell=True, stderr=open(os.devnull, "w"))
+
+from deenurp import __version__
+
 # Fix for `setup.py test`
 # See http://bugs.python.org/issue15881
 try:
@@ -12,6 +25,7 @@ except ImportError:
     from distribute_setup import use_setuptools
     use_setuptools()
     from setuptools import setup, find_packages, Command
+
 
 class run_audit(Command):
     """Audits source code using PyFlakes for following issues:
@@ -28,7 +42,6 @@ class run_audit(Command):
         pass
 
     def run(self):
-        import os, sys
         try:
             import pyflakes.scripts.pyflakes as flakes
         except ImportError:
@@ -41,7 +54,7 @@ class run_audit(Command):
         for dir in dirs:
             for root, _, files in os.walk(dir):
                 for file in files:
-                    if file != '__init__.py' and file.endswith('.py') :
+                    if file != '__init__.py' and file.endswith('.py'):
                         warns += flakes.checkPath(os.path.join(root, file))
         if warns > 0:
             print "Audit finished with total %d warnings." % warns
@@ -51,7 +64,7 @@ class run_audit(Command):
 install_requires = []
 
 setup(name='deenurp',
-      version='0.0.4',
+      version=__version__,
       package_data={'deenurp': ['data/*', 'test/data/*']},
       entry_points={'console_scripts': {'deenurp = deenurp.scripts.deenurp:main'}},
       install_requires=install_requires,

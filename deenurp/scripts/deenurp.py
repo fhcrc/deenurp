@@ -2,7 +2,16 @@ import argparse
 import logging
 import sys
 
-from .. import subcommands
+from .. import __version__, subcommands
+
+
+class VersionAction(argparse._VersionAction):
+    '''Write the version string to stdout and exit'''
+    def __call__(self, parser, namespace, values, option_string=None):
+        formatter = parser._get_formatter()
+        formatter.add_text(parser.version if self.version is None else self.version)
+        sys.stdout.write(formatter.format_help())
+        sys.exit(0)
 
 
 def main(argv=sys.argv[1:]):
@@ -39,6 +48,8 @@ def parse_arguments(argv):
     parser.add_argument(
         '-q', '--quiet', action='store_const', const=0, dest='verbosity',
         help="Suppress output")
+    parser.add_argument(
+        '--version', action=VersionAction, version='%(prog)s {}'.format(__version__))
 
     # Subparsers
     subparsers = parser.add_subparsers(dest='subparser_name')

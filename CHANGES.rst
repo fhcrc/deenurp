@@ -10,6 +10,7 @@
  * adds a dependency on pandas
  * installs muscle and vsearch
  * add subcommand ``deenurp pairwise-distances``
+ * version number defined using ``git describe --tags --dirty``
 
 0.0.3
 =====

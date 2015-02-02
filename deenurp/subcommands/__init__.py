@@ -1,3 +1,6 @@
+import logging
+log = logging
+
 commands = (
     'add_reps',
     'cluster_refs',
@@ -17,5 +20,9 @@ commands = (
 
 def itermodules(root=__name__):
     for command in sorted(commands):
-        yield (command.replace('_', '-'),
-               __import__('.'.join((root, command)), fromlist=[command]))
+        try:
+            mod = __import__('.'.join((root, command)), fromlist=[command])
+        except ImportError, e:
+            log.error(e)
+        else:
+            yield (command.replace('_', '-'), mod)

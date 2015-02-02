@@ -1,5 +1,6 @@
 /src
 /build
+/deenurp/data/ver
 /dist
 *-env
 *.pyc
@@ -8,4 +9,3 @@ tests/*/output/*
 tests/*/temp.fasta
 tests/hrefpkg-build/hrefpkg
 *.ssi
-
