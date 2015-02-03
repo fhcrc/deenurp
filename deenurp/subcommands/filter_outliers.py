@@ -20,7 +20,6 @@ from taxtastic.taxtable import TaxNode
 
 from deenurp import config, wrap, util, outliers
 from deenurp.wrap import (CMALIGN_THREADS, MUSCLE_MAXITERS,
-                          USEARCH,
                           VSEARCH, VSEARCH_IDDEF, VSEARCH_THREADS)
 
 DEFAULT_RANK = 'species'
@@ -57,7 +56,7 @@ def build_parser(p):
     aligner_options.add_argument(
         '--aligner', help='multiple alignment tool [%(default)s]',
         default=DEFAULT_ALIGNER,
-        choices=['cmalign', 'muscle', 'usearch', 'vsearch'])
+        choices=['cmalign', 'muscle', 'vsearch'])
     aligner_options.add_argument(
         '--executable',
         help='Optional absolute or relative path to the alignment tool executable')
@@ -177,15 +176,13 @@ def distmat_pairwise(sequence_file, prefix, aligner,
 
     """
 
-    assert aligner in {'usearch', 'vsearch'}, 'invalid aligner'
-    executable = executable or {'usearch': USEARCH, 'vsearch': VSEARCH}[aligner]
+    assert aligner in {'vsearch'}, 'invalid aligner'
+    executable = executable or {'vsearch': VSEARCH}[aligner]
 
     with open(sequence_file) as sf, util.ntf(
             prefix=prefix, suffix='.blast6out') as uc:
 
-        if aligner == 'usearch':
-            wrap.usearch_allpairs_files(sequence_file, uc.name, executable)
-        elif aligner == 'vsearch':
+        if aligner == 'vsearch':
             wrap.vsearch_allpairs_files(sequence_file, uc.name, executable,
                                         iddef=iddef, threads=threads)
 
@@ -202,13 +199,13 @@ def distmat_pairwise(sequence_file, prefix, aligner,
     return taxa, distmat
 
 
-def filter_sequences(sequence_file, tax_id, cutoff, aligner, executable,
+def filter_sequences(sequence_file, tax_id, cutoff, aligner, executable=None,
                      maxiters=MUSCLE_MAXITERS, iddef=VSEARCH_IDDEF):
     """
     Return a list of sequence names identifying outliers.
     """
 
-    assert aligner in {'cmalign', 'muscle', 'usearch', 'vsearch'}, 'invalid aligner'
+    assert aligner in {'cmalign', 'muscle', 'vsearch'}, 'invalid aligner'
 
     prefix = '{}_'.format(tax_id)
 
@@ -216,7 +213,7 @@ def filter_sequences(sequence_file, tax_id, cutoff, aligner, executable,
         taxa, distmat = distmat_cmalign(sequence_file, prefix)
     elif aligner == 'muscle':
         taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
-    elif aligner in {'usearch', 'vsearch'}:
+    elif aligner == 'vsearch':
         taxa, distmat = distmat_pairwise(
             sequence_file, prefix, aligner, executable, iddef)
 
@@ -304,7 +301,6 @@ def action(a):
 
     executable = a.executable or {'cmalign': 'cmalign',
                                   'muscle': 'muscle',
-                                  'usearch': wrap.USEARCH,
                                   'vsearch': wrap.VSEARCH}[a.aligner]
 
     outcomes = []  # accumulate DatFrame objects

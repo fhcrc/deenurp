@@ -55,12 +55,14 @@ class TestFastTreeDists(unittest.TestCase):
 
 class TestFindOutliers(unittest.TestCase):
 
-    def test01(self):
+    def setUp(self):
         with open(data_path('e_faecium.distmat')) as f:
-            taxa, mat = outliers.read_dists(f)
-            _, _, is_outlier = outliers.outliers(mat, cutoff=0.015)
-            out = {t for t, o in zip(taxa, is_outlier) if o}
-            self.assertEqual(len(out), 7)
+            self.taxa, self.mat = outliers.read_dists(f)
+
+    def test01(self):
+        _, _, is_outlier = outliers.outliers(self.mat, cutoff=0.015)
+        out = {t for t, o in zip(self.taxa, is_outlier) if o}
+        self.assertEqual(len(out), 7)
 
     def test02(self):
         """
@@ -91,9 +93,8 @@ class TestFilterSequences(unittest.TestCase):
 
     def test03(self):
         fa = data_path('test_db_head.fasta')
-        to_prune = filter_sequences(fa, '53635', 0.015, aligner='usearch')
+        to_prune = filter_sequences(fa, '53635', 0.015, aligner='vsearch')
         self.assertEqual(sum(to_prune['is_out']), 5)
-
 
 
 def suite():

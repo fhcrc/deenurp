@@ -24,8 +24,6 @@ CMALIGN_THREADS = 1
 
 MUSCLE_MAXITERS = 2
 
-USEARCH = 'usearch6'
-
 VSEARCH = 'vsearch'
 VSEARCH_VERSION = '1.0.7'
 VSEARCH_IDDEF = 2
@@ -234,21 +232,6 @@ def cmalign(sequences, output=None, cm=CM, cpu=CMALIGN_THREADS):
             yield sequence
 
 
-def _require_usearch6(usearch=USEARCH):
-    """
-    Check for usearch version 6, raising an error if not found
-    """
-
-    version_str = 'v6.'
-    cmd = [usearch, '-version']
-    o = subprocess.check_output(cmd)
-    if not o.split()[-1].startswith(version_str):
-        msg = ('usearch v6 not found. '
-               'Expected {0} in output of "{1}", got:\n{2}').format(
-                   version_str, ' '.join(cmd), o)
-        raise MissingDependencyError(msg)
-
-
 def _require_vsearch_version(vsearch=VSEARCH, version=VSEARCH_VERSION):
     """
     Check for vsearch with a version >= `version`
@@ -282,22 +265,6 @@ def vsearch_allpairs_files(input_file, output_file, executable=VSEARCH,
            '--iddef', str(iddef),
            '--blast6out', output_file]
 
-    logging.info(' '.join(cmd))
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    logging.debug(p.stdout.read().strip())
-    error = p.stderr.read().strip()
-    if p.wait() != 0:
-        # TODO: preserve output files (input_file, output_file)
-        raise subprocess.CalledProcessError(p.returncode, error)
-
-
-def usearch_allpairs_files(input_file, output_file, executable=USEARCH):
-    """Run ``usearch -allpairs_local``
-
-    """
-
-    _require_usearch6(executable)
-    cmd = [executable, '-allpairs_local', input_file, '-blast6out', output_file]
     logging.info(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     logging.debug(p.stdout.read().strip())

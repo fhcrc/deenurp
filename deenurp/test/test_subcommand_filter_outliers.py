@@ -22,13 +22,6 @@ class FilterOutliersFunctions(unittest.TestCase):
         distmat = filter_outliers.parse_usearch_allpairs(filename, seqnames)
         self.assertEqual(len(seqnames), distmat.shape[0])
 
-    @unittest.skipUnless(which(wrap.USEARCH), "{} not found.".format(wrap.USEARCH))
-    def test_distmat_pairwise_usearch(self):
-        infile = util.data_path('e_faecalis.head.fasta')
-        taxa, distmat = filter_outliers.distmat_pairwise(
-            infile, 'foo', 'usearch', wrap.USEARCH)
-        self.assertEqual(distmat.shape[0], len(taxa))
-
     @unittest.skipUnless(which(wrap.VSEARCH), "{} not found.".format(wrap.VSEARCH))
     def test_distmat_pairwise_vsearch(self):
         infile = util.data_path('e_faecalis.head.fasta')

@@ -7,12 +7,7 @@ rm -rf output
 BASE=../rdp_10_30_named1200bp_subset
 DEENURP=${DEENURP-../../deenurp.py}
 
-for aligner in cmalign muscle vsearch usearch; do
-    # skip usearch if usearch6 not available
-    if [[ $aligner == 'usearch' ]] && [[ -z $(which usearch6) ]]; then
-    continue
-    fi
-
+for aligner in cmalign muscle vsearch; do
     out=output/$aligner
     mkdir -p $out
     time $DEENURP filter-outliers --aligner $aligner \
