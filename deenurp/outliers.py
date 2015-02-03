@@ -52,6 +52,26 @@ def fasttree_dists(fasta):
     return taxa, distmat
 
 
+def find_medoid(X, ii=None):
+    """Return the index of the medoid of square numpy matrix
+    ``X``. ``ii`` is an optional boolean vector specifying which rows
+    and columns of ``X`` to consider.
+
+    """
+
+    n, m = X.shape
+    assert n == m
+
+    if ii is None:
+        medoid = np.argmin(np.median(X, 0))
+        idx = np.arange(n)[medoid]
+    else:
+        medoid = np.argmin(np.median(X[np.ix_(ii, ii)], 0))
+        idx = np.arange(n)[ii][medoid]
+
+    return idx
+
+
 def outliers(distmat, cutoff, min_size=3):
     """Given pairwise distance matrix `distmat`, identify elements with a
     distance to the centrid element of > cutoff. Does not attempt to
@@ -75,7 +95,7 @@ def outliers(distmat, cutoff, min_size=3):
         ma = np.ma.masked_array(distmat, np.isnan(distmat))
 
         # index of most central element.
-        medoid = np.argmin(np.median(ma, 0))
+        medoid = find_medoid(ma)
 
         # distance from each element to most central element
         dists = ma[medoid, :]

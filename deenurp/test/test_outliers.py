@@ -1,6 +1,6 @@
 import os
 import unittest
-import numpy
+import numpy as np
 
 from deenurp import outliers
 from deenurp.subcommands.filter_outliers import filter_sequences
@@ -59,6 +59,16 @@ class TestFindOutliers(unittest.TestCase):
         with open(data_path('e_faecium.distmat')) as f:
             self.taxa, self.mat = outliers.read_dists(f)
 
+    def test_find_medoid_01(self):
+        medoid = outliers.find_medoid(self.mat)
+        self.assertEqual(medoid, 3)
+
+    def test_find_medoid_02(self):
+        n, m = self.mat.shape
+        medoid = outliers.find_medoid(
+            self.mat, ii=np.array([i > n/2. for i in range(n)], dtype=bool))
+        self.assertEqual(medoid, 82)
+
     def test01(self):
         _, _, is_outlier = outliers.outliers(self.mat, cutoff=0.015)
         out = {t for t, o in zip(self.taxa, is_outlier) if o}
@@ -70,7 +80,7 @@ class TestFindOutliers(unittest.TestCase):
         fail.
         """
 
-        mat = numpy.matrix([0, 0.02, 0.02, 0])
+        mat = np.matrix([0, 0.02, 0.02, 0])
         mat.shape = (2, 2)
         _, _, is_outlier = outliers.outliers(mat, cutoff=0.015)
         self.assertFalse(any(is_outlier))
