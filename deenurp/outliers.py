@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 
 import numpy as np
+import pandas as pd
 
 import scipy
 import scipy.cluster
@@ -130,3 +131,51 @@ def scipy_cluster(X, module, t, **kwargs):
 
     return clusters, title
 
+
+def find_cluster_medoids(X, clusters):
+    """Inputs are ``X``, a square distance matrix, and ``clusters``, a
+    1-dimensional array assigning each element in ``X`` to a
+    cluster. Returns a pandas DataFrame with rows corresponding to
+    clusters (sorted by size, descending) with columns 'cluster',
+    'count', 'medoid' (an int identifying the medoid of each cluster),
+    and 'dist' (distance from the medoid of this cluster to the medoid
+    of the largest cluster).
+
+    """
+
+    assert isinstance(X, np.ndarray)
+    n, m = X.shape
+    assert n == m, 'X must be a square matrix'
+    assert isinstance(clusters, np.ndarray)
+
+    clusters, counts = np.unique(clusters, return_counts=True)
+    tallies = sorted(zip(counts, clusters), reverse=True)
+    counts, clusters = zip(*tallies)  # reorders clusters and counts
+    medoids = [(None if cluster == -1 else find_medoid(X, clusters == cluster))
+               for _, cluster in tallies]
+    dists = [None if medoid is None else X[medoids[0], medoid] for medoid in medoids]
+
+    return pd.DataFrame.from_items([
+        ('cluster', clusters), ('count', counts), ('medoid', medoids), ('dist', dists)
+    ]).sort('count', ascending=False)
+
+
+def choose_clusters(df, min_size, max_dist):
+    """Implements logic for cluster-based outlier detection.
+
+    * ``df`` - output of find_cluster_medoids()
+    * ``min_size`` - discard clusters with size below this value.
+    * ``max_dist`` - discard clusters whose medoid is greater than
+      this distance from the medoid of the largest cluster.
+
+    In addition to selecting clusters according to the parameters
+    above, also discards any clusters identified by a value of -1.
+
+    Returns an ndarray containing names clusters to keep (ie, values
+    from 'cluster' column).
+
+    """
+
+    # the parens are necessary to enforce precedence
+    keep = (df['cluster'] != -1) & (df['count'] >= min_size) & (df['dist'] <= max_dist)
+    return df['cluster'][keep]

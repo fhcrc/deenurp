@@ -3,7 +3,7 @@ import unittest
 
 try:
     import numpy as np
-
+    import pandas as pd
     from deenurp import outliers
     from deenurp.subcommands.filter_outliers import filter_sequences
 except ImportError:
@@ -79,6 +79,23 @@ class TestFindOutliers(unittest.TestCase):
         n, m = self.mat.shape
         clusters, title = outliers.scipy_cluster(self.mat, 'single', t=0.01)
         self.assertEqual(len(clusters), n)
+
+    def test_find_cluster_medoids(self):
+        clusters, title = outliers.scipy_cluster(self.mat, 'single', t=0.01)
+        df = outliers.find_cluster_medoids(self.mat, clusters)
+        self.assertEqual(len(set(clusters)), df.shape[0])
+
+    def test_choose_clusters(self):
+
+        s = """{"cluster":{"0":0,"1":-1,"2":1},
+        "count":{"0":278,"1":17,"2":6},
+        "medoid":{"0":238.0,"1":null,"2":284.0},
+        "dist":{"0":0.0,"1":null,"2":0.089}}"""
+
+        df = pd.read_json(s)
+        # output is a set of cluster names (not indices)
+        self.assertSetEqual(set(outliers.choose_clusters(df, 2, 0.015)), {0})
+        self.assertSetEqual(set(outliers.choose_clusters(df, 2, 0.1)), {0, 1})
 
     def test01(self):
         _, _, is_outlier = outliers.outliers(self.mat, cutoff=0.015)
