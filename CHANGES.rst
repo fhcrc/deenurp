@@ -11,6 +11,7 @@
  * installs muscle and vsearch
  * add subcommand ``deenurp pairwise-distances``
  * version number defined using ``git describe --tags --dirty``
+ * requires scipy
 
 0.0.3
 =====

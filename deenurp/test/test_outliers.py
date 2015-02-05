@@ -1,9 +1,15 @@
 import os
 import unittest
-import numpy as np
 
-from deenurp import outliers
-from deenurp.subcommands.filter_outliers import filter_sequences
+try:
+    import numpy as np
+
+    from deenurp import outliers
+    from deenurp.subcommands.filter_outliers import filter_sequences
+except ImportError:
+    # prefer errors withon tests over failure at the time the test
+    # suites are assembled
+    pass
 
 """
 Here's how some of the data files used in testing this module came to be:
@@ -68,6 +74,11 @@ class TestFindOutliers(unittest.TestCase):
         medoid = outliers.find_medoid(
             self.mat, ii=np.array([i > n/2. for i in range(n)], dtype=bool))
         self.assertEqual(medoid, 82)
+
+    def test_scipy_cluster(self):
+        n, m = self.mat.shape
+        clusters, title = outliers.scipy_cluster(self.mat, 'single', t=0.01)
+        self.assertEqual(len(clusters), n)
 
     def test01(self):
         _, _, is_outlier = outliers.outliers(self.mat, cutoff=0.015)

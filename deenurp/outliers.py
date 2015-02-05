@@ -9,6 +9,9 @@ import tempfile
 
 import numpy as np
 
+import scipy
+import scipy.cluster
+
 log = logging.getLogger(__name__)
 
 
@@ -102,3 +105,28 @@ def outliers(distmat, cutoff, min_size=3):
         to_prune = dists > cutoff
 
     return medoid, dists, to_prune
+
+
+def scipy_cluster(X, module, t, **kwargs):
+    """Given distance matrix ``X``, perform clustering using the specified
+    module of ``scipy.cluster.hierarchy``. The threshold value `t` and
+    any additional keyword arguments are passed to
+    scipy.cluster.hierarchy.fcluster().
+
+    see https://docs.scipy.org/doc/scipy-0.15.1/reference/cluster.hierarchy.html
+
+    """
+
+    defaults = {'criterion': 'distance'}
+    args = dict(defaults, **kwargs)
+
+    # requires 'import scipy.cluster'
+    fun = getattr(scipy.cluster.hierarchy, module)
+    y = scipy.spatial.distance.squareform(X)
+    Z = fun(y)
+    clusters = scipy.cluster.hierarchy.fcluster(Z, t, **args)
+    title = 'scipy.cluster.hierarchy.{} {}'.format(
+        module, ' '.join('%s=%s' % item for item in args.items()))
+
+    return clusters, title
+
