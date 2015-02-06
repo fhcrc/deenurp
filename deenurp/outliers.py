@@ -76,10 +76,16 @@ def find_medoid(X, ii=None):
     return idx
 
 
-def outliers(distmat, cutoff, min_size=3):
-    """Given pairwise distance matrix `distmat`, identify elements with a
-    distance to the centrid element of > cutoff. Does not attempt to
-    prune if margin of distmat is < min_size.
+def all_ok(distmat):
+    medoid = np.nan
+    dists = np.repeat(np.nan, distmat.shape[0])
+    to_prune = np.repeat(False, distmat.shape[0])
+    return medoid, dists, to_prune
+
+
+def outliers(distmat, radius):
+    """Given pairwise distance matrix `distmat`, identify elements where
+    distance to the medoid > radius.
 
     Returns (medoid, dists, to_prune):
 
@@ -90,20 +96,29 @@ def outliers(distmat, cutoff, min_size=3):
 
     """
 
-    if distmat.shape[0] < min_size:
-        medoid = np.nan
-        dists = np.repeat(np.nan, distmat.shape[0])
-        to_prune = np.repeat(False, distmat.shape[0])
-    else:
-        # use a masked array in case there are any nan
-        ma = np.ma.masked_array(distmat, np.isnan(distmat))
+    # use a masked array in case there are any nan
+    ma = np.ma.masked_array(distmat, np.isnan(distmat))
 
-        # index of most central element.
-        medoid = find_medoid(ma)
+    # index of most central element.
+    medoid = find_medoid(ma)
 
-        # distance from each element to most central element
-        dists = ma[medoid, :]
-        to_prune = dists > cutoff
+    # distance from each element to most central element
+    dists = ma[medoid, :]
+    to_prune = dists > radius
+
+    return medoid, dists, to_prune
+
+
+def outliers_by_cluster(distmat, t, max_dist, min_size=2, cluster_type='single'):
+
+    clusters, title = scipy_cluster(distmat, cluster_type, t=t)
+    medoids = find_cluster_medoids(distmat, clusters)
+    keep = choose_clusters(medoids, min_size, max_dist)
+    to_prune = ~ pd.Series(clusters).isin(keep)
+
+    # medoid of the largest cluster
+    medoid = medoids['medoid'][0]
+    dists = None
 
     return medoid, dists, to_prune
 
@@ -179,3 +194,13 @@ def choose_clusters(df, min_size, max_dist):
     # the parens are necessary to enforce precedence
     keep = (df['cluster'] != -1) & (df['count'] >= min_size) & (df['dist'] <= max_dist)
     return df['cluster'][keep]
+
+
+def scaled_radius(X, percentile, min_radius=0.0):
+    """Calculate the distribution of distances between the medoid of
+    distance matrix ``X`` and each element, and return the value at
+    ``percentile``. ``min_radius`` defines a minimum return value.
+
+    """
+
+    return max([np.percentile(X[find_medoid(X), :], percentile), min_radius])

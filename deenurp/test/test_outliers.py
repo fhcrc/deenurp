@@ -97,24 +97,21 @@ class TestFindOutliers(unittest.TestCase):
         self.assertSetEqual(set(outliers.choose_clusters(df, 2, 0.015)), {0})
         self.assertSetEqual(set(outliers.choose_clusters(df, 2, 0.1)), {0, 1})
 
-    def test01(self):
-        _, _, is_outlier = outliers.outliers(self.mat, cutoff=0.015)
+    def test_scaled_radius(self):
+        R = outliers.scaled_radius(self.mat, percentile=90, min_radius=0.01)
+        self.assertLess(R, 0.015)
+        R = outliers.scaled_radius(self.mat, percentile=90, min_radius=0.015)
+        self.assertEqual(R, 0.015)
+
+    def test_outliers_01(self):
+        _, _, is_outlier = outliers.outliers(self.mat, radius=0.015)
         out = {t for t, o in zip(self.taxa, is_outlier) if o}
         self.assertEqual(len(out), 7)
 
-    def test02(self):
-        """
-        Test special handling for matrices of size (2,2): these never
-        fail.
-        """
-
-        mat = np.matrix([0, 0.02, 0.02, 0])
-        mat.shape = (2, 2)
-        _, _, is_outlier = outliers.outliers(mat, cutoff=0.015)
-        self.assertFalse(any(is_outlier))
-
-        _, _, is_outlier = outliers.outliers(mat, cutoff=0.025)
-        self.assertFalse(any(is_outlier))
+    def test_outliers_02(self):
+        _, _, is_outlier = outliers.outliers_by_cluster(self.mat, t=0.015, max_dist=0.015)
+        out = {t for t, o in zip(self.taxa, is_outlier) if o}
+        self.assertEqual(len(out), 2)
 
 
 class TestFilterSequences(unittest.TestCase):
