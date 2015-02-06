@@ -44,7 +44,6 @@ def build_parser(p):
     p.add_argument('--detailed-seqinfo',
                    help="""Sequence info, including filtering details""",
                    type=argparse.FileType('w'))
-    p.add_argument('--log', help="""Log path""", type=argparse.FileType('w'))
     p.add_argument('--distance-cutoff', type=float, default=0.015,
                    help="""Distance cutoff from cluster centroid [default:
                    %(default)f]""")
@@ -60,12 +59,12 @@ def build_parser(p):
     aligner_options.add_argument(
         '--executable',
         help='Optional absolute or relative path to the alignment tool executable')
-    aligner_options.add_argument(
-        '--maxiters', default=MUSCLE_MAXITERS, type=int,
-        help='muscle: value for -maxiters [%(default)s]')
-    aligner_options.add_argument(
-        '--iddef', default=VSEARCH_IDDEF, type=int, choices=[0, 1, 2, 3, 4],
-        help='vsearch: method for calculating pairwise identity [%(default)s]')
+    # aligner_options.add_argument(
+    #     '--maxiters', default=MUSCLE_MAXITERS, type=int,
+    #     help='muscle: value for -maxiters [%(default)s]')
+    # aligner_options.add_argument(
+    #     '--iddef', default=VSEARCH_IDDEF, type=int, choices=[0, 1, 2, 3, 4],
+    #     help='vsearch: method for calculating pairwise identity [%(default)s]')
 
     rare_group = p.add_argument_group("Rare taxa")
     rare_group.add_argument(
@@ -244,26 +243,22 @@ def mock_filter(seqs, keep):
         'is_out': numpy.repeat(not keep, len(seqs))})
 
 
-def filter_worker(sequence_file, node, seqs, distance_cutoff,
-                  aligner, executable, maxiters, iddef,
-                  log_taxid=None):
+def filter_worker(sequence_file, tax_id, seqs, distance_cutoff, aligner, executable):
     """
     Worker task for running filtering tasks.
 
     Arguments:
     :sequence_file: Complete sequence file
-    :node: Taxonomic node being filtered
-    :seqs: set containing the names of sequences to keep
+    :tax_id: string identifying tax_id of these sequences
+    :seqs: sequence names representing this tax_id
     :distance_cutoff: Distance cutoff for medoid filtering
     :aligner: name of alignment program
-    :executable: name or path of executable
-    :maxiters: value of this parameter to pass to muscle
-    :log_taxid: Optional function to log tax_id activity.
+    :executable: name or path of executable for alignmment program
 
     :returns: Set of sequences to *keep*
     """
 
-    prefix = '{}_'.format(node.tax_id)
+    prefix = '{}_'.format(tax_id)
 
     with util.ntf(prefix=prefix, suffix='.fasta') as tf:
         # Extract sequences
@@ -271,12 +266,11 @@ def filter_worker(sequence_file, node, seqs, distance_cutoff,
         tf.flush()
 
         filtered = filter_sequences(
-            tf.name, node.tax_id, distance_cutoff,
-            aligner=aligner, executable=executable, maxiters=maxiters, iddef=iddef)
-
-        if log_taxid:
-            log_taxid(node.tax_id, node.name, len(seqs),
-                      sum(~filtered.is_out), sum(filtered.is_out))
+            sequence_file=tf.name,
+            tax_id=tax_id,
+            cutoff=distance_cutoff,
+            aligner=aligner,
+            executable=executable)
 
         return filtered
 
@@ -305,92 +299,76 @@ def action(a):
 
     outcomes = []  # accumulate DatFrame objects
 
-    log_taxid = None
-    if a.log:
-        writer = csv.writer(a.log, lineterminator='\n',
-                            quoting=csv.QUOTE_NONNUMERIC)
-        writer.writerow(('tax_id', 'tax_name', 'n', 'kept', 'pruned'))
-
-        def log_taxid(tax_id, tax_name, n, kept, pruned):
-            writer.writerow((tax_id, tax_name, n, kept, pruned))
-
     filter_rank_col = '{}_id'.format(a.filter_rank)
 
-    with a.log or util.nothing():
-        # Sequences which are classified above the desired rank should just be kept
-        names_above_rank = list(sequences_above_rank(taxonomy, a.filter_rank))
-        logging.info('Keeping %d sequences classified above %s',
-                     len(names_above_rank), a.filter_rank)
-        above_rank = mock_filter(names_above_rank, keep=True)
-        above_rank[filter_rank_col] = pd.Series(numpy.nan, index=above_rank.index)
-        outcomes.append(above_rank)
+    # Sequences which are classified above the desired rank should just be kept
+    names_above_rank = list(sequences_above_rank(taxonomy, a.filter_rank))
+    logging.info('Keeping %d sequences classified above %s',
+                 len(names_above_rank), a.filter_rank)
+    above_rank = mock_filter(names_above_rank, keep=True)
+    above_rank[filter_rank_col] = pd.Series(numpy.nan, index=above_rank.index)
+    outcomes.append(above_rank)
 
-        # For each filter-rank, filter
-        nodes = [i for i in taxonomy if i.rank == a.filter_rank]
+    # For each filter-rank, filter
+    nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
-        # Filter each tax_id, running in ``--threads`` tasks in parallel
-        with futures.ThreadPoolExecutor(a.threads) as executor:
+    # Filter each tax_id, running in ``--threads`` tasks in parallel
+    with futures.ThreadPoolExecutor(a.threads) as executor:
+        # dispatch a pool of tasks
+        futs = {}
+        for i, node in enumerate(nodes):
+            seqs = frozenset(node.subtree_sequence_ids())
 
-            # dispatch a pool of tasks
-            futs = {}
-            for i, node in enumerate(nodes):
-                seqs = frozenset(node.subtree_sequence_ids())
+            if not seqs:
+                logging.debug("No sequences for %s (%s)", node.tax_id, node.name)
+                continue
+            elif len(seqs) < a.min_seqs_for_filtering:
+                logging.debug('%d sequence(s) for %s (%s) [action: %s]',
+                              len(seqs), node.tax_id, node.name, a.rare_taxon_action)
+                f = executor.submit(mock_filter, seqs=list(seqs),
+                                    keep=a.rare_taxon_action == KEEP)
+            else:
+                # `f` is a DataFrame (output of filter_sequences)
+                f = executor.submit(filter_worker,
+                                    sequence_file=a.sequence_file,
+                                    tax_id=node.tax_id,
+                                    seqs=seqs,
+                                    distance_cutoff=a.distance_cutoff,
+                                    aligner=a.aligner,
+                                    executable=executable)
 
-                if not seqs:
-                    logging.debug("No sequences for %s (%s)", node.tax_id, node.name)
-                    if log_taxid:
-                        log_taxid(node.tax_id, node.name, 0, 0, 0)
-                    continue
-                elif len(seqs) < a.min_seqs_for_filtering:
-                    logging.debug('%d sequence(s) for %s (%s) [action: %s]',
-                                  len(seqs), node.tax_id, node.name, a.rare_taxon_action)
-                    f = executor.submit(mock_filter, seqs=list(seqs),
-                                        keep=a.rare_taxon_action == KEEP)
-                else:
-                    # `f` is a DataFrame (output of filter_sequences)
-                    f = executor.submit(filter_worker,
-                                        sequence_file=a.sequence_file,
-                                        node=node,
-                                        seqs=seqs,
-                                        distance_cutoff=a.distance_cutoff,
-                                        aligner=a.aligner,
-                                        executable=executable,
-                                        maxiters=a.maxiters,
-                                        iddef=a.iddef,
-                                        log_taxid=log_taxid)
+            futs[f] = {'n_seqs': len(seqs), 'node': node}
 
-                futs[f] = {'n_seqs': len(seqs), 'node': node}
+        # log results for each tax_id as tasks complete
+        complete = 0
+        while futs:
+            done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
+            complete += len(done)
+            sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(
+                complete, complete + len(pending)))
+            for f in done:
+                if f.exception():
+                    logging.exception("Error in child process: %s", f.exception())
+                    executor.shutdown(False)
+                    raise f.exception()
 
-            # log results for each tax_id as tasks complete
-            complete = 0
-            while futs:
-                done, pending = futures.wait(futs, 1, futures.FIRST_COMPLETED)
-                complete += len(done)
-                sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(
-                    complete, complete + len(pending)))
-                for f in done:
-                    if f.exception():
-                        logging.exception("Error in child process: %s", f.exception())
-                        executor.shutdown(False)
-                        raise f.exception()
+                info = futs.pop(f)
+                filtered = f.result()  # here's the DataFrame again...
 
-                    info = futs.pop(f)
-                    filtered = f.result()  # here's the DataFrame again...
+                # add a column for tax_d at filter_rank
+                filtered[filter_rank_col] = pd.Series(
+                    info['node'].tax_id, index=filtered.index)
+                outcomes.append(filtered)
 
-                    # add a column for tax_d at filter_rank
-                    filtered[filter_rank_col] = pd.Series(
-                        info['node'].tax_id, index=filtered.index)
-                    outcomes.append(filtered)
-
-                    kept = frozenset(filtered.seqname[~filtered.is_out])
-                    if len(kept) == 0:
-                        logging.info('Pruned all %d sequences for %s (%s)',
-                                     info['n_seqs'], info['node'].tax_id,
-                                     info['node'].name)
-                    elif len(kept) != info['n_seqs']:
-                        logging.info('Pruned %d/%d sequences for %s (%s)',
-                                     info['n_seqs'] - len(kept), info['n_seqs'],
-                                     info['node'].tax_id, info['node'].name)
+                kept = frozenset(filtered.seqname[~filtered.is_out])
+                if len(kept) == 0:
+                    logging.info('Pruned all %d sequences for %s (%s)',
+                                 info['n_seqs'], info['node'].tax_id,
+                                 info['node'].name)
+                elif len(kept) != info['n_seqs']:
+                    logging.info('Pruned %d/%d sequences for %s (%s)',
+                                 info['n_seqs'] - len(kept), info['n_seqs'],
+                                 info['node'].tax_id, info['node'].name)
 
     all_outcomes = pd.concat(outcomes, ignore_index=True)
     all_outcomes.set_index('seqname', inplace=True)
