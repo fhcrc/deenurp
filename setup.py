@@ -1,6 +1,8 @@
 import subprocess
 import os
 import sys
+import re
+import logging
 
 subprocess.call(
     ('mkdir -p deenurp/data && '
@@ -10,6 +12,13 @@ subprocess.call(
     shell=True, stderr=open(os.devnull, "w"))
 
 from deenurp import __version__
+
+# set up logging
+vflag = ([f for f in sys.argv if re.search('^-v{1,4}', f)] or ['-'])[0]
+loglevel = {'-v': logging.INFO, '--v': logging.DEBUG}.get(vflag, logging.WARNING)
+logformat = '%(levelname)s %(module)s %(lineno)s %(message)s' \
+            if loglevel < logging.WARNING else '%(message)s'
+logging.basicConfig(file=sys.stdout, format=logformat, level=loglevel)
 
 # Fix for `setup.py test`
 # See http://bugs.python.org/issue15881
