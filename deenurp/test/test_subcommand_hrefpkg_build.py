@@ -29,9 +29,3 @@ class FindNodesTestCase(unittest.TestCase):
         r = list(hrefpkg_build.find_nodes(self.taxonomy, 'genus'))
         self.assertEqual(['s3'], [i.name for i in r])
 
-def suite():
-    s = unittest.TestSuite()
-    classes = [FindNodesTestCase]
-    for cls in classes:
-        s.addTests(unittest.makeSuite(cls))
-    return s

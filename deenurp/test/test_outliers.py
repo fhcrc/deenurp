@@ -5,7 +5,7 @@ try:
     import numpy as np
     import pandas as pd
     from deenurp import outliers
-    from deenurp.subcommands.filter_outliers import filter_sequences
+    from deenurp.subcommands.filter_outliers import filter_sequences, distmat_muscle
 except ImportError:
     # prefer errors withon tests over failure at the time the test
     # suites are assembled
@@ -99,9 +99,11 @@ class TestFindOutliers(unittest.TestCase):
 
     def test_scaled_radius(self):
         R = outliers.scaled_radius(self.mat, percentile=90, min_radius=0.01)
-        self.assertLess(R, 0.015)
+        self.assertGreater(R, 0.01)
         R = outliers.scaled_radius(self.mat, percentile=90, min_radius=0.015)
         self.assertEqual(R, 0.015)
+        R = outliers.scaled_radius(self.mat, percentile=90, max_radius=0.01)
+        self.assertEqual(R, 0.01)
 
     def test_outliers_01(self):
         _, _, is_outlier = outliers.outliers(self.mat, radius=0.015)
@@ -109,33 +111,64 @@ class TestFindOutliers(unittest.TestCase):
         self.assertEqual(len(out), 7)
 
     def test_outliers_02(self):
-        _, _, is_outlier = outliers.outliers_by_cluster(self.mat, t=0.015, max_dist=0.015)
+        _, _, is_outlier = outliers.outliers_by_cluster(self.mat, t=0.015, D=0.015)
         out = {t for t, o in zip(self.taxa, is_outlier) if o}
-        self.assertEqual(len(out), 2)
+        self.assertEqual(len(out), 4)
 
 
 class TestFilterSequences(unittest.TestCase):
 
+    fa = data_path('test_db_head.fasta')
+    tax_id = '53635'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.taxa, cls.distmat = distmat_muscle(cls.fa, '{}_'.format(cls.tax_id))
+
     def test01(self):
-        fa = data_path('test_db_head.fasta')
-        to_prune = filter_sequences(fa, '53635', 0.015, aligner='cmalign')
+        to_prune = filter_sequences(self.tax_id,
+                                    sequence_file=self.fa,
+                                    strategy='radius',
+                                    cutoff=0.015,
+                                    aligner='cmalign')
         self.assertEqual(sum(to_prune['is_out']), 5)
 
     def test02(self):
-        fa = data_path('test_db_head.fasta')
-        to_prune = filter_sequences(fa, '53635', 0.015, aligner='muscle')
+        to_prune = filter_sequences(self.tax_id,
+                                    sequence_file=self.fa,
+                                    strategy='radius',
+                                    cutoff=0.015,
+                                    aligner='vsearch')
         self.assertEqual(sum(to_prune['is_out']), 5)
 
     def test03(self):
-        fa = data_path('test_db_head.fasta')
-        to_prune = filter_sequences(fa, '53635', 0.015, aligner='vsearch')
+        to_prune = filter_sequences(self.tax_id,
+                                    sequence_file=self.fa,
+                                    strategy='radius',
+                                    cutoff=0.015,
+                                    aligner='muscle')
         self.assertEqual(sum(to_prune['is_out']), 5)
 
+    def test04(self):
+        to_prune = filter_sequences(self.tax_id,
+                                    distmat=self.distmat,
+                                    taxa=self.taxa,
+                                    strategy='cluster',
+                                    cutoff=0.015)
+        self.assertEqual(sum(to_prune['is_out']), 5)
 
-def suite():
-    s = unittest.TestSuite()
-    classes = [TestReadDists, TestFastTreeDists, TestFindOutliers]
-    for cls in classes:
-        s.addTests(unittest.makeSuite(cls))
+    def test05(self):
+        to_prune = filter_sequences(self.tax_id,
+                                    distmat=self.distmat,
+                                    taxa=self.taxa,
+                                    strategy='cluster',
+                                    percentile=90)
+        self.assertEqual(sum(to_prune['is_out']), 0)
 
-    return s
+    def test06(self):
+        to_prune = filter_sequences(self.tax_id,
+                                    distmat=self.distmat,
+                                    taxa=self.taxa,
+                                    strategy='cluster',
+                                    percentile=90, min_radius=0.1)
+        self.assertEqual(sum(to_prune['is_out']), 0)

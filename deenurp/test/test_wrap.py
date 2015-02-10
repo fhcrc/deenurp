@@ -68,14 +68,6 @@ class RpprMinAdclTreeTestCase(unittest.TestCase):
         self.assertEqual(7, len(prune_seqs))
 
 
-def suite():
-    s = unittest.TestSuite()
-    classes = [CmAlignTestCase, CMTestCase, RpprMinAdclTreeTestCase]
-    for cls in classes:
-        s.addTests(unittest.makeSuite(cls))
-
-    return s
-
 try:
     wrap.require_executable(wrap.VSEARCH)
 except MissingDependencyError, e:

@@ -28,11 +28,3 @@ class FilterOutliersFunctions(unittest.TestCase):
         taxa, distmat = filter_outliers.distmat_pairwise(
             infile, 'foo', 'vsearch', wrap.VSEARCH)
         self.assertEqual(distmat.shape[0], len(taxa))
-
-
-def suite():
-    s = unittest.TestSuite()
-    classes = [FilterOutliersFunctions]
-    for cls in classes:
-        s.addTests(unittest.makeSuite(cls))
-    return s

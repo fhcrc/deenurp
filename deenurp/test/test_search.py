@@ -44,6 +44,7 @@ GA05AQR02HZ4VX,GLKT0ZE02GQ2FO,1""")
 
 TestHit = collections.namedtuple('TestHit', ['query_label', 'target_label', 'pct_id'])
 
+
 class SelectHitsTestCase(unittest.TestCase):
     def setUp(self):
         self.items = [
@@ -59,10 +60,3 @@ class SelectHitsTestCase(unittest.TestCase):
             ('seq2', [TestHit('seq2', 't6', 98.4)])]
         self.assertItemsEqual(expected, r)
 
-def suite():
-    s = unittest.TestSuite()
-    classes = [SelectHitsTestCase, DedupInfoToCountsTestCase]
-    for cls in classes:
-        s.addTests(unittest.makeSuite(cls))
-
-    return s

@@ -4,6 +4,7 @@ import unittest
 
 from deenurp import util
 
+
 class UniqueTestCase(unittest.TestCase):
     def test_nokey(self):
         l = [1, 2, 3, 1, 2, 4, 6, 7, 5, 1]
@@ -20,6 +21,7 @@ class UniqueTestCase(unittest.TestCase):
         actual1 = util.unique(l, key=operator.itemgetter('n'))
         self.assertEqual(expected1, list(actual1))
 
+
 class MemoizeTestCase(unittest.TestCase):
     def test_function(self):
         d = {'test': object()}
@@ -34,6 +36,7 @@ class MemoizeTestCase(unittest.TestCase):
         self.assertEqual([expected], list(m.cache.values()))
         m.cache.clear()
         self.assertIsNone(m('test'))
+
 
 class MaybeTempFileTestCase(unittest.TestCase):
     def test_tempfile(self):
@@ -56,12 +59,3 @@ class RequireExecutableTestCase(unittest.TestCase):
     def test_not_exists(self):
         self.assertRaises(util.MissingDependencyError, util.require_executable,
                           'fake_program-')
-
-def suite():
-    s = unittest.TestSuite()
-    classes = [MaybeTempFileTestCase, MemoizeTestCase, UniqueTestCase,
-               RequireExecutableTestCase]
-    for cls in classes:
-        s.addTests(unittest.makeSuite(cls))
-
-    return s

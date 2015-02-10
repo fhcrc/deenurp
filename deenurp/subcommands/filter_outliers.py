@@ -11,6 +11,8 @@ import sys
 import shutil
 import logging
 
+log = logging
+
 from concurrent import futures
 import numpy
 import pandas as pd
@@ -35,38 +37,57 @@ def build_parser(p):
     p.add_argument('seqinfo_file', help="""Sequence info file""")
     p.add_argument(
         'taxonomy', help="""Taxtable""", type=argparse.FileType('r'))
-    p.add_argument('output_fp', help="""Destination for sequences""",
-                   type=argparse.FileType('w'))
-    p.add_argument('--filter-rank', default=DEFAULT_RANK)
-    p.add_argument('--filtered-seqinfo',
-                   help="""Path to write filtered sequence info""",
-                   type=argparse.FileType('w'))
-    p.add_argument('--detailed-seqinfo',
-                   help="""Sequence info, including filtering details""",
-                   type=argparse.FileType('w'))
-    p.add_argument('--distance-cutoff', type=float, default=0.015,
-                   help="""Distance cutoff from cluster centroid [default:
-                   %(default)f]""")
-    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
-                   help="""number of taxa to process concurrently (one
-                   process per multiple alignment)""")
 
-    aligner_options = p.add_argument_group("Aligner-specific options")
-    aligner_options.add_argument(
+    output_group = p.add_argument_group('output options')
+    output_group.add_argument(
+        'output_fp', help="""Destination for sequences""",
+        type=argparse.FileType('w'))
+    output_group.add_argument(
+        '--filtered-seqinfo', type=argparse.FileType('w'),
+        help="""Path to write filtered sequence info""")
+    output_group.add_argument(
+        '--detailed-seqinfo', type=argparse.FileType('w'),
+        help="""Sequence info, including filtering details""")
+
+    filter_group = p.add_argument_group('filtering options')
+    filter_group.add_argument('--filter-rank', default=DEFAULT_RANK)
+    filter_group.add_argument(
+        '--strategy', default='radius', choices=['radius', 'cluster'],
+        help="""Strategy for outlier detection.""")
+    filter_group.add_argument(
+        '--distance-cutoff', type=float, default=0.015,
+        help="""Distance threshold from cluster centroid
+        (--strategy='radius') or distance parameter for hierarchical
+        clustering (--strategy='cluster') [default: %(default)s]""")
+    filter_group.add_argument(
+        '--distance-percentile', type=float, default=90.0,
+        help="""Define distance cutoff as a percentile of the
+        distribution of distances from medoid to others [default:
+        %(default)s]""")
+    filter_group.add_argument(
+        '--min-distance', type=float, default=0.01,
+        help="""Minimum distance when calculating as a percentile
+        [default: %(default)s]""")
+    filter_group.add_argument(
+        '--max-distance', type=float, default=0.10,
+        help="""Maximum distance when calculating as a percentile
+        [default: %(default)s]""")
+
+    aligner_group = p.add_argument_group("aligner-specific options")
+    aligner_group.add_argument(
         '--aligner', help='multiple alignment tool [%(default)s]',
-        default=DEFAULT_ALIGNER,
-        choices=['cmalign', 'muscle', 'vsearch'])
-    aligner_options.add_argument(
+        default=DEFAULT_ALIGNER, choices=['cmalign', 'muscle', 'vsearch'])
+    aligner_group.add_argument(
         '--executable',
         help='Optional absolute or relative path to the alignment tool executable')
-    # aligner_options.add_argument(
+    # aligner_group.add_argument(
     #     '--maxiters', default=MUSCLE_MAXITERS, type=int,
     #     help='muscle: value for -maxiters [%(default)s]')
-    # aligner_options.add_argument(
+    # aligner_group.add_argument(
     #     '--iddef', default=VSEARCH_IDDEF, type=int, choices=[0, 1, 2, 3, 4],
     #     help='vsearch: method for calculating pairwise identity [%(default)s]')
 
-    rare_group = p.add_argument_group("Rare taxa")
+    rare_group = p.add_argument_group("rare taxa")
     rare_group.add_argument(
         '--min-seqs-for-filtering', type=int, default=5,
         help="""Minimum number of sequences perform distance-based
@@ -75,6 +96,10 @@ def build_parser(p):
         '--rare-taxon-action', choices=(KEEP, DROP), default=KEEP,
         help="""Action to perform when a taxon has <
             '--min-seqs-to-filter' representatives. [default: %(default)s]""")
+
+    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
+                   help="""number of taxa to process concurrently (one
+                   process per multiple alignment)""")
 
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
@@ -198,25 +223,55 @@ def distmat_pairwise(sequence_file, prefix, aligner,
     return taxa, distmat
 
 
-def filter_sequences(sequence_file, tax_id, cutoff, aligner, executable=None,
+def filter_sequences(tax_id,
+                     sequence_file=None,
+                     distmat=None,
+                     taxa=None,
+                     strategy='radius',
+                     cutoff=None,
+                     percentile=None,
+                     min_radius=0.0,
+                     max_radius=None,
+                     aligner='cmalign',
+                     executable=None,
                      maxiters=MUSCLE_MAXITERS, iddef=VSEARCH_IDDEF):
     """
     Return a list of sequence names identifying outliers.
     """
 
     assert aligner in {'cmalign', 'muscle', 'vsearch'}, 'invalid aligner'
+    assert strategy in {'radius', 'cluster'}, 'invalid strategy'
 
     prefix = '{}_'.format(tax_id)
 
-    if aligner == 'cmalign':
-        taxa, distmat = distmat_cmalign(sequence_file, prefix)
-    elif aligner == 'muscle':
-        taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
-    elif aligner == 'vsearch':
-        taxa, distmat = distmat_pairwise(
-            sequence_file, prefix, aligner, executable, iddef)
+    if distmat is None:
+        if aligner == 'cmalign':
+            taxa, distmat = distmat_cmalign(sequence_file, prefix)
+        elif aligner == 'muscle':
+            taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
+        elif aligner == 'vsearch':
+            taxa, distmat = distmat_pairwise(
+                sequence_file, prefix, aligner, executable, iddef)
+    else:
+        assert taxa is not None
 
-    medoid, dists, is_out = outliers.outliers(distmat, cutoff)
+    if cutoff is not None:
+        distance = cutoff
+    elif percentile is not None:
+        distance = outliers.scaled_radius(distmat, percentile, min_radius, max_radius)
+    else:
+        raise ValueError('must provide either cutoff or percentile')
+
+    log.info('distance={} ({})'.format(
+        distance, 'calculated' if percentile else 'pre-defined'))
+
+    if strategy == 'radius':
+        medoid, dists, is_out = outliers.outliers(distmat, cutoff)
+    elif strategy == 'cluster':
+        medoid, dists, is_out = outliers.outliers_by_cluster(
+            distmat, t=distance, D=distance,
+            min_size=2, cluster_type='single')
+
     assert len(is_out) == len(taxa)
 
     result = pd.DataFrame({
@@ -243,19 +298,31 @@ def mock_filter(seqs, keep):
         'is_out': numpy.repeat(not keep, len(seqs))})
 
 
-def filter_worker(sequence_file, tax_id, seqs, distance_cutoff, aligner, executable):
+def filter_worker(tax_id,
+                  sequence_file,
+                  seqs,
+                  strategy,
+                  distance_cutoff,
+                  percentile,
+                  min_radius,
+                  max_radius,
+                  aligner,
+                  executable):
     """
     Worker task for running filtering tasks.
 
     Arguments:
-    :sequence_file: Complete sequence file
     :tax_id: string identifying tax_id of these sequences
+    :sequence_file: Complete sequence file
     :seqs: sequence names representing this tax_id
+    :strategy: 'radius' or 'cluster'
     :distance_cutoff: Distance cutoff for medoid filtering
+    :percentile: Used to calculate distance cutoff (``distance_cutoff`` cannot also be provided)
+    :{min, max}_radius: Bounds of calculated distance cutoff
     :aligner: name of alignment program
     :executable: name or path of executable for alignmment program
 
-    :returns: Set of sequences to *keep*
+    :returns: output of ``filter_sequences()``
     """
 
     prefix = '{}_'.format(tax_id)
@@ -266,9 +333,13 @@ def filter_worker(sequence_file, tax_id, seqs, distance_cutoff, aligner, executa
         tf.flush()
 
         filtered = filter_sequences(
+            tax_id,
             sequence_file=tf.name,
-            tax_id=tax_id,
+            strategy=strategy,
             cutoff=distance_cutoff,
+            percentile=percentile,
+            min_radius=min_radius,
+            max_radius=max_radius,
             aligner=aligner,
             executable=executable)
 
@@ -312,7 +383,7 @@ def action(a):
     # For each filter-rank, filter
     nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
-    # Filter each tax_id, running in ``--threads`` tasks in parallel
+    # Filter each tax_id, running ``--threads`` tasks in parallel
     with futures.ThreadPoolExecutor(a.threads) as executor:
         # dispatch a pool of tasks
         futs = {}
@@ -329,13 +400,18 @@ def action(a):
                                     keep=a.rare_taxon_action == KEEP)
             else:
                 # `f` is a DataFrame (output of filter_sequences)
-                f = executor.submit(filter_worker,
-                                    sequence_file=a.sequence_file,
-                                    tax_id=node.tax_id,
-                                    seqs=seqs,
-                                    distance_cutoff=a.distance_cutoff,
-                                    aligner=a.aligner,
-                                    executable=executable)
+                f = executor.submit(
+                    filter_worker,
+                    tax_id=node.tax_id,
+                    sequence_file=a.sequence_file,
+                    seqs=seqs,
+                    strategy=a.strategy,
+                    distance_cutoff=a.distance_cutoff,
+                    percentile=a.distance_percentile,
+                    min_radius=a.min_distance,
+                    max_radius=a.max_distance,
+                    aligner=a.aligner,
+                    executable=executable)
 
             futs[f] = {'n_seqs': len(seqs), 'node': node}
 

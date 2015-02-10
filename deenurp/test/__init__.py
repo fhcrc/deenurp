@@ -9,10 +9,22 @@ modules = [
     'test_wrap',
 ]
 
+
+def get_test_suites(module):
+    for name in dir(module):
+        obj = getattr(module, name)
+        try:
+            if issubclass(obj, unittest.TestCase):
+                yield unittest.makeSuite(obj)
+        except TypeError:
+            pass
+
+
 def suite():
     s = unittest.TestSuite()
     for m in modules:
         module = __import__(__name__ + '.' + m, fromlist=m)
-        s.addTests(module.suite())
+        for suite in get_test_suites(module):
+            s.addTests(suite)
 
     return s

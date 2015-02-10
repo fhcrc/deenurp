@@ -6,6 +6,7 @@ import os
 import logging
 import subprocess
 import tempfile
+import sys
 
 import numpy as np
 import pandas as pd
@@ -57,23 +58,23 @@ def fasttree_dists(fasta):
 
 
 def find_medoid(X, ii=None):
-    """Return the index of the medoid of square numpy matrix
-    ``X``. ``ii`` is an optional boolean vector specifying which rows
-    and columns of ``X`` to consider.
+    """Return the index of the medoid of square numpy matrix ``X`` of
+    shape (n, n). ``ii`` is an optional boolean vector of length n
+    defining a submatrix of ``X``.
 
     """
 
     n, m = X.shape
-    assert n == m
+    assert n == m, 'X must be a square matrix'
 
     if ii is None:
         medoid = np.argmin(np.median(X, 0))
-        idx = np.arange(n)[medoid]
     else:
-        medoid = np.argmin(np.median(X[np.ix_(ii, ii)], 0))
-        idx = np.arange(n)[ii][medoid]
+        assert ii.shape[0] == n, 'ii must be the length of the margin of X'
+        medoid_ii = np.argmin(np.median(X[np.ix_(ii, ii)], 0))
+        medoid = np.arange(n)[ii][medoid_ii]
 
-    return idx
+    return medoid
 
 
 def all_ok(distmat):
@@ -109,16 +110,38 @@ def outliers(distmat, radius):
     return medoid, dists, to_prune
 
 
-def outliers_by_cluster(distmat, t, max_dist, min_size=2, cluster_type='single'):
+def outliers_by_cluster(distmat, t, D, min_size=2, cluster_type='single'):
+    """Detect outliers by 1) performing hierarchical clustering with
+    distance threshold ``t`` and discarding clusters with fewer than
+    ``min_size`` members; then 2) discarding clusters whose medoids
+    have a distance greater than ``D`` from the medoid of the largest
+    cluster. ``cluster_type`` is the name of a method of
+    ``scipy.cluster.hierarchy`` and identifies the clsutering
+    algorithm.
+
+    * medoid - the index of the centermost element of the largest cluster
+    * dists - a vector of distances to the medoid of the largest cluster
+    * to_prune - a boolean vector corresponding to the margin of `distmat`
+      where True identifies outliers.
+    """
 
     clusters, title = scipy_cluster(distmat, cluster_type, t=t)
+    log.debug(title)
+
     medoids = find_cluster_medoids(distmat, clusters)
-    keep = choose_clusters(medoids, min_size, max_dist)
+
+    # `keep` is a collection of cluster numbers to retain (these are
+    # cluster labels, not indices)
+    keep = choose_clusters(medoids, min_size, D)
     to_prune = ~ pd.Series(clusters).isin(keep)
 
-    # medoid of the largest cluster
+    # medoid of the largest cluster (an index into distmat)
     medoid = medoids['medoid'][0]
-    dists = None
+
+    # distances to this medoid (note that these distances are not used
+    # directly as a criterion for filtering - they just provide a
+    # sense of the relative position of each sequence)
+    dists = distmat[medoid, :]
 
     return medoid, dists, to_prune
 
@@ -160,31 +183,37 @@ def find_cluster_medoids(X, clusters):
 
     assert isinstance(X, np.ndarray)
     n, m = X.shape
-    assert n == m, 'X must be a square matrix'
-    assert isinstance(clusters, np.ndarray)
+    assert n == m, '`X` must be a square matrix'
+    assert isinstance(clusters, np.ndarray), '`clusters` must be a numpy ndarray'
+    assert clusters.shape[0] == n, '`clusters` must be the size of the margin of `X`'
 
-    clusters, counts = np.unique(clusters, return_counts=True)
-    tallies = sorted(zip(counts, clusters), reverse=True)
-    counts, clusters = zip(*tallies)  # reorders clusters and counts
+    uclusters, counts = np.unique(clusters, return_counts=True)
+    tallies = sorted(zip(counts, uclusters), reverse=True)
+    counts, uclusters = zip(*tallies)  # reorders uclusters and counts
+
     medoids = [(None if cluster == -1 else find_medoid(X, clusters == cluster))
                for _, cluster in tallies]
+
     dists = [None if medoid is None else X[medoids[0], medoid] for medoid in medoids]
 
     return pd.DataFrame.from_items([
-        ('cluster', clusters), ('count', counts), ('medoid', medoids), ('dist', dists)
+        ('cluster', uclusters), ('count', counts), ('medoid', medoids), ('dist', dists)
     ]).sort('count', ascending=False)
 
 
 def choose_clusters(df, min_size, max_dist):
     """Implements logic for cluster-based outlier detection.
 
+    Arguments:
     * ``df`` - output of find_cluster_medoids()
     * ``min_size`` - discard clusters with size below this value.
     * ``max_dist`` - discard clusters whose medoid is greater than
       this distance from the medoid of the largest cluster.
 
     In addition to selecting clusters according to the parameters
-    above, also discards any clusters identified by a value of -1.
+    above, also discards any clusters identified by a value of -1
+    (identifies unassigned items in the output of some clustering
+    methods).
 
     Returns an ndarray containing names clusters to keep (ie, values
     from 'cluster' column).
@@ -196,11 +225,20 @@ def choose_clusters(df, min_size, max_dist):
     return df['cluster'][keep]
 
 
-def scaled_radius(X, percentile, min_radius=0.0):
+def scaled_radius(X, percentile, min_radius=0.0, max_radius=None):
     """Calculate the distribution of distances between the medoid of
     distance matrix ``X`` and each element, and return the value at
-    ``percentile``. ``min_radius`` defines a minimum return value.
+    ``percentile``. ``min_radius`` and ``max_radius`` define a minimum
+    and maximum return values, respectively.
 
     """
 
-    return max([np.percentile(X[find_medoid(X), :], percentile), min_radius])
+    radius = np.percentile(X[find_medoid(X), :], percentile)
+    if radius < min_radius:
+        radius = min_radius
+
+    if max_radius is not None and radius > max_radius:
+        radius = max_radius
+
+    return radius
+
