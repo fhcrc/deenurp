@@ -215,8 +215,8 @@ def choose_clusters(df, min_size, max_dist):
     (identifies unassigned items in the output of some clustering
     methods).
 
-    Returns an ndarray containing names clusters to keep (ie, values
-    from 'cluster' column).
+    Returns an ndarray identifying clusters to keep (ie, values from
+    'cluster' column).
 
     """
 
@@ -242,3 +242,20 @@ def scaled_radius(X, percentile, min_radius=0.0, max_radius=None):
 
     return radius
 
+
+def mds(X, taxa):
+    """Perform multidimensional scaling using ``sklearn.manifold`` given
+    square distance matrix ``X``. Return a DataFrame with columns
+    'seqname', 'x', 'y' in which 'seqname' contains the names provided
+    in `taxa`.
+
+    """
+
+    from sklearn import manifold
+    mds = manifold.MDS(dissimilarity='precomputed')
+    mds_fit = mds.fit_transform(X)
+    df = pd.DataFrame(mds_fit, columns=['x', 'y'])
+    df['seqname'] = pd.Series(taxa, index=df.index)
+    df = df[['seqname', 'x', 'y']]  # reorder columns
+
+    return df
