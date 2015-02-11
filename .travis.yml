@@ -5,7 +5,7 @@ python:
 before_install:
   - "sudo apt-get build-dep python-scipy"
 
-install: travis_wait "bin/bootstrap.sh $VIRTUAL_ENV"
+install: travis_wait 40 "bin/bootstrap.sh $VIRTUAL_ENV"
 
 script:
   - python setup.py test
