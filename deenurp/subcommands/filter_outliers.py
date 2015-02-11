@@ -280,6 +280,9 @@ def filter_sequences(tax_id,
         'dist': dists,
         'is_out': is_out})
 
+    mds = outliers.mds(distmat, taxa)
+    result = pd.merge(result, mds, how='left', on='seqname')
+
     return result
 
 

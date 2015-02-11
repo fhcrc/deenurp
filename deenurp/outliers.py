@@ -251,11 +251,22 @@ def mds(X, taxa):
 
     """
 
+    n, m = X.shape
+    assert n == m, 'X must be a square matrix'
+
     from sklearn import manifold
     mds = manifold.MDS(dissimilarity='precomputed')
-    mds_fit = mds.fit_transform(X)
-    df = pd.DataFrame(mds_fit, columns=['x', 'y'])
-    df['seqname'] = pd.Series(taxa, index=df.index)
-    df = df[['seqname', 'x', 'y']]  # reorder columns
+
+    if np.all(X == 0):
+        df = pd.DataFrame.from_items([
+            ('seqname', taxa),
+            ('x', np.zeros(n)),
+            ('y', np.zeros(n))
+        ])
+    else:
+        mds_fit = mds.fit_transform(X)
+        df = pd.DataFrame(mds_fit, columns=['x', 'y'])
+        df['seqname'] = pd.Series(taxa, index=df.index)
+        df = df[['seqname', 'x', 'y']]  # reorder columns
 
     return df

@@ -115,10 +115,18 @@ class TestFindOutliers(unittest.TestCase):
         out = {t for t, o in zip(self.taxa, is_outlier) if o}
         self.assertEqual(len(out), 4)
 
-    def test_mds(self):
+    def test_mds_01(self):
         df = outliers.mds(self.mat, self.taxa)
         self.assertEqual(df.shape[0], self.mat.shape[0])
         self.assertTrue((df['seqname'] == self.taxa).all())
+
+    def test_mds_02(self):
+        # handle all zero distances
+        df = outliers.mds(np.zeros(shape=self.mat.shape), self.taxa)
+        self.assertEqual(df.shape[0], self.mat.shape[0])
+        self.assertTrue((df['seqname'] == self.taxa).all())
+        self.assertTrue((df['x'] == 0).all())
+        self.assertTrue((df['y'] == 0).all())
 
 
 class TestFilterSequences(unittest.TestCase):
