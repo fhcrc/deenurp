@@ -55,11 +55,6 @@ def build_parser(p):
         '--strategy', default='radius', choices=['radius', 'cluster'],
         help="""Strategy for outlier detection.""")
     filter_group.add_argument(
-        '--distance-cutoff', type=float, default=0.015,
-        help="""Distance threshold from cluster centroid
-        (--strategy='radius') or distance parameter for hierarchical
-        clustering (--strategy='cluster') [default: %(default)s]""")
-    filter_group.add_argument(
         '--distance-percentile', type=float, default=90.0,
         help="""Define distance cutoff as a percentile of the
         distribution of distances from medoid to others [default:
@@ -72,6 +67,14 @@ def build_parser(p):
         '--max-distance', type=float, default=0.10,
         help="""Maximum distance when calculating as a percentile
         [default: %(default)s]""")
+    filter_group.add_argument(
+        '--distance-cutoff', type=float,
+        help="""Distance threshold from cluster centroid
+        (--strategy='radius') or distance parameter for hierarchical
+        clustering (--strategy='cluster'). Overrides distance
+        calculation using --distance-percentile if provided [default:
+        %(default)s]""")
+
 
     aligner_group = p.add_argument_group("aligner-specific options")
     aligner_group.add_argument(
@@ -232,6 +235,7 @@ def filter_sequences(tax_id,
                      percentile=None,
                      min_radius=0.0,
                      max_radius=None,
+                     cluster_type='single',
                      aligner='cmalign',
                      executable=None,
                      maxiters=MUSCLE_MAXITERS, iddef=VSEARCH_IDDEF):
@@ -256,21 +260,22 @@ def filter_sequences(tax_id,
         assert taxa is not None
 
     if cutoff is not None:
-        distance = cutoff
+        cutoff = cutoff
     elif percentile is not None:
-        distance = outliers.scaled_radius(distmat, percentile, min_radius, max_radius)
+        cutoff = outliers.scaled_radius(distmat, percentile, min_radius, max_radius)
     else:
         raise ValueError('must provide either cutoff or percentile')
 
-    log.info('distance={} ({})'.format(
-        distance, 'calculated' if percentile else 'pre-defined'))
+    log.info('cutoff={} ({})'.format(
+        cutoff, 'calculated' if percentile else 'pre-defined'))
 
+    log.info('strategy: {}'.format(strategy))
     if strategy == 'radius':
         medoid, dists, is_out = outliers.outliers(distmat, cutoff)
     elif strategy == 'cluster':
         medoid, dists, is_out = outliers.outliers_by_cluster(
-            distmat, t=distance, D=distance,
-            min_size=2, cluster_type='single')
+            distmat, t=cutoff, D=cutoff * 1.5,
+            min_size=2, cluster_type=cluster_type)
 
     assert len(is_out) == len(taxa)
 
@@ -309,6 +314,7 @@ def filter_worker(tax_id,
                   percentile,
                   min_radius,
                   max_radius,
+                  cluster_type,
                   aligner,
                   executable):
     """
@@ -322,6 +328,7 @@ def filter_worker(tax_id,
     :distance_cutoff: Distance cutoff for medoid filtering
     :percentile: Used to calculate distance cutoff (``distance_cutoff`` cannot also be provided)
     :{min, max}_radius: Bounds of calculated distance cutoff
+    :cluster_type: clustering algorithm (method of scipy.cluster.hierarchy)
     :aligner: name of alignment program
     :executable: name or path of executable for alignmment program
 
@@ -413,6 +420,7 @@ def action(a):
                     percentile=a.distance_percentile,
                     min_radius=a.min_distance,
                     max_radius=a.max_distance,
+                    cluster_type='single',
                     aligner=a.aligner,
                     executable=executable)
 
@@ -475,3 +483,4 @@ def action(a):
 
     if a.detailed_seqinfo:
         merged.to_csv(a.detailed_seqinfo)
+        # merged.to_csv(a.detailed_seqinfo[['seqname', 'is_out', 'centroid', 'dist', 'x', 'y']])

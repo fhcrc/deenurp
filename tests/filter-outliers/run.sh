@@ -7,8 +7,8 @@ rm -rf output
 BASE=../rdp_10_30_named1200bp_subset
 DEENURP=${DEENURP-../../deenurp.py}
 
-# for aligner in cmalign muscle vsearch; do
-for aligner in vsearch; do
+for aligner in cmalign muscle vsearch; do
+# for aligner in vsearch; do
     out=output/$aligner/radius
     mkdir -p $out
     time $DEENURP filter-outliers \
