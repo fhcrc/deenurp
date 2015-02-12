@@ -14,8 +14,7 @@ import pandas as pd
 import scipy
 import scipy.cluster
 
-log = logging.getLogger(__name__)
-
+log = logging
 
 def read_dists(fobj):
     """
@@ -234,12 +233,14 @@ def scaled_radius(X, percentile, min_radius=0.0, max_radius=None):
     """
 
     radius = np.percentile(X[find_medoid(X), :], percentile)
+    log.info('calculated cutoff: {}'.format(radius))
     if radius < min_radius:
         radius = min_radius
 
     if max_radius is not None and radius > max_radius:
         radius = max_radius
 
+    log.info('cutoff after bounds check: {}'.format(radius))
     return radius
 
 
