@@ -255,7 +255,7 @@ def mds(X, taxa):
     assert n == m, 'X must be a square matrix'
 
     from sklearn import manifold
-    mds = manifold.MDS(dissimilarity='precomputed')
+    mds = manifold.MDS(dissimilarity='precomputed', random_state=12345)
 
     if np.all(X == 0):
         df = pd.DataFrame.from_items([
