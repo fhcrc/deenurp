@@ -1,4 +1,4 @@
 include requirements.txt
-include README.txt
+include README.rst
 include deenurp/data/*
 include deenurp/test/data/*
