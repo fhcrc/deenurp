@@ -36,6 +36,11 @@ First, install binary dependencies:
 * pplacer suite (http://matsen.fhcrc.org/pplacer)
 * FastTree 2 (http://www.microbesonline.org/fasttree/#Install)
 
+Optional (for ``filter-outliers`` and ``pairwise-distances``):
+
+* vsearch (https://github.com/torognes/vsearch)
+* muscle (http://www.drive5.com/muscle/)
+
 Finally, install::
 
     python setup.py install
@@ -65,8 +70,7 @@ Creating a sequence set for refpkg building
 ``deenurp filter-outliers``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Removes sequences from a reference database that are more than a specified
-distance from the centroid of their tax id.
+Removes outlier sequences from a reference database
 
 ``deenurp expand-named``
 ~~~~~~~~~~~~~~~~~~~~~~~~

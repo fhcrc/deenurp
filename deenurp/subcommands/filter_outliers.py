@@ -1,10 +1,56 @@
-"""
-Filter sequences based on distance from the centroid of a taxon.
+"""Remove mis-annotated or malformed sequences from a reference database.
+
+Inputs are a database of reference sequences in fasta format, sequence
+annotation, and a taxonomy file.
+
+Sequences are first grouped at a specified taxonomic rank (the default
+is species). For each group, all pairwise distances are calculated
+using a choice of alignment strategies. If ``--aligner=cmalign``, a
+multiple alignment is created using a 16S rRNA alignment profile. A
+multiple alignment of non-16S sequences can be created using
+``--aligner=muscle``, but note that alignment of large numbers of
+sequences may be slow. For both multiple alignment strategies,
+pairwise distances are calculated using ``FastTree
+-makematrix``. Alternatively, ``--aligner=vsearch`` will calculate
+pairwise distances using global pairwise alignments.
+
+Given a pairwise distance matrix, two strategies are available for
+outlier detection:
+
+* ``--strategy=radius`` finds the medoid of the group and discards all
+  other sequences with a distance from the medoid greater than some
+  threshold.
+* ``--strategy=cluster`` performs single-linkage hierarchical
+  clustering at a specified threshold T. All clusters of size 1 are
+  discarded. In addition, medoids of each remaining cluster are
+  identified, and all members of any cluster whose medoid has a
+  distance of 1.5 * T from the medoid of the largest cluster is also
+  discarded.
+
+There are two options for defining the threshold T:
+
+* By default, T is defined as a percentile of the distribution of
+  distances from the group medoid to all the other sequences in the
+  group (``--distance-percentile``). Bounds on this value may be
+  defined using ``--{min,max}-distance``.
+* Alternatively, a fixed value may be defined using ``--distance-cutoff``
+
+At the species level, T will typically be 0.01 to 0.02; 0.015 is a
+reasonable to use as a fixed value.
+
+A filtered subset of the sequences are provided as output. The file
+specified by ``--filtered-seqinfo`` contains the filtered subset of
+``seqinfo_file``. ``--detailed-seqinfo`` contains the following additional fields:
+* centroid - the group centroid
+* dist - distance to the group centroid
+* is_out - whether the sequence is an outlier
+* {rank}_id - the tax_id at the taxonomic rank used for grouping
+* x, y - coordinates calculated by multidimensional scaling of the
+  pairwise distance matrix.
+
 """
 
 import argparse
-import csv
-import logging
 import os
 import os.path
 import sys
@@ -74,7 +120,6 @@ def build_parser(p):
         clustering (--strategy='cluster'). Overrides distance
         calculation using --distance-percentile if provided [default:
         %(default)s]""")
-
 
     aligner_group = p.add_argument_group("aligner-specific options")
     aligner_group.add_argument(
@@ -163,8 +208,6 @@ def parse_usearch_allpairs(filename, seqnames):
 
     data = pd.io.parsers.read_table(filename, header=None, names=BLAST6NAMES)
     data['dist'] = pd.Series(1.0 - data['pct_id'] / 100.0, index=data.index)
-
-    # from IPython import embed; embed()
 
     # for each sequence pair, select the longest alignment if there is
     # more than one (chooses first occurrence if there are two the same length).
