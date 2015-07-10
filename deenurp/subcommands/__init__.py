@@ -7,6 +7,7 @@ commands = (
     'expand_named',
     'fill_lonely',
     'filter_outliers',
+    'gb2csv',
     'hrefpkg_build',
     'pairwise_distances',
     'rdp_extract_genbank',
