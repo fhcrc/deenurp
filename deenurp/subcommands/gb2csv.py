@@ -56,7 +56,7 @@ def action(args):
         accession, version = accession_version_of_genbank(record)
         annotations = record.annotations
         keywords = ';'.join(record.annotations.get('keywords', []))
-        out.writerow(dict(accession=annotations['accessions'][0],
+        out.writerow(dict(accession=accession,
                           date=annotations['date'],
                           description=record.description,
                           gi=annotations.get('gi', ''),
@@ -66,8 +66,7 @@ def action(args):
                           organism=annotations['organism'],
                           source=annotations['source'],
                           tax_id=tax_of_genbank(record),
-                          version=version,
-                          ))
+                          version=version))
 
         if out_refs and 'references' in annotations:
             for ref in annotations['references']:
