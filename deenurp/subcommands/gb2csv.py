@@ -44,7 +44,7 @@ def action(args):
     out = csv.DictWriter(args.out, fieldnames=fieldnames)
     out.writeheader()
 
-    if args.references:
+    if args.references_out:
         fieldnames = ['version', 'title', 'authors', 'comment',
                       'consrtm', 'journal', 'medline_id', 'pubmed_id']
         out_refs = csv.DictWriter(args.references_out, fieldnames=fieldnames)
@@ -67,7 +67,7 @@ def action(args):
                           version=version,
                           ))
 
-        if out_refs:
+        if out_refs and 'references' in annotations:
             for ref in annotations['references']:
                 out_refs.writerow(dict(authors=ref.authors,
                                        comment=ref.comment,
