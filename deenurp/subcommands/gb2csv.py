@@ -14,11 +14,12 @@ References
 
 import argparse
 import csv
+import re
 import sys
 
 from Bio import SeqIO
 
-from deenurp.util import accession_version_of_genbank, tax_of_genbank
+from deenurp.util import accession_version_of_genbank, tax_of_genbank, Counter
 
 
 def build_parser(parser):
@@ -37,6 +38,7 @@ def build_parser(parser):
 
 def action(args):
     records = SeqIO.parse(args.infile, format='gb')
+    records = Counter(records, prefix='Record ')
 
     fieldnames = ['version', 'accession', 'id', 'name', 'description',
                   'gi', 'tax_id', 'date', 'source', 'keywords', 'organism']
@@ -69,11 +71,12 @@ def action(args):
 
         if out_refs and 'references' in annotations:
             for ref in annotations['references']:
+                title = ref.title if re.search('\w', ref.title) else ''
                 out_refs.writerow(dict(authors=ref.authors,
                                        comment=ref.comment,
                                        consrtm=ref.consrtm,
                                        journal=ref.journal,
                                        medline_id=ref.medline_id,
                                        pubmed_id=ref.pubmed_id,
-                                       title=ref.title,
+                                       title=title,
                                        version=version))
