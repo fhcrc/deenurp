@@ -68,7 +68,7 @@ def action(args):
                           tax_id=tax_of_genbank(record),
                           version=version))
 
-        if out_refs and 'references' in annotations:
+        if args.references_out and 'references' in annotations:
             for ref in annotations['references']:
                 title = ref.title if re.search('\w', ref.title) else ''
                 out_refs.writerow(dict(authors=ref.authors,
