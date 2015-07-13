@@ -7,6 +7,7 @@ modules = [
     'test_subcommand_filter_outliers',
     'test_util',
     'test_wrap',
+    'test_subcommand_gb2csv'
 ]
 
 
