@@ -2,6 +2,12 @@
  Changes for deenurp
 =====================
 
+0.1.1
+=====
+
+* ``gb2csv`` creates a csv of Genbank records and optionally the references
+* using new container based Travis build
+
 0.1.0
 =====
 
