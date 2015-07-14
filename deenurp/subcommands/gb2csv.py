@@ -19,20 +19,22 @@ import sys
 
 from Bio import SeqIO
 
-from deenurp.util import accession_version_of_genbank, tax_of_genbank, Counter
+from deenurp.util import (accession_version_of_genbank, tax_of_genbank,
+                          Counter, file_opener)
 
 
 def build_parser(parser):
     parser.add_argument('infile',
                         default=sys.stdin,
                         nargs='?',
+                        type=file_opener(mode='r'),
                         help="""path to genbank file [default: stdin]""")
     parser.add_argument('--references-out',
-                        type=argparse.FileType('w'),
+                        type=file_opener(mode='w'),
                         help="""output references""")
     parser.add_argument('--out',
-                        type=argparse.FileType('w'),
                         default=sys.stdout,
+                        type=file_opener(mode='w'),
                         help="""output path [default: stdout]""")
 
 
