@@ -5,8 +5,8 @@
 0.1.1
 =====
 
-* ``gb2csv`` creates a csv of Genbank records and optionally the references
-* using new container based Travis build
+* ``gb2csv`` creates a csv of Genbank records and optionally the references (issue: 23)
+* using new container based Travis build (issue: 24)
 
 0.1.0
 =====
