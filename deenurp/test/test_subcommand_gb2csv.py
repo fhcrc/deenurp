@@ -31,7 +31,7 @@ class Gb2csvTestCase(unittest.TestCase):
 
         gb2csv.action(args)
 
-        self.assertTrue(open(test_reference).read(), args.out.getvalue())
+        self.assertEqual(open(test_reference).read(), args.out.getvalue())
 
     def test02(self):
         """
@@ -48,21 +48,21 @@ class Gb2csvTestCase(unittest.TestCase):
 
         gb2csv.action(args)
 
-        self.assertTrue(open(test_reference).read(), args.out.getvalue())
+        self.assertEqual(open(test_reference).read(),
+                         args.references_out.getvalue())
 
     def test03(self):
         """
         test null case
         """
 
-        test_input = data_path('records.gb')
-        test_reference = data_path('references.csv')
+        test_reference = data_path('records.csv')
 
         class args(object):
-            infile = test_input
+            infile = StringIO('')
             out = StringIO()
             references_out = None
 
         gb2csv.action(args)
 
-        self.assertTrue(next(open(test_reference)), args.out.getvalue())
+        self.assertEqual(next(open(test_reference)), args.out.getvalue())
