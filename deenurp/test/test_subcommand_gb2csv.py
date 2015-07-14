@@ -49,3 +49,20 @@ class Gb2csvTestCase(unittest.TestCase):
         gb2csv.action(args)
 
         self.assertTrue(open(test_reference).read(), args.out.getvalue())
+
+    def test03(self):
+        """
+        test null case
+        """
+
+        test_input = data_path('records.gb')
+        test_reference = data_path('references.csv')
+
+        class args(object):
+            infile = test_input
+            out = StringIO()
+            references_out = None
+
+        gb2csv.action(args)
+
+        self.assertTrue(next(open(test_reference)), args.out.getvalue())
