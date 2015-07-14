@@ -1,0 +1,423 @@
+LOCUS       NZ_JEYK02000005         1545 bp    DNA              CON 01-DEC-2014
+DEFINITION  Acinetobacter baumannii 1592897 Ab1592897.contig.4_1, whole genome
+            shotgun sequence.
+ACCESSION   NZ_JEYK02000005
+VERSION     NZ_JEYK02000005.1  GI:727738441
+DBLINK      BioProject:PRJNA224116 BioSample:SAMN02385044
+KEYWORDS    WGS; RefSeq.
+SOURCE      Acinetobacter baumannii 1592897
+  ORGANISM  Acinetobacter baumannii 1592897
+            Bacteria; Proteobacteria; Gammaproteobacteria; Pseudomonadales;
+            Moraxellaceae; Acinetobacter; Acinetobacter calcoaceticus/baumannii
+            complex.
+REFERENCE   1  (bases 1 to 1545)
+  AUTHORS   Harris,A.D., Johnson,K.J., George,J., Nadendla,S., Daugherty,S.C.,
+            Parankush,S., Sadzewicz,L., Tallon,L., Sengamalay,N., Hazen,T.H. and
+            Rasko,D.A.
+  TITLE     Comparative genomics and transcriptomics to identify genetic
+            mechanisms underlying the emergence of carbapenem resistant
+            Acinetobacter baumannii (CRAb)
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 1545)
+  AUTHORS   Harris,A.D., Johnson,K.J., George,J., Nadendla,S., Daugherty,S.C.,
+            Parankush,S., Sadzewicz,L., Tallon,L., Sengamalay,N., Hazen,T.H. and
+            Rasko,D.A.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (18-MAR-2014) Institute for Genome Sciences, University of
+            Maryland School of Medicine, BioPark II, 801 W. Baltimore St., Suite
+            619, Baltimore, MD 21201, USA
+REFERENCE   3  (bases 1 to 1545)
+  AUTHORS   Harris,A.D., Johnson,K.J., Nadendla,S., Daugherty,S.C.,
+            Parankush,S., Sadzewicz,L., Tallon,L., Sengamalay,N., Hazen,T.H. and
+            Rasko,D.A.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (18-FEB-2014) Institute for Genome Sciences, BioPark II,
+            801 W. Baltimore St., Suite 619, Baltimore, MD 21201, USA
+COMMENT     VALIDATED REFSEQ: This record has undergone validation or
+            preliminary review.
+            Bacteria and source DNA available from BEI.
+            Annotation was added by the NCBI Prokaryotic Genome Annotation
+            Pipeline (released 2013). Information about the Pipeline can be
+            found here: http://www.ncbi.nlm.nih.gov/genome/annotation_prok/
+            ##Genome-Assembly-Data-START##
+            Assembly Method       :: MaSuRCA v. 2.0.3.1
+            Genome Coverage       :: 68.37662181x
+            Sequencing Technology :: PacBio
+            ##Genome-Assembly-Data-END##
+            ##Genome-Annotation-Data-START##
+            Annotation Provider          :: NCBI
+            Annotation Date              :: 11/04/2014 11:47:05
+            Annotation Pipeline          :: NCBI Prokaryotic Genome Annotation
+            Pipeline
+            Annotation Method            :: Best-placed reference protein set;
+            GeneMarkS+
+            Annotation Software revision :: 2.9 (rev. 450998)
+            Features Annotated           :: Gene; CDS; rRNA; tRNA; ncRNA;
+            repeat_region
+            Genes                        :: 4,040
+            CDS                          :: 3,858
+            Pseudo Genes                 :: 87
+            rRNAs                        :: 18 ( 5S, 16S, 23S )
+            tRNAs                        :: 76
+            ncRNA                        :: 1
+            Frameshifted Genes           :: 74
+            ##Genome-Annotation-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..1545
+                     /mol_type="genomic DNA"
+                     /db_xref="taxon:1310696"
+                     /country="USA"
+                     /isolation_source="perirectal"
+                     /strain="1592897"
+                     /host="Homo sapiens"
+                     /organism="Acinetobacter baumannii 1592897"
+     gene            1..1545
+                     /old_locus_tag="J595_02153"
+                     /locus_tag="J595_RS10485"
+     rRNA            1..1545
+                     /old_locus_tag="J595_02153"
+                     /locus_tag="J595_RS10485"
+                     /product="16S ribosomal RNA"
+ORIGIN
+        1 tttaactgaa gagtttgatc atggctcaga ttgaacgctg gcggcaggct taacacatgc
+       61 aagtcgagcg ggggaaggta gcttgctacc ggacctagcg gcggacgggt gagtaatgct
+      121 taggaatctg cctattagtg ggggacaaca tctcgaaagg gatgctaata ccgcatacgt
+      181 cctacgggag aaagcagggg atcttcggac cttgcgctaa tagatgagcc taagtcggat
+      241 tagctagttg gtggggtaaa ggcctaccaa ggcgacgatc tgtagcgggt ctgagaggat
+      301 gatccgccac actgggactg agacacggcc cagactccta cgggaggcag cagtggggaa
+      361 tattggacaa tgggcgcaag cctgatccag ccatgccgcg tgtgtgaaga aggccttatg
+      421 gttgtaaagc actttaagcg aggaggaggc tactttagat aatacctaga gatagtggac
+      481 gttactcgca gaataagcac cggctaactc tgtgccagca gccgcggtaa tacagagggt
+      541 gcaagcgtta atcggattta ctgggcgtaa agcgcgcgta ggcggctaat taagtcaaat
+      601 gtgaaatccc cgagcttaac ttgggaattg cattcgatac tggttagcta gagtgtggga
+      661 gaggatggta gaattccagg tgtagcggtg aaatgcgtag agatctggag gaataccgat
+      721 ggcgaaggca gccatctggc ctaacactga cgctgaggtg cgaaagcatg gggagcaaac
+      781 aggattagat accctggtag tccatgccgt aaacgatgtc tactagccgt tggggccttt
+      841 gaggctttag tggcgcagct aacgcgataa gtagaccgcc tggggagtac ggtcgcaaga
+      901 ctaaaactca aatgaattga cgggggcccg cacaagcggt ggagcatgtg gtttaattcg
+      961 atgcaacgcg aagaacctta cctggccttg acatagtaag aactttccag agatggattg
+     1021 gtgccttcgg gaacttacat acaggtgctg catggctgtc gtcagctcgt gtcgtgagat
+     1081 gttgggttaa gtcccgcaac gagcgcaacc cttttcctta tttgccagcg agtaatgtcg
+     1141 ggaactttaa ggatactgcc agtgacaaac tggaggaagg cggggacgac gtcaagtcat
+     1201 catggccctt acggccaggg ctacacacgt gctacaatgg tcggtacaaa gggttgctac
+     1261 acagcgatgt gatgctaatc tcaaaaagcc gatcgtagtc cggattggag tctgcaactc
+     1321 gactccatga agtcggaatc gctagtaatc gcggatcaga atgccgcggt gaatacgttc
+     1381 ccgggccttg tacacaccgc ccgtcacacc atgggagttt gttgcaccag aagtagctag
+     1441 cctaactgca aagagggcgg ttaccacggt gtggccgatg actggggtga agtcgtaaca
+     1501 aggtagccgt aggggaacct gcggctggat cacctcctta acgaa
+//
+LOCUS       NR_114178               1470 bp    DNA              BCT 03-FEB-2015
+DEFINITION  Granulosicoccus antarcticus strain NBRC 102684 16S ribosomal RNA
+            gene, partial sequence.
+ACCESSION   NR_114178
+VERSION     NR_114178.1  GI:631252980
+DBLINK      Project:33175 BioProject:PRJNA33175
+KEYWORDS    RefSeq.
+SOURCE      Granulosicoccus antarcticus IMCC3135
+  ORGANISM  Granulosicoccus antarcticus IMCC3135
+            Bacteria; Proteobacteria; Gammaproteobacteria; Chromatiales;
+            Granulosicoccaceae; Granulosicoccus.
+REFERENCE   1
+  AUTHORS   Nakagawa,Y., Muramatsu,Y., Miyashita,M., Sugimoto,M., Yoshino,M. and
+            Kamakura,Y.
+  TITLE     NITE Biological Resource Center (NBRC)
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 1470)
+  CONSRTM   NCBI RefSeq Targeted Loci Project
+  TITLE     Direct Submission
+  JOURNAL   Submitted (23-APR-2014) National Center for Biotechnology
+            Information, NIH, Bethesda, MD 20894, USA
+REFERENCE   3  (bases 1 to 1470)
+  AUTHORS   Nakagawa,Y., Muramatsu,Y., Miyashita,M. and Suzuki,K.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (10-NOV-2011) Contact:Mika Miyashita National Institute of
+            Technology and Evaluation, NITE Biological Resource Center (NBRC);
+            Kazusakamatari, Kisarazu, Chiba 292-0818, Japan URL
+            :http://www.nbrc.nite.go.jp/
+COMMENT     REVIEWED REFSEQ: This record has been curated by NCBI staff. The
+            reference sequence is identical to AB681900:1-1470.
+FEATURES             Location/Qualifiers
+     source          1..1470
+                     /strain="NBRC 102684"
+                     /mol_type="rRNA"
+                     /organism="Granulosicoccus antarcticus IMCC3135"
+                     /db_xref="NBRC:102684"
+                     /db_xref="taxon:1192854"
+                     /culture_collection="IMCC:3135"
+                     /culture_collection="NBRC:102684"
+     rRNA            <1..>1470
+                     /product="16S ribosomal RNA"
+ORIGIN
+        1 attgaacgct ggcggtatgc ttaacacatg caagtcgaac ggcagcatga cagagcttgc
+       61 tctgttgatg gcgagtggcg gacgggtgag taatacttag gaatctatcc agtagttggg
+      121 gataacgtgg ggaaactcac gctaataccg aatacgcact acggtggaaa gagggggatc
+      181 ttcggacctc tcactattgg gtgagcctaa gccggattag ctagttggtg gggtaatggc
+      241 ctaccaaggc gacgatccgt agctggtctg agaggacgat cagccacact gggactgaga
+      301 cacggcccag actcctacgg gaggcagcag tggggaatat tggacaatgg gggcaaccct
+      361 gatccagcaa taccgcgtgt gtgaagaagg cctgcgggtt gtaaagcact ttcagtaggg
+      421 aagaaaggtt gttggttaat agctgacgaa tttgacgtta cctacagaag aagcaccggc
+      481 taactccgtg ccagcagccg cggtaatacg gagggtgcaa gcgttaatcg gaattactgg
+      541 gcgtaaagcg cgcgtaggcg gcttagtcag tcagatgtga aatccccgag cttaacttgg
+      601 gaactgcatt tgatactgct aggctagagt atgttagagg aaagnggaat tccaggtgta
+      661 gcggtgaaat gcgtagatat ctggaggaac atcagtggcg aaggcgnctt tctggaacaa
+      721 tactgacgct gaggtgcgaa agcgtgggga gcaaacagga ttagataccc tggtagtcca
+      781 cgccgtaaac gatgtcaact agccgttggt tccatttaag ggatcagtgg cgaagctaac
+      841 gcgataagtt gaccgcctgg ggagtacgcc ggcaacggta aaactcaaag gaattgacgg
+      901 gggcccgcac aagcggtgga gcatgtggtt taattcgatg caacgcgaaa aaccttacct
+      961 acccttgaca tcatcggaac ttgtcagaga tgactcggtg ccttcgggaa ccgatagaca
+     1021 ggtgctgcat ggctgtcgtc agctcgtgtc gtgagatgtt gggttaagtc ccgcaacgag
+     1081 cgcaaccctt gtccttagtt gccagcacgt aatggtggga actctaggga gactgccggt
+     1141 gacaaaccgg aggaaggtgg ggatgacgtc aagtcatcat ggcccttacg ggtagggcta
+     1201 cacacgtgct acaatggtcg gtacagaggg ttgcgaagcc gcgaggtgga gctaatctca
+     1261 caaaaccgat cgtagtccgg attggagtct gcaactcgac tccatgaagt cggaatcgct
+     1321 agtaatcgca gatcagaact gctgcggtga atacgttccc gggccttgta cacaccgccc
+     1381 gtcacaccat gggagttggc tgcaaaagaa gtgggtagtc taaccttcgg gaggacgctc
+     1441 accactttgt ggttaatgac tggggtgaag
+//
+LOCUS       JXVG01000028             128 bp    DNA              BCT 20-FEB-2015
+DEFINITION  Vibrio parahaemolyticus strain 10-4245 contig28, whole genome
+            shotgun sequence.
+ACCESSION   JXVG01000028
+VERSION     JXVG01000028.1  GI:758719220
+DBLINK      BioProject:PRJNA272927 BioSample:SAMN03287758
+KEYWORDS    WGS.
+SOURCE      Vibrio parahaemolyticus
+  ORGANISM  Vibrio parahaemolyticus
+            Bacteria; Proteobacteria; Gammaproteobacteria; Vibrionales;
+            Vibrionaceae; Vibrio.
+REFERENCE   1  (bases 1 to 128)
+  AUTHORS   Ronholm,J., Petronella,N., Kenwell,R. and Banerjee,S.
+  TITLE     Draft Whole-Genome Sequences of 14 Vibrio parahaemolyticus Clinical
+            Isolates with an Ambiguous K Serogroup
+  JOURNAL   Genome Announc 3 (2) (2015)
+   PUBMED   25838480
+  REMARK    Publication Status: Online-Only
+REFERENCE   2  (bases 1 to 128)
+  AUTHORS   Ronholm,J., Petronella,N., Kenwell,R. and Banerjee,S.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (21-JAN-2015) Bureau of Microbial Hazards, Health Canada,
+            251 Sir Frederick Banting, Ottawa, Ontario K1A0K9, Canada
+COMMENT     Annotation was added by the NCBI Prokaryotic Genome Annotation
+            Pipeline (released 2013). Information about the Pipeline can be
+            found here: http://www.ncbi.nlm.nih.gov/genome/annotation_prok/
+            ##Genome-Assembly-Data-START##
+            Assembly Method        :: SPAdes v. 3.1.1
+            Genome Representation  :: Full
+            Expected Final Version :: Yes
+            Genome Coverage        :: 66.3x
+            Sequencing Technology  :: Illumina MiSeq
+            ##Genome-Assembly-Data-END##
+            ##Genome-Annotation-Data-START##
+            Annotation Provider          :: NCBI
+            Annotation Date              :: 02/02/2015 14:06:33
+            Annotation Pipeline          :: NCBI Prokaryotic Genome Annotation
+            Pipeline
+            Annotation Method            :: Best-placed reference protein set;
+            GeneMarkS+
+            Annotation Software revision :: 2.9 (rev. 456657)
+            Features Annotated           :: Gene; CDS; rRNA; tRNA; ncRNA;
+            repeat_region
+            Genes                        :: 4,697
+            CDS                          :: 4,495
+            Pseudo Genes                 :: 51
+            rRNAs                        :: 28 ( 5S, 16S, 23S )
+            tRNAs                        :: 121
+            ncRNA                        :: 2
+            Frameshifted Genes           :: 24
+            ##Genome-Annotation-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..128
+                     /mol_type="genomic DNA"
+                     /db_xref="taxon:670"
+                     /collection_date="2006"
+                     /country="Canada: British Columbia"
+                     /collected_by="National Microbiology Laboratory"
+                     /serotype="O4:KII"
+                     /isolation_source="Clinical sample"
+                     /strain="10-4245"
+                     /host="Homo sapiens"
+                     /organism="Vibrio parahaemolyticus"
+     gene            1..>128
+                     /locus_tag="SZ06_13385"
+     rRNA            1..>128
+                     /locus_tag="SZ06_13385"
+                     /product="16S ribosomal RNA"
+ORIGIN
+        1 cttaaattga agagtttgat catggctcag attgaacgct ggcggcaggc ctaacacatg
+       61 caagtcgagc ggaaacgagt tatcagaacc ttcggggaac gataacggcg tcgagcggcg
+      121 gacgggtg
+//
+LOCUS       S000855325              1045 bp    DNA              BCT 01-JAN-1980
+DEFINITION  uncultured bacterium; BSLdp42.
+ACCESSION   EF558678
+VERSION     EF558678
+KEYWORDS    .
+SOURCE      uncultured bacterium
+  ORGANISM  uncultured bacterium
+            Root; Bacteria; "Actinobacteria"; Actinobacteria; Acidimicrobidae;
+            Acidimicrobiales; "Acidimicrobineae"; Acidimicrobiaceae;
+            Acidimicrobium.
+REFERENCE   1  (bases 1 to 1045)
+  AUTHORS   Bartles A.N., Siering P.L., Wilson M.S.;
+  TITLE     Prokaryotic Diversity of Boiling Springs Lake, Lassen Volcanic
+            National Park
+  JOURNAL   Unpublished.
+REFERENCE   2  (bases 1 to 1045)
+  AUTHORS   Bartles A.N., Siering P.L., Wilson M.S.;
+  TITLE     ;
+  JOURNAL   Submitted (16-APR-2007) to the EMBL/GenBank/DDBJ databases.
+            Department of Biological Sciences, Humboldt State University, 1
+            Harpst St., Arcata, CA 95521, USA
+COMMENT     Genbank: EF558678 islowqual: false
+FEATURES             Location/Qualifiers
+     source          1..1045
+                     /mol_type="genomic DNA"
+                     /collection_date="19-Jul-2004"
+                     /country="USA:Boiling Springs Lake, Lassen Volcanic
+                     National Park"
+                     /clone="BSLdp42"
+                     /environmental_sample
+                     /isolation_source="lake water"
+                     /db_xref="taxon:77133"
+                     /organism="uncultured bacterium"
+     rRNA            <1..>1045
+                     /product="16S ribosomal RNA"
+ORIGIN
+        1 tcctacgggg ggcagcagtg gggaatattg cgcaatgggc gaaagctgac gcagcaacgc
+       61 cgcgtggagg acgaaggcct tcgggttgta aactcctttc agcagggacg aaactgacgg
+      121 tacctgcaga agaagccccg gctaactacg tgccagcagc cgcggtaaga cgtagggggc
+      181 gagcgttgtc cggatttact gggcgtaaag agctcgtagg cggcttggca agtcggatgt
+      241 gaaatcacca ggctcaacct ggtgtcgcca tccgatactg ccatggcttc gagtccggta
+      301 gaggaccgtg gaattcctgg tgtagcggtg aaatgcgcag atatcaggag gaacaccgat
+      361 ggcgaaggca gcggtctggg ccggcactga cgctgaggag cgaaagcgtg gggagcaaac
+      421 aggattagat accctggtag tccacgccct aaacgttggg cactaggtgt ggggcctcat
+      481 tcgacgggct ccgtgccggc gctaacgcat taagtgcccc gcctggggag tacggccgca
+      541 aggctaaaac tcaaaggaat tgacgggggc ccgcacaagc ggcggagcat gcggcttaat
+      601 tcgatgcgac gcgaagaacc tcacctgggc ttgacatgga gggaaaagcc gtagagatac
+      661 ggtgtccttc ggggccctcc acaggcggtg catggctgtc gtcagctcgt gtcgtgagat
+      721 gttgggttaa gtcccgcaac gagcgcaacc cttgccctat gttgccagcg gatcatgccg
+      781 gggactcgta ggggactgcc ggagttaatt cggaggaagg tggggacgac gtcaagtcat
+      841 catgcccctt acgtccaggg ctgcacgcat gctacaatgg ccggtacaaa gggtcgccaa
+      901 cccgcgaggg ggagccaatc ccaaaaaacc ggtctcagtt cggatcgcag tctgcaactc
+      961 gactgcgtga agtcggagtc gctagtaatc ccggatcagc acgccggggt gaatacgttc
+     1021 ccgggccttg tacacaccgc ccgtc
+//
+LOCUS       S000631947              1329 bp    DNA              BCT 01-JAN-1980
+DEFINITION  uncultured Acidimicrobium sp.; SK111.
+ACCESSION   AY882670
+VERSION     AY882670
+KEYWORDS    .
+SOURCE      uncultured Acidimicrobium sp
+  ORGANISM  uncultured Acidimicrobium sp.
+            Root; Bacteria; "Actinobacteria"; Actinobacteria; Acidimicrobidae;
+            Acidimicrobiales; "Acidimicrobineae"; Acidimicrobiaceae;
+            Acidimicrobium.
+REFERENCE   1  (bases 1 to 1329)
+  AUTHORS   Korf S.E., Macur R.E., Taylor W.P., Kozubal M.A., Ackerman G., Masur
+            D., Inskeep W.P.;
+  TITLE     Geochemical Controls on Microbial Population Distribution at Rainbow
+            and Joseph's Coat Hot Springs in Yellowstone National Park
+  JOURNAL   Unpublished.
+REFERENCE   2  (bases 1 to 1329)
+  AUTHORS   Korf S.E., Macur R.E., Taylor W.P., Kozubal M.A., Ackerman G., Masur
+            D., Inskeep W.P.;
+  TITLE     ;
+  JOURNAL   Submitted (11-JAN-2005) to the EMBL/GenBank/DDBJ databases. Land
+            Resources and Environmental Science, Montana State University, Leon
+            Johnson Hall, Bozeman, MT 59717, USA
+REFERENCE   3  (bases 1 to 1329)
+  AUTHORS   Korf S.E., Macur R.E., Kozubal M.A., Ackerman G., Taylor W.P., Masur
+            D., Inskeep W.P.;
+  TITLE     ;
+  JOURNAL   Submitted (22-DEC-2005) to the EMBL/GenBank/DDBJ databases. Land
+            Resources and Environmental Science, Montana State University, 815
+            Leon Johnson Hall, Bozeman, MT 59717, USA
+COMMENT     Genbank: AY882670 islowqual: false
+FEATURES             Location/Qualifiers
+     source          1..1329
+                     /mol_type="genomic DNA"
+                     /country="USA:Yellowstone National Park"
+                     /clone="SK111"
+                     /environmental_sample
+                     /isolation_source="hot spring"
+                     /db_xref="taxon:221084"
+                     /organism="uncultured Acidimicrobium sp."
+     rRNA            <1..>1329
+                     /product="16S ribosomal RNA"
+ORIGIN
+        1 gacgaacgct ggcggcgtgc ctaacacatg caagtcgtac gcggtggcaa caccgagtgg
+       61 cgaacgggtg cgtaacacgt gaggaaccta ccccgaagtg ggggataaca ccgggaaacc
+      121 ggtgctaata ccgcatacgc tccccggacc gcatggtcca gggagcaaag cctccgggcg
+      181 cttcgggacg gcctcgcggc ctatcagctt gttggtgggg taacggccca ccaaggcgac
+      241 gacgggtagc tggtctgaga ggacgatcag ccacactggg actgagacac ggcccagact
+      301 cctacgggag gcagcagtgg ggaatattgc gcaatgggcg aaagcctgac gcagcaacgc
+      361 cgcgtggagg acgaaggcct tcgggttgta aactcctttc agcagggacg aaactgacgg
+      421 tacctgcaga agaagccccg gctaactacg tgccagcagc cgcggtaaga cgtagggggc
+      481 gagcgttgtc cggatttact gggcgtaaag agctcgtagg cggcttggca agtcggatgt
+      541 gaaatcacca ggctcaacct ggtgtcgcca tccgatactg ccatggcttc gagtccggta
+      601 gaggaccgtg gaattcctgg tgtagcggtg aaatgcgcag atatcaggag gaacaccgat
+      661 ggcgaaggca gcggtctggg ccggcactga cgctgaggag cgaaagcgtg gggagcaaac
+      721 aggattagat accctggtag tccacgccct aaacgttggg cactaggtgt ggggcctcat
+      781 tcgacgggct ccgtgccggc gctaacgcat taagtgcccc gcctggggag tacggccgca
+      841 aggctaaaac gcaaaggaat tgacgggggc ccgcacaagc ggcggagcat gcggcttaat
+      901 tcgatgcaac gcgaagaacc tcacctgggc ttgacatgga gggaaaagcc gtagagatac
+      961 ggtgtccttc ggggccctcc acaggtggtg catggctgtc gtcagctcgt gtcgtgagat
+     1021 gttgggttaa gtcccgcaac gagcgcaacc cttgccctat gttgccagcg gatcatgccg
+     1081 gggactcgta ggggactgcc ggagttaatt cggaggaagg tggggacgac gtcaagtcat
+     1141 catgcccctt acgtccaggg ctgcacgcat gctacaatgg ccggtacaaa gggtcgccaa
+     1201 cccgcgaggg ggagccaatc ccaaaaaacc ggtctcagtt cggatcgcag tctgcaactc
+     1261 gactgcgtga agtcggagtc gctagtaatc ccggatcagc acgccggggt gaatacgttc
+     1321 ccgggcctt
+//
+LOCUS       S000887598               935 bp    DNA              BCT 01-JAN-1980
+DEFINITION  uncultured prokaryote; BSLc270.
+ACCESSION   EF682390
+VERSION     EF682390
+KEYWORDS    .
+SOURCE      uncultured prokaryote
+  ORGANISM  uncultured prokaryote
+            Root; Bacteria; "Actinobacteria"; Actinobacteria; Acidimicrobidae;
+            Acidimicrobiales; "Acidimicrobineae"; Acidimicrobiaceae;
+            Acidimicrobium.
+REFERENCE   1  (bases 1 to 935)
+  AUTHORS   Wilson M.S., Siering P.L., White C.L., Hauser M.E., Bartles A.N.;
+  TITLE     Novel archaea and bacteria dominate stable microbial communities in
+            North America's Largest Hot Spring
+  JOURNAL   Microb. Ecol. 56(2):292-305(2008).
+   PUBMED   18080156
+REFERENCE   2  (bases 1 to 935)
+  AUTHORS   Wilson M.S., Siering P.L., White C.L.;
+  TITLE     ;
+  JOURNAL   Submitted (15-JUN-2007) to the EMBL/GenBank/DDBJ databases.
+            Biological Sciences, Humboldt State University, 1 Harpst St.,
+            Arcata, CA 95521, USA
+COMMENT     Genbank: EF682390 islowqual: false
+FEATURES             Location/Qualifiers
+     source          1..935
+                     /mol_type="genomic DNA"
+                     /clone="BSLc270"
+                     /environmental_sample
+                     /isolation_source="acidic hot spring in Lassen Volcanic
+                     National Park"
+                     /db_xref="taxon:198431"
+                     /organism="uncultured prokaryote"
+     rRNA            <1..>935
+                     /product="16S ribosomal RNA"
+ORIGIN
+        1 gtgccagcag ccgcggtaag acgtaggggg cgagcgttgt ccggatttac tgggcgtaaa
+       61 gagctcgtag gcggcttggc aagtcggatg tgaaatcacc aggctcaacc tggtgtcgcc
+      121 atccgatact gccatggctt cgagtccggt agaggaccgt ggaattcctg gtgtagcggt
+      181 gaaatgcgca gatatcagga ggaacaccga tggcgaaggc agcggtctgg gccggcactg
+      241 acgctgagga gcgaaagcgt ggggagcaaa caggattaga taccctggta gtccacgccc
+      301 taaacgttgg gcactaggtg tggggcctca ttcgacgggc tccgtgccgg cgctaacgca
+      361 ttaagtgccc cgcctgggga gtacggccgc aaggctaaaa ctcaaaggaa ttgacggggg
+      421 cccgcacaag cggcggagca tgcggcttaa ttcgatgcaa cgcgaagaac ctcacctggg
+      481 cttgacatgg agggaaaagc cgtagagata cggtgtcctt cggggccctc cacaggtggt
+      541 gcatggctgt cgtcagctcg tgtcgtgaga tgttgggtta agtcccgcaa cgagcgcaac
+      601 ccttgcccta tgttgccagc ggatcatgcc ggggactcgt aggggactgc cggagttaat
+      661 tcggaggaag gtggggacga cgtcaagtca tcatgcccct tacgtccagg gctgcacgca
+      721 tgctacaatg gccggtacaa agggtcgcca acccgcgagg gggagccaat cccaaaaaac
+      781 cggcctcagt tcggatcgca gtctgcaact cgactgcgtg aagtcggagt cgctagtaat
+      841 cccggatcag cacgccgggg tgaatacgtt cccgggcctt gtacacaccg cccgtcacac
+      901 cacgaaagtc agcaacgccc gaagccggtg gccca
+//

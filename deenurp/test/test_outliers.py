@@ -4,8 +4,9 @@ import unittest
 try:
     import numpy as np
     import pandas as pd
-    from deenurp import outliers
+    from deenurp import outliers, wrap
     from deenurp.subcommands.filter_outliers import filter_sequences, distmat_muscle
+    from deenurp.util import MissingDependencyError
 except ImportError:
     # prefer errors withon tests over failure at the time the test
     # suites are assembled
@@ -128,6 +129,12 @@ class TestFindOutliers(unittest.TestCase):
         self.assertTrue((df['x'] == 0).all())
         self.assertTrue((df['y'] == 0).all())
 
+try:
+    wrap.require_executable(wrap.VSEARCH)
+except MissingDependencyError, e:
+    vsearch_available = False
+else:
+    vsearch_available = True
 
 class TestFilterSequences(unittest.TestCase):
 
@@ -146,6 +153,7 @@ class TestFilterSequences(unittest.TestCase):
                                     aligner='cmalign')
         self.assertEqual(sum(to_prune['is_out']), 5)
 
+    @unittest.skipUnless(vsearch_available, "{} not found.".format(wrap.VSEARCH))
     def test02(self):
         to_prune = filter_sequences(self.tax_id,
                                     sequence_file=self.fa,

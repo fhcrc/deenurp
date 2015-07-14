@@ -1,15 +1,21 @@
+sudo: false
 language: python
-python:
-  - "2.7"
+python: 2.7
 
-before_install:
-  - "sudo apt-get build-dep python-scipy"
+addons:
+  apt:
+    packages:
+      # scipy dependencies
+      - gfortran
+      - libopenblas-dev
+      - liblapack-dev
 
-install: travis_wait 60 "bin/bootstrap.sh $VIRTUAL_ENV"
+install: 
+  - "bin/bootstrap.sh $VIRTUAL_ENV"
 
 script:
-  - python setup.py test
-  - tests/run.sh
+  - "python setup.py test"
+  - "tests/run.sh"
 
 notifications:
   email:

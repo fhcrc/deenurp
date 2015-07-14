@@ -15,13 +15,16 @@ import tempfile
 
 from Bio import SeqIO
 
+
 class Counter(object):
+
     """
     Count objects processed in iterable. By default, progress is written to
     stderr every 1000 items.
     """
+
     def __init__(self, iterable, stream=sys.stderr, report_every=0.3,
-            prefix=''):
+                 prefix=''):
         self._it = iter(iterable)
         self.count = 0
         self.stream = stream
@@ -32,8 +35,9 @@ class Counter(object):
 
     def _report(self):
         if self.stream:
-            self.stream.write('{0}{1:15d} [{2:10.2f}s]\r'.format(self.prefix,
-                self.count, time.clock() - self.start))
+            msg = '{0}{1:15d} [{2:10.2f}s]\r'
+            msg = msg.format(self.prefix, self.count, time.clock()-self.start)
+            self.stream.write(msg)
 
     def __iter__(self):
         for i in self._it:
@@ -44,10 +48,13 @@ class Counter(object):
                 self._report()
                 self.last = now
 
+
 class SingletonDefaultDict(dict):
+
     """
     Dictionary-like object that returns the same value, regardless of key
     """
+
     def __init__(self, val=None):
         self.val = val
 
@@ -56,6 +63,7 @@ class SingletonDefaultDict(dict):
 
     def __contains__(self, key):
         return True
+
 
 def memoize(fn):
     cache = {}
@@ -71,6 +79,7 @@ def memoize(fn):
     inner.cache = cache
     return inner
 
+
 def unique(iterable, key=lambda x: x):
     """
     Choose unique elements from iterable, using the value returned by `key` to
@@ -83,12 +92,14 @@ def unique(iterable, key=lambda x: x):
             s.add(k)
             yield i
 
+
 @contextlib.contextmanager
 def nothing(obj=None):
     """
     The least interesting context manager.
     """
     yield obj
+
 
 @contextlib.contextmanager
 def ntf(**kwargs):
@@ -104,6 +115,7 @@ def ntf(**kwargs):
     finally:
         os.unlink(tf.name)
 
+
 @contextlib.contextmanager
 def tempcopy(path, **kwargs):
     """
@@ -117,6 +129,7 @@ def tempcopy(path, **kwargs):
         shutil.copyfileobj(fp, tf)
         tf.close()
         yield tf.name
+
 
 @contextlib.contextmanager
 def tempdir(**kwargs):
@@ -140,6 +153,7 @@ def tempdir(**kwargs):
     finally:
         shutil.rmtree(td)
 
+
 @contextlib.contextmanager
 def as_fasta(sequences, **kwargs):
     """
@@ -153,6 +167,7 @@ def as_fasta(sequences, **kwargs):
         tf.close()
         yield tf.name
 
+
 @contextlib.contextmanager
 def maybe_tempfile(obj=None, **kwargs):
     """
@@ -165,6 +180,7 @@ def maybe_tempfile(obj=None, **kwargs):
         with ntf(**kwargs) as tf:
             yield tf
 
+
 @contextlib.contextmanager
 def cd(path):
     """
@@ -176,6 +192,7 @@ def cd(path):
         yield
     finally:
         os.chdir(curdir)
+
 
 def file_opener(mode='r'):
     """
@@ -192,6 +209,7 @@ def file_opener(mode='r'):
 
     return open_file
 
+
 def which(executable_name, dirs=None):
     """
     Find an executable in dirs.
@@ -207,9 +225,43 @@ def which(executable_name, dirs=None):
     except StopIteration:
         return None
 
+
 class MissingDependencyError(ValueError):
     pass
+
 
 def require_executable(executable_name):
     if not which(executable_name):
         raise MissingDependencyError(executable_name)
+
+
+def accession_version_of_genbank(record):
+    """
+    Return the accession and version of a Bio.SeqRecord.SeqRecord
+    """
+    annotations = record.annotations
+    accession = annotations.get('accessions', [''])[0]
+    if accession:
+        version = annotations.get('sequence_version', 1)
+        version = '{}.{}'.format(accession, version)
+    else:
+        version = ''
+    return accession, version
+
+
+def tax_of_genbank(gb):
+    """
+    Get the tax id from a genbank record, returning None if no taxonomy is
+    available.
+    """
+    # Check for bad name
+    try:
+        source = next(i for i in gb.features if i.type == 'source')
+        organism = ''.join(source.qualifiers.get('organism', [])).lower()
+        if 'uncultured bacterium' in organism:
+            return
+        taxon = next(i[6:] for i in source.qualifiers.get('db_xref', [])
+                     if i.startswith('taxon:'))
+        return taxon
+    except StopIteration:
+        return
