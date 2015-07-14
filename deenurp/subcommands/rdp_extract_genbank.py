@@ -114,9 +114,9 @@ def action(a):
             rdp_lineage = ';'.join(record.annotations.get('taxonomy', []))
             rdp_lineage = rdp_lineage.replace('"', '')
 
-            row = (record.name, tax_id, accession, record.description,
+            row = (version, record.name, tax_id, accession, record.description,
                    len(record), count_ambiguous(str(record.seq)),
-                   str(is_type(record)).upper(), rdp_lineage, version)
+                   str(is_type(record)).upper(), rdp_lineage)
 
             writer.writerow(row)
             SeqIO.write([transform_id(record)], fasta_fp, 'fasta')
