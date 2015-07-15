@@ -12,15 +12,14 @@ References
  consrtm, journal, medline_id, pubmed_id]
 """
 
-import argparse
 import csv
 import re
 import sys
 
 from Bio import SeqIO
 
-from deenurp.util import (accession_version_of_genbank, tax_of_genbank,
-                          Counter, file_opener)
+from deenurp.util import (accession_version_of_genbank,
+                          tax_of_genbank, Counter, file_opener)
 
 
 def build_parser(parser):
@@ -49,9 +48,10 @@ def action(args):
     out.writeheader()
 
     if args.references_out:
-        fieldnames = ['version', 'title', 'authors', 'comment',
-                      'consrtm', 'journal', 'medline_id', 'pubmed_id']
-        out_refs = csv.DictWriter(args.references_out, fieldnames=fieldnames)
+        refs_fieldnames = ['version', 'title', 'authors', 'comment',
+                           'consrtm', 'journal', 'medline_id', 'pubmed_id']
+        out_refs = csv.DictWriter(args.references_out,
+                                  fieldnames=refs_fieldnames)
         out_refs.writeheader()
 
     for record in records:
@@ -71,13 +71,11 @@ def action(args):
                           version=version))
 
         if args.references_out and 'references' in annotations:
+            # dedup references per record
+            rows = set()
             for ref in annotations['references']:
                 title = ref.title if re.search('\w', ref.title) else ''
-                out_refs.writerow(dict(authors=ref.authors,
-                                       comment=ref.comment,
-                                       consrtm=ref.consrtm,
-                                       journal=ref.journal,
-                                       medline_id=ref.medline_id,
-                                       pubmed_id=ref.pubmed_id,
-                                       title=title,
-                                       version=version))
+                rows.add((version, title, ref.authors, ref.comment,
+                          ref.consrtm, ref.journal,
+                          ref.medline_id, ref.pubmed_id))
+            out_refs.writerows(dict(zip(refs_fieldnames, row)) for row in rows)
