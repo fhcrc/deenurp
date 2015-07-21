@@ -1,6 +1,7 @@
 sudo: false
 language: python
 python: 2.7
+cache: pip
 
 addons:
   apt:
@@ -11,12 +12,13 @@ addons:
       - liblapack-dev
 
 install: 
+  - "pip install scipy==0.15.1 --download-cache $HOME/.cache/pip"
   - "bin/bootstrap.sh $VIRTUAL_ENV"
 
 script:
   - "python setup.py test"
   - "tests/run.sh"
 
-notifications:
-  email:
-    - noah.hoffman@gmail.com
+#notifications:
+#  email:
+#    - noah.hoffman@gmail.com
