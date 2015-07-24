@@ -9,9 +9,10 @@
 # specify path to the deenurp source directory using
 # `DEENURP=path/to/deenurp bootstrap.sh`
 
-# Will attempt to install python packages from wheels (using `pip
-# install --use-wheel --find-links="$WHEELHOUSE"`) if a directory or
-# url is defined in the environment variable `$WHEELHOUSE`
+# Will attempt to install python packages from wheels if $PIP_FIND_LINKS is defined
+# and pip --use-wheel is specified
+# Will attempt to create wheels if $PIP_WHEEL_DIR is defined
+# see https://pip.pypa.io/en/latest/user_guide.html#environment-variables
 
 set -e
 
@@ -78,8 +79,6 @@ else
 fi
 
 source $venv/bin/activate
-# make relocatable (necessary to prevent long shebang lines)
-virtualenv --relocatable $venv
 
 # full path; set by activate
 venv=$VIRTUAL_ENV
@@ -193,17 +192,21 @@ else
 	    ./mk && cp muscle $venv/bin)
 fi
 
+# install wheels library
+if [ -n "$PIP_WHEEL_DIR" ]; then 
+  pip install wheel
+  pip wheel wheel
+fi
+
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
-    if [[ -z "$WHEELHOUSE" ]]; then
-	pip install -U "$line"
-    else
-	pip install --use-wheel --find-links="$WHEELHOUSE" "$line"
-    fi
+  if [[ -n "$PIP_WHEEL_DIR" ]]; then
+    pip wheel "$line"
+  fi
+  pip install --use-wheel "$line"
 done < "$DEENURP/requirements.txt"
 
-# install deenurp
 pip install -e "$DEENURP"
 
 # correct any more shebang lines
