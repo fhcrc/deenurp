@@ -1,7 +1,24 @@
 sudo: false
 language: python
 python: 2.7
-cache: pip
+
+cache:
+  apt: true
+  # must specify pip dir
+  # https://github.com/travis-ci/travis-ci/issues/3239
+  directories:
+    - $HOME/.cache/pip
+
+env:
+  global:
+    # These two environment variables could be set by Travis itself, or Travis
+    # could configure itself in /etc/, ~/, or inside of the virtual
+    # environments. In any case if these two values get configured then end
+    # users only need to enable the pip cache and manually run pip wheel before
+    # running pip install.
+    - PIP_WHEEL_DIR=$HOME/.cache/pip/wheels
+    - PIP_FIND_LINKS=file://$HOME/.cache/pip/wheels
+    - VIRTUAL_ENV=deenurp-env
 
 addons:
   apt:
@@ -11,13 +28,13 @@ addons:
       - libopenblas-dev
       - liblapack-dev
 
-install: 
-  - "bin/bootstrap.sh $VIRTUAL_ENV"
+install:
+  - bin/bootstrap.sh $VIRTUAL_ENV
 
 script:
-  - "python setup.py test"
-  - "tests/run.sh"
+  - python setup.py test
+  - tests/run.sh
 
-#notifications:
-#  email:
-#    - noah.hoffman@gmail.com
+notifications:
+  email:
+    - noah.hoffman@gmail.com
