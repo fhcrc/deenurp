@@ -33,6 +33,6 @@ script:
   - "python setup.py test"
   - "tests/run.sh"
 
-#notifications:
-#  email:
-#    - noah.hoffman@gmail.com
+notifications:
+  email:
+    - noah.hoffman@gmail.com
