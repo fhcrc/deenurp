@@ -2,6 +2,20 @@ sudo: false
 language: python
 python: 2.7
 
+cache: 
+  directories:
+    - $HOME/.cache/pip
+
+env:
+  global:
+    # These two environment variables could be set by Travis itself, or Travis
+    # could configure itself in /etc/, ~/, or inside of the virtual
+    # environments. In any case if these two values get configured then end
+    # users only need to enable the pip cache and manually run pip wheel before
+    # running pip install.
+    - PIP_WHEEL_DIR=$HOME/.cache/pip/wheels
+    - PIP_FIND_LINKS=file://$HOME/.cache/pip/wheels
+
 addons:
   apt:
     packages:
@@ -10,13 +24,15 @@ addons:
       - libopenblas-dev
       - liblapack-dev
 
-install: 
+install:
+  - "pip install cogent" # for tax2tree wheel
+  - "pip wheel --requirement requirements.txt"
   - "bin/bootstrap.sh $VIRTUAL_ENV"
 
 script:
   - "python setup.py test"
   - "tests/run.sh"
 
-notifications:
-  email:
-    - noah.hoffman@gmail.com
+#notifications:
+#  email:
+#    - noah.hoffman@gmail.com
