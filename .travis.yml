@@ -2,7 +2,9 @@ sudo: false
 language: python
 python: 2.7
 
-cache: 
+cache:
+  # must specify pip dir
+  # https://github.com/travis-ci/travis-ci/issues/3239
   directories:
     - $HOME/.cache/pip
 
@@ -15,6 +17,7 @@ env:
     # running pip install.
     - PIP_WHEEL_DIR=$HOME/.cache/pip/wheels
     - PIP_FIND_LINKS=file://$HOME/.cache/pip/wheels
+    - VIRTUAL_ENV=deenurp-env
 
 addons:
   apt:
@@ -25,14 +28,12 @@ addons:
       - liblapack-dev
 
 install:
-  - "pip install cogent" # for tax2tree wheel
-  - "pip wheel --requirement requirements.txt"
-  - "bin/bootstrap.sh $VIRTUAL_ENV"
+  - bin/bootstrap.sh $VIRTUAL_ENV
 
 script:
-  - "python setup.py test"
-  - "tests/run.sh"
+  - python setup.py test
+  - tests/run.sh
 
-notifications:
-  email:
-    - noah.hoffman@gmail.com
+#notifications:
+#  email:
+#    - noah.hoffman@gmail.com
