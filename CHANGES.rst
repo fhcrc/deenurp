@@ -2,6 +2,10 @@
  Changes for deenurp
 =====================
 
+0.1.2-HEAD
+==========
+* travis caching is setup for pip installs (issue: 22)
+
 0.1.1
 =====
 
