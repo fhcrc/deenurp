@@ -204,7 +204,7 @@ while read line; do
   if [[ -n "$PIP_WHEEL_DIR" ]]; then
     pip wheel "$line"
   fi
-  pip install --use-wheel "$line"
+  pip install "$line" # --use-wheel implied if PIP_FIND_LINKS is defined
 done < "$DEENURP/requirements.txt"
 
 pip install -e "$DEENURP"
