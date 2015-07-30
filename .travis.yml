@@ -3,7 +3,6 @@ language: python
 python: 2.7
 
 cache:
-  apt: true
   # must specify pip dir
   # https://github.com/travis-ci/travis-ci/issues/3239
   directories:
