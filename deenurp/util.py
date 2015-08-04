@@ -257,9 +257,6 @@ def tax_of_genbank(gb):
     # Check for bad name
     try:
         source = next(i for i in gb.features if i.type == 'source')
-        organism = ''.join(source.qualifiers.get('organism', [])).lower()
-        if 'uncultured bacterium' in organism:
-            return
         taxon = next(i[6:] for i in source.qualifiers.get('db_xref', [])
                      if i.startswith('taxon:'))
         return taxon
