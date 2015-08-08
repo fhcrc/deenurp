@@ -74,7 +74,7 @@ def action(a):
                     continue
                 accepted += 1
 
-                if info['is_classified'] == 'True':
+                if info['taxid_classified'] == 'True':
                     # named
                     fa_fp = named_fa_fp
                     w = named_writer

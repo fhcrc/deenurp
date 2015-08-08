@@ -16,6 +16,22 @@ from deenurp.util import (Counter, memoize, file_opener,
                           accession_version_of_genbank,
                           tax_of_genbank)
 
+type_keywords = ['(T)', 'ATCC', 'NCTC', 'NBRC', 'CCUG',
+                 'DSM', 'JCM', 'NCDO', 'NCIB', 'CIP']
+
+
+def is_type(record):
+    """
+    Returns a boolean indicating whether a sequence is a member of a type
+    strain, as indicated by the presence of the string '(T)' within the
+    record description.
+    """
+    for t in type_keywords:
+        if t in record.description:
+            return True
+
+    return False
+
 
 def is_classified_fn(taxonomy):
     """
@@ -74,23 +90,6 @@ def count_ambiguous(seq):
     return sum(i not in s for i in seq)
 
 
-def is_type(record):
-    """
-    Returns a boolean indicating whether a sequence is a member of a type
-    strain, as indicated by the presence of the string '(T)' within the
-    record description.
-    """
-    return '(T)' in record.description
-
-
-def get_organism(record):
-    try:
-        source = next(i for i in record.features if i.type == 'source')
-        return ''.join(source.qualifiers.get('organism', [])).lower()
-    except StopIteration:
-        return ''
-
-
 def build_parser(p):
     p.add_argument('infile', type=file_opener('r'),
                    help="""Input file, gzipped""")
@@ -125,7 +124,7 @@ def action(a):
         if a.header:
             header = ('version', 'seqname', 'tax_id', 'accession',
                       'description', 'length', 'ambig_count',
-                      'is_type', 'rdp_lineage', 'is_classified')
+                      'is_type', 'rdp_lineage', 'taxid_classified')
             writer.writerow(header)
 
         for record, tax_id in taxa:
@@ -133,12 +132,10 @@ def action(a):
             rdp_lineage = ';'.join(record.annotations.get('taxonomy', []))
             rdp_lineage = rdp_lineage.replace('"', '')
 
-            is_class = is_classified(tax_id)
-            is_class &= 'uncultured bacterium' not in get_organism(record)
-
             row = (version, record.name, tax_id, accession, record.description,
                    len(record), count_ambiguous(str(record.seq)),
-                   str(is_type(record)).upper(), rdp_lineage, is_class)
+                   str(is_type(record)).upper(),
+                   rdp_lineage, is_classified(tax_id))
 
             writer.writerow(row)
             SeqIO.write([transform_id(record)], fasta_fp, 'fasta')
