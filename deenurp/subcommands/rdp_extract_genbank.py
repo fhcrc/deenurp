@@ -4,7 +4,6 @@ Extract sequences and annotation from a file of GenBank records.
 
 import argparse
 import csv
-import gzip
 import logging
 
 from Bio import SeqIO
@@ -17,6 +16,22 @@ from deenurp.util import (Counter, memoize, file_opener,
                           accession_version_of_genbank,
                           tax_of_genbank)
 
+type_keywords = ['(T)', 'ATCC', 'NCTC', 'NBRC', 'CCUG',
+                 'DSM', 'JCM', 'NCDO', 'NCIB', 'CIP']
+
+
+def is_type(record):
+    """
+    Returns a boolean indicating whether a sequence is a member of a type
+    strain, as indicated by the presence of the string '(T)' within the
+    record description.
+    """
+    for t in type_keywords:
+        if t in record.description:
+            return True
+
+    return False
+
 
 def is_classified_fn(taxonomy):
     """
@@ -27,10 +42,11 @@ def is_classified_fn(taxonomy):
 
     @memoize
     def fetch_tax_id(tax_id):
-        s = select([nodes.c.tax_id, nodes.c.is_valid, nodes.c.parent_id, nodes.c.rank])\
-            .where(nodes.c.tax_id == tax_id)
-        res = s.execute().fetchone()
-        return res
+        # get tax node data
+        c = nodes.c
+        s = select([c.tax_id, c.is_valid, c.parent_id, c.rank])
+        s = s.where(c.tax_id == tax_id)
+        return s.execute().fetchone()
 
     @memoize
     def is_classified(tax_id):
@@ -49,6 +65,19 @@ def is_classified_fn(taxonomy):
     return is_classified
 
 
+def update_taxid(tax_id, taxonomy):
+    """
+    Check the taxonomy for latest taxid and return it
+    """
+    merged = taxonomy.merged
+
+    # fetch updated tax_id if exists
+    c = merged.c
+    s = select([c.new_tax_id]).where(c.old_tax_id == tax_id)
+    new_tax_id = s.execute().fetchone()
+    return new_tax_id[0] if new_tax_id else tax_id
+
+
 def transform_id(rec):
     old_id = rec.id
     rec.id = rec.name
@@ -61,17 +90,9 @@ def count_ambiguous(seq):
     return sum(i not in s for i in seq)
 
 
-def is_type(record):
-    """
-    Returns a boolean indicating whether a sequence is a member of a type
-    strain, as indicated by the presence of the string '(T)' within the
-    record description.
-    """
-    return '(T)' in record.description
-
-
 def build_parser(p):
-    p.add_argument('infile', help="""Input file, gzipped""")
+    p.add_argument('infile', type=file_opener('r'),
+                   help="""Input file, gzipped""")
     p.add_argument('database', help="""Path to taxonomy database""")
     p.add_argument('fasta_out', type=file_opener('w'),
                    help="""Path to write sequences in FASTA format.
@@ -84,21 +105,18 @@ def build_parser(p):
 
 
 def action(a):
-    """
-    Run
-    """
     # Start database
     e = sqlalchemy.create_engine('sqlite:///{0}'.format(a.database))
     tax = Taxonomy(e, ncbi.ranks)
     is_classified = is_classified_fn(tax)
 
-    with gzip.open(a.infile) as fp, \
+    with a.infile as fp, \
             a.output as out_fp, \
             a.fasta_out as fasta_fp:
         records = SeqIO.parse(fp, 'genbank')
         records = Counter(records, prefix='Record ')
-        taxa = ((record, tax_of_genbank(record)) for record in records)
-        taxa = ((i, j if not j or is_classified(j) else None) for i, j in taxa)
+        taxa = ((rec, tax_of_genbank(rec)) for rec in records)
+        taxa = ((i, update_taxid(j, tax)) for i, j in taxa)
 
         writer = csv.writer(out_fp,
                             lineterminator='\n',
@@ -106,7 +124,7 @@ def action(a):
         if a.header:
             header = ('version', 'seqname', 'tax_id', 'accession',
                       'description', 'length', 'ambig_count',
-                      'is_type', 'rdp_lineage')
+                      'is_type', 'rdp_lineage', 'taxid_classified')
             writer.writerow(header)
 
         for record, tax_id in taxa:
@@ -116,7 +134,8 @@ def action(a):
 
             row = (version, record.name, tax_id, accession, record.description,
                    len(record), count_ambiguous(str(record.seq)),
-                   str(is_type(record)).upper(), rdp_lineage)
+                   str(is_type(record)).upper(),
+                   rdp_lineage, is_classified(tax_id))
 
             writer.writerow(row)
             SeqIO.write([transform_id(record)], fasta_fp, 'fasta')

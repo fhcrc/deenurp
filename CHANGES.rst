@@ -2,6 +2,14 @@
  Changes for deenurp
 =====================
 
+0.1.2-HEAD
+==========
+
+* ``deenurp rdp_extract_sequences`` now updates old tax_ids instead of dropping them (issue: 27)
+* ``deenurp rdp_extract_sequences`` creates new column taxid_classified instead of dropping tax_ids of unclassified sequences (issue: 28)
+* function tax_of_genbank no longer returns None if string 'uncultured bacterium' is in the organism name (issue: 29)
+* expanding type strain designations to include more terms (issue: 16)
+
 0.1.1
 =====
 
