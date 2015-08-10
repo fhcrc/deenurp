@@ -201,9 +201,6 @@ fi
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
-  if [[ -n "$PIP_WHEEL_DIR" ]]; then
-    pip wheel "$line"
-  fi
   pip install --use-wheel "$line"
 done < "$DEENURP/requirements.txt"
 
