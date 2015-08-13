@@ -33,12 +33,15 @@ def is_type(record):
     return False
 
 
-def is_classified_fn(taxonomy):
+def species_is_classified_fn(taxonomy):
     """
-    Creates a function which classifies tax_ids as classified or unclassified,
+    Creates a function which classifies tax_ids as classified or
+    unclassified at species level according to taxonomy database,
     based on presence in taxonomy and names.is_classified.
     """
     nodes = taxonomy.nodes
+    ranks = taxonomy.ranks
+    species_index = ranks.index('species')
 
     @memoize
     def fetch_tax_id(tax_id):
@@ -54,28 +57,21 @@ def is_classified_fn(taxonomy):
         if not res:
             return False
 
-        tax_id, is_class, parent_id, rank = res
+        tax_id, is_valid, parent_id, rank = res
         if rank == 'species':
-            return is_class
-        else:
+            return is_valid
+        elif rank == 'no rank':
+            # NOTE: is this only root?  Recusively move up taxonomy,
+            # if above species will return False.
             if tax_id == parent_id:
                 return False
             return is_classified(parent_id)
+        else:
+            # FIXME: ranks needs to be imported from ncbi_taxonomy.db database
+            # returns FALSE if above species
+            return ranks.index(rank) > species_index
 
     return is_classified
-
-
-def update_taxid(tax_id, taxonomy):
-    """
-    Check the taxonomy for latest taxid and return it
-    """
-    merged = taxonomy.merged
-
-    # fetch updated tax_id if exists
-    c = merged.c
-    s = select([c.new_tax_id]).where(c.old_tax_id == tax_id)
-    new_tax_id = s.execute().fetchone()
-    return new_tax_id[0] if new_tax_id else tax_id
 
 
 def transform_id(rec):
@@ -88,6 +84,31 @@ def transform_id(rec):
 def count_ambiguous(seq):
     s = frozenset('ACGT')
     return sum(i not in s for i in seq)
+
+
+@memoize
+def update_taxid(tax_id, taxonomy, name):
+    """
+    """
+    try:
+        taxonomy._node(tax_id)
+    except KeyError as err:
+        new_tax_id = taxonomy._get_merged(tax_id)
+        if new_tax_id != tax_id:
+            logging.warn('updating tax_id {} to {}'.format(tax_id, new_tax_id))
+            tax_id = new_tax_id
+        elif name:
+            try:
+                tax_id, _, _ = taxonomy.primary_from_name(name)
+            except KeyError as err:
+                logging.warn(err)
+                tax_id = None
+        else:
+            msg = 'taxid {} not found in taxonomy, dropping'.format(tax_id)
+            logging.warn(msg)
+            tax_id = None
+
+    return tax_id
 
 
 def build_parser(p):
@@ -107,16 +128,17 @@ def build_parser(p):
 def action(a):
     # Start database
     e = sqlalchemy.create_engine('sqlite:///{0}'.format(a.database))
-    tax = Taxonomy(e, ncbi.ranks)
-    is_classified = is_classified_fn(tax)
+    taxonomy = Taxonomy(e, ncbi.ranks)
+    is_classified = species_is_classified_fn(taxonomy)
 
     with a.infile as fp, \
             a.output as out_fp, \
             a.fasta_out as fasta_fp:
         records = SeqIO.parse(fp, 'genbank')
         records = Counter(records, prefix='Record ')
-        taxa = ((rec, tax_of_genbank(rec)) for rec in records)
-        taxa = ((i, update_taxid(j, tax)) for i, j in taxa)
+        taxa = ((record, tax_of_genbank(record)) for record in records)
+        taxa = ((record, tax_id, record.annotations['organism']) for record, tax_id in taxa)
+        taxa = ((record, update_taxid(tax_id, tax, organism)) for record, tax_id, oransism in taxa)
 
         writer = csv.writer(out_fp,
                             lineterminator='\n',
