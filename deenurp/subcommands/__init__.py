@@ -5,6 +5,7 @@ commands = (
     'add_reps',
     'cluster_refs',
     'expand_named',
+    'extract_genbank',
     'fill_lonely',
     'filter_outliers',
     'gb2csv',
