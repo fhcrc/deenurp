@@ -15,6 +15,13 @@ from deenurp import util
 
 _taxonomy = None
 
+info_fieldnames = ['version', 'accession', 'id', 'name', 'description',
+                   'gi', 'tax_id', 'date', 'source', 'keywords', 'organism',
+                   'ambig_count', 'is_type', 'length', 'taxid_classified']
+
+ref_fieldnames = ['version', 'title', 'authors', 'comment',
+                  'consrtm', 'journal', 'medline_id', 'pubmed_id']
+
 
 def set_taxonomy(database):
     global _taxonomy
@@ -138,12 +145,8 @@ def update_taxid(tax_id, name):
 
 
 class Seq_Info(Bio.SeqRecord.SeqRecord):
-    attrs = ['version', 'accession', 'id', 'name', 'description',
-             'gi', 'tax_id', 'date', 'source', 'keywords', 'organism',
-             'ambig_count', 'is_type', 'length', 'taxid_classified']
-
     def record_dict(self):
-        return dict((a, self.__getattribute__(a)) for a in Seq_Info.attrs)
+        return dict((a, self.__getattribute__(a)) for a in info_fieldnames)
 
     def __eq__(self, other):
         return isinstance(other, Seq_Ref) and self.hash() == other.hash()
@@ -194,9 +197,6 @@ class Seq_Info(Bio.SeqRecord.SeqRecord):
 
 
 class Seq_Ref(Bio.SeqFeature.Reference):
-    attrs = ['version', 'title', 'authors', 'comment',
-             'consrtm', 'journal', 'medline_id', 'pubmed_id']
-
     def __hash__(self):
         """
         Unique Seq_Ref ID
@@ -204,7 +204,8 @@ class Seq_Ref(Bio.SeqFeature.Reference):
         Combo of all ref_names attributes
         """
         if not hasattr(self, 'hash_id'):
-            attributes = tuple(self.__getattribute__(a) for a in Seq_Ref.attrs)
+            attributes = tuple(self.__getattribute__(a)
+                               for a in ref_fieldnames)
             self.hash_id = hash(attributes)
         return self.hash_id
 
