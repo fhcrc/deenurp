@@ -86,29 +86,34 @@ def count_ambiguous(seq):
     return sum(i not in s for i in seq)
 
 
-@memoize
 def update_taxid(tax_id, taxonomy, name):
     """
     """
-    try:
-        taxonomy._node(tax_id)
-    except KeyError as err:
-        new_tax_id = taxonomy._get_merged(tax_id)
-        if new_tax_id != tax_id:
-            logging.warn('updating tax_id {} to {}'.format(tax_id, new_tax_id))
-            tax_id = new_tax_id
-        elif name:
-            try:
-                tax_id, _, _ = taxonomy.primary_from_name(name)
-            except KeyError as err:
-                logging.warn(err)
-                tax_id = None
-        else:
-            msg = 'taxid {} not found in taxonomy, dropping'.format(tax_id)
-            logging.warn(msg)
-            tax_id = None
 
-    return tax_id
+    @memoize
+    def update(tax_id, name):
+        try:
+            taxonomy._node(tax_id)
+        except KeyError as err:
+            new_tax_id = taxonomy._get_merged(tax_id)
+            if new_tax_id != tax_id:
+                msg = 'updating tax_id {} to {}'.format(tax_id, new_tax_id)
+                logging.warn(msg)
+                tax_id = new_tax_id
+            elif name:
+                try:
+                    tax_id, _, _ = taxonomy.primary_from_name(name)
+                except KeyError as err:
+                    logging.warn(err)
+                    tax_id = None
+            else:
+                msg = 'taxid {} not found in taxonomy, dropping'.format(tax_id)
+                logging.warn(msg)
+                tax_id = None
+
+        return tax_id
+
+    return update(tax_id, name)
 
 
 def build_parser(p):
