@@ -233,32 +233,3 @@ class MissingDependencyError(ValueError):
 def require_executable(executable_name):
     if not which(executable_name):
         raise MissingDependencyError(executable_name)
-
-
-def accession_version_of_genbank(record):
-    """
-    Return the accession and version of a Bio.SeqRecord.SeqRecord
-    """
-    annotations = record.annotations
-    accession = annotations.get('accessions', [''])[0]
-    if accession:
-        version = annotations.get('sequence_version', 1)
-        version = '{}.{}'.format(accession, version)
-    else:
-        version = ''
-    return accession, version
-
-
-def tax_of_genbank(gb):
-    """
-    Get the tax id from a genbank record, returning None if no taxonomy is
-    available.
-    """
-    # Check for bad name
-    try:
-        source = next(i for i in gb.features if i.type == 'source')
-        taxon = next(i[6:] for i in source.qualifiers.get('db_xref', [])
-                     if i.startswith('taxon:'))
-        return taxon
-    except StopIteration:
-        return
