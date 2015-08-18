@@ -12,25 +12,10 @@ from sqlalchemy.sql import select
 from taxtastic.taxonomy import Taxonomy
 from taxtastic import ncbi
 
-from deenurp.util import (Counter, memoize, file_opener,
-                          accession_version_of_genbank,
-                          tax_of_genbank)
+from deenurp import util, seq_info
 
 type_keywords = ['(T)', 'ATCC', 'NCTC', 'NBRC', 'CCUG',
                  'DSM', 'JCM', 'NCDO', 'NCIB', 'CIP']
-
-
-def is_type(record):
-    """
-    Returns a boolean indicating whether a sequence is a member of a type
-    strain, as indicated by the presence of the string '(T)' within the
-    record description.
-    """
-    for t in type_keywords:
-        if t in record.description:
-            return True
-
-    return False
 
 
 def species_is_classified_fn(taxonomy):
@@ -43,7 +28,7 @@ def species_is_classified_fn(taxonomy):
     ranks = taxonomy.ranks
     species_index = ranks.index('species')
 
-    @memoize
+    @util.memoize
     def fetch_tax_id(tax_id):
         # get tax node data
         c = nodes.c
@@ -51,7 +36,7 @@ def species_is_classified_fn(taxonomy):
         s = s.where(c.tax_id == tax_id)
         return s.execute().fetchone()
 
-    @memoize
+    @util.memoize
     def is_classified(tax_id):
         res = fetch_tax_id(tax_id)
         if not res:
@@ -90,7 +75,7 @@ def update_taxid(tax_id, taxonomy, name):
     """
     """
 
-    @memoize
+    @util.memoize
     def update(tax_id, name):
         try:
             taxonomy._node(tax_id)
@@ -117,10 +102,10 @@ def update_taxid(tax_id, taxonomy, name):
 
 
 def build_parser(p):
-    p.add_argument('infile', type=file_opener('r'),
+    p.add_argument('infile', type=util.file_opener('r'),
                    help="""Input file, gzipped""")
     p.add_argument('database', help="""Path to taxonomy database""")
-    p.add_argument('fasta_out', type=file_opener('w'),
+    p.add_argument('fasta_out', type=util.file_opener('w'),
                    help="""Path to write sequences in FASTA format.
                            Specify '.gz' or '.bz2' extension to compress.""")
     p.add_argument('output', metavar='tax_out', type=argparse.FileType('w'),
@@ -140,10 +125,13 @@ def action(a):
             a.output as out_fp, \
             a.fasta_out as fasta_fp:
         records = SeqIO.parse(fp, 'genbank')
-        records = Counter(records, prefix='Record ')
-        taxa = ((record, tax_of_genbank(record)) for record in records)
-        taxa = ((record, tax_id, record.annotations['organism']) for record, tax_id in taxa)
-        taxa = ((record, update_taxid(tax_id, tax, organism)) for record, tax_id, oransism in taxa)
+        records = util.Counter(records, prefix='Record ')
+        taxa = ((record, seq_info.tax_of_genbank(record))
+                for record in records)
+        taxa = ((record, tax_id, record.annotations['organism'])
+                for record, tax_id in taxa)
+        taxa = ((record, update_taxid(tax_id, taxonomy, organism))
+                for record, tax_id, organism in taxa)
 
         writer = csv.writer(out_fp,
                             lineterminator='\n',
@@ -155,13 +143,13 @@ def action(a):
             writer.writerow(header)
 
         for record, tax_id in taxa:
-            accession, version = accession_version_of_genbank(record)
+            accession, version = seq_info.accession_version_of_genbank(record)
             rdp_lineage = ';'.join(record.annotations.get('taxonomy', []))
             rdp_lineage = rdp_lineage.replace('"', '')
 
             row = (version, record.name, tax_id, accession, record.description,
                    len(record), count_ambiguous(str(record.seq)),
-                   str(is_type(record)).upper(),
+                   str(seq_info.is_type(record)).upper(),
                    rdp_lineage, is_classified(tax_id))
 
             writer.writerow(row)
