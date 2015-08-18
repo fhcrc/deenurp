@@ -17,7 +17,7 @@ _taxonomy = None
 
 info_fieldnames = ['version', 'accession', 'id', 'name', 'description',
                    'gi', 'tax_id', 'date', 'source', 'keywords', 'organism',
-                   'ambig_count', 'is_type', 'length', 'taxid_classified']
+                   'length', 'count_ambig', 'is_type', 'length', 'taxid_classified']
 
 ref_fieldnames = ['version', 'title', 'authors', 'comment',
                   'consrtm', 'journal', 'medline_id', 'pubmed_id']
@@ -87,7 +87,7 @@ def fetch_tax_info(tax_id):
 
 
 @util.memoize
-def is_classified(tax_id):
+def species_is_classified(tax_id):
     """
     return is_valid from ncbi taxonomy
     """
@@ -96,18 +96,25 @@ def is_classified(tax_id):
         return False
 
     tax_id, is_valid, parent_id, rank = res
-    if rank == 'species' or not rank:
+    if rank == 'species' or rank is None:
         return is_valid
     elif tax_id == parent_id:
         return False
     else:
-        return is_classified(parent_id)
+        # instead of recursion create a table of ranks by index. code
+        # will be something liek ranks.index(rank) > species_index
+        return species_is_classified(parent_id)
 
 
 def parse(handle, *args, **kwargs):
     records = Bio.SeqIO.parse(handle, *args, **kwargs)
     for record in records:
         yield convert_record(record, Seq_Info)
+
+
+def count_ambiguous(seq):
+    s = frozenset('ACGT')
+    return sum(i not in s for i in seq)
 
 
 def convert_record(record, cls, *attrs):
@@ -164,10 +171,6 @@ class Seq_Info(Bio.SeqRecord.SeqRecord):
     def hash(self):
         return self.__hash__()
 
-    def count_ambiguous(self, seq):
-        s = frozenset('ACGT')
-        return sum(i not in s for i in seq)
-
     def has_references(self):
         return 'references' in self.annotations
 
@@ -183,7 +186,8 @@ class Seq_Info(Bio.SeqRecord.SeqRecord):
 
     def setAttributes(self):
         self.accession, self.version = accession_version_of_genbank(self)
-        self.ambig_count = self.count_ambiguous(str(self.seq))
+        self.length = len(self)
+        self.count_ambig = count_ambiguous(str(self.seq))
         self.is_type = is_type(self)
         self.date = self.annotations['date']
         self.gi = self.annotations.get('gi', '')
@@ -191,8 +195,7 @@ class Seq_Info(Bio.SeqRecord.SeqRecord):
         self.organism = self.annotations['organism']
         self.source = self.annotations['source']
         self.tax_id = update_taxid(tax_of_genbank(self), self.organism)
-        self.taxid_classified = is_classified(self.tax_id)
-        self.length = len(self)
+        self.taxid_classified = species_is_classified(self.tax_id)
         return self
 
 
@@ -216,7 +219,7 @@ class Seq_Ref(Bio.SeqFeature.Reference):
         return self.__hash__()
 
     def ref_dict(self):
-        return dict((a, self.__getattribute__(a)) for a in Seq_Ref.attrs)
+        return dict((a, self.__getattribute__(a)) for a in ref_fieldnames)
 
     def setAttributes(self, version):
         title = self.title
