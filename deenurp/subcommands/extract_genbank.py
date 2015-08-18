@@ -1,13 +1,13 @@
 """
-Convert a genbank record to csv format
+Convert a genbank record to csv format (seq_info.csv and seq_refs.csv)
 
 Output:
 
-Genbank
+seq_info.csv
 [id, name, description, version, accession, gi, tax_id,
  comment, date, source, keywords, organism]
 
-Seq_References
+seq_refs.vsv
 [version, title, authors, comment,
  consrtm, journal, medline_id, pubmed_id]
 """
@@ -26,10 +26,12 @@ def build_parser(parser):
                         nargs='?',
                         type=util.file_opener(mode='r'),
                         help="""path to genbank file [default: stdin]""")
+
     parser.add_argument('--references-out',
                         type=util.file_opener(mode='w'),
                         help="""output references""")
-    parser.add_argument('--database', help='Path to taxonomy database')
+    parser.add_argument('--database', help="""Path to taxonomy database
+                                              for validating tax_ids""")
     parser.add_argument('--out',
                         default=sys.stdout,
                         type=util.file_opener(mode='w'),
@@ -51,13 +53,14 @@ def action(args):
         out_refs = csv.DictWriter(args.references_out, fieldnames=fieldnames)
         out_refs.writeheader()
 
+    # check out seqmagick.transform.sort to avoid writing records to memory
     records = sorted(records, key=operator.attrgetter('version'))
     records = itertools.groupby(records, key=operator.attrgetter('version'))
     records = (list(recs) for ver, recs in records)
 
     for recs in records:
+        # write reference file before taking `set' of records
         if args.references_out:
-            # write reference file before deduplicating records
             has_refs = [rec for rec in recs if rec.has_references()]
             refs = set([ref for rec in has_refs for ref in rec.references()])
             out_refs.writerows(ref.ref_dict() for ref in refs)
