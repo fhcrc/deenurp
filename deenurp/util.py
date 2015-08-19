@@ -8,7 +8,9 @@ import functools
 import gzip
 import os
 import os.path
+import re
 import shutil
+import subprocess
 import sys
 import time
 import tempfile
@@ -233,3 +235,10 @@ class MissingDependencyError(ValueError):
 def require_executable(executable_name):
     if not which(executable_name):
         raise MissingDependencyError(executable_name)
+
+
+def version():
+    git_version = subprocess.check_output(['git', 'describe', '--tags'])
+    tag_version = re.search('v([\w.]*-[\w.]*)(-.*)?', git_version).group(1)
+    version = '.dev'.join(tag_version.split('-'))
+    return version

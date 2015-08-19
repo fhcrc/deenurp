@@ -9,6 +9,7 @@
 * function tax_of_genbank no longer returns None if string 'uncultured bacterium' is in the organism name (issue: 29)
 * expanding type strain designations to include more terms (issue: 16)
 * travis caching is setup for pip installs (issue: 22)
+* fixed pep 440 versioning bug when installing and running unittests (issue: 31)
 
 0.1.1
 =====
