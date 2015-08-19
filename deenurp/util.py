@@ -238,7 +238,10 @@ def require_executable(executable_name):
 
 
 def version():
-    git_version = subprocess.check_output(['git', 'describe', '--tags'])
-    tag_version = re.search('v([\w.]*-[\w.]*)(-.*)?', git_version).group(1)
-    version = '.dev'.join(tag_version.split('-'))
-    return version
+    try:
+        git_version = subprocess.check_output(['git', 'describe', '--tags'])
+        tag_version = re.search('v([\w.]*-[\w.]*)(-.*)?', git_version).group(1)
+        return '.dev'.join(tag_version.split('-'))
+    except Exception:
+        import pkg_resources
+        return pkg_resources.require("deenurp")[0].version
