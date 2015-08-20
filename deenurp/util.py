@@ -6,8 +6,10 @@ import bz2
 import contextlib
 import functools
 import gzip
+import logging
 import os
 import os.path
+import pkg_resources
 import re
 import shutil
 import subprocess
@@ -238,10 +240,24 @@ def require_executable(executable_name):
 
 
 def version():
-    try:
-        git_version = subprocess.check_output(['git', 'describe', '--tags'])
-        tag_version = re.search('v([\w.]*-[\w.]*)(-.*)?', git_version).group(1)
-        return '.dev'.join(tag_version.split('-'))
-    except Exception:
-        import pkg_resources
-        return pkg_resources.require("deenurp")[0].version
+    """
+    Depending on if git exists and at what version we can try these commands
+    to get the git version from the git tags.  If all else return the install
+    version or 0.0.0
+    """
+
+    install_dir = os.path.dirname(__file__)
+    git_cmds = (['git', '-C', install_dir, 'describe', '--tags'],  # >= 1.8.5
+                ['git', 'describe', '--tags'])  # < 1.8.5
+    devnull = open(os.devnull, 'w')
+
+    for cmd in git_cmds:
+        try:
+            logging.info(' '.join(cmd))
+            git_ver = subprocess.check_output(cmd, stderr=devnull)
+            tag_ver = re.search('v([\d.]*-[\d.]*)(-.*)?', git_ver).group(1)
+            return '.dev'.join(tag_ver.split('-'))
+        except Exception as e:
+            logging.warn(e)
+
+    return pkg_resources.require("deenurp")[0].version
