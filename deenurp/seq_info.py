@@ -77,7 +77,7 @@ def accession_version_of_genbank(record):
 
 @util.memoize
 def fetch_tax_info(tax_id):
-    if _taxonomy.nodes is not None:
+    if _taxonomy is not None:
         c = _taxonomy.nodes.c  # columns
         s = select([c.tax_id, c.is_valid, c.parent_id, c.rank])
         s = s.where(c.tax_id == tax_id)
