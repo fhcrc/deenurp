@@ -1,5 +1,5 @@
 """
-Test gb2csv output, records.csv and references.csv
+Test extract-sequences output, records.csv and references.csv
 """
 
 import os
@@ -7,14 +7,14 @@ import unittest
 
 from cStringIO import StringIO
 
-from deenurp.subcommands import gb2csv
+from deenurp.subcommands import extract_genbank
 
 
 def data_path(*args):
     return os.path.join(os.path.dirname(__file__), 'data', *args)
 
 
-class Gb2csvTestCase(unittest.TestCase):
+class ExtractGenbankTestCase(unittest.TestCase):
 
     def test01(self):
         """
@@ -28,8 +28,9 @@ class Gb2csvTestCase(unittest.TestCase):
             infile = test_input
             out = StringIO()
             references_out = None
+            database = None
 
-        gb2csv.action(args)
+        extract_genbank.action(args)
 
         self.assertEqual(open(test_reference).read(), args.out.getvalue())
 
@@ -45,8 +46,9 @@ class Gb2csvTestCase(unittest.TestCase):
             infile = test_input
             out = StringIO()
             references_out = StringIO()
+            database = None
 
-        gb2csv.action(args)
+        extract_genbank.action(args)
 
         self.assertEqual(open(test_reference).read(),
                          args.references_out.getvalue())
@@ -62,7 +64,8 @@ class Gb2csvTestCase(unittest.TestCase):
             infile = StringIO('')
             out = StringIO()
             references_out = None
+            database = None
 
-        gb2csv.action(args)
+        extract_genbank.action(args)
 
         self.assertEqual(next(open(test_reference)), args.out.getvalue())
