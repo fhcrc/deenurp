@@ -299,12 +299,13 @@ def version():
         except Exception as e:
             logging.warn('{} {}'.format(type(e), e.message))
 
-    try:
-        """
-        return version that was installed if available
-        """
-        version = pkg_resources.require("csvpandas")[0].version
-    except pkg_resources.DistributionNotFound as e:
-        logging.warn(e)
+    if version is None:
+        try:
+            """
+            return version that was installed if available
+            """
+            version = pkg_resources.require("csvpandas")[0].version
+        except pkg_resources.DistributionNotFound as e:
+            logging.warn(e)
 
     return version or '0.0.0'
