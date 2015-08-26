@@ -272,6 +272,8 @@ def version():
     return 0.0.0
     """
 
+    version = None
+
     install_dir = os.path.dirname(__file__)
     git_cmds = (['git', '-C', install_dir, 'describe', '--tags'],  # >= 1.8.5
                 ['git', 'describe', '--tags'])  # < 1.8.5
@@ -284,15 +286,16 @@ def version():
     ex - v0.1.2-38-g6a8e5e3
     """
     for cmd in git_cmds:
+        logging.debug(' '.join(cmd))
+        git_re = 'v(?P<tag>[\d.]*)-?(?P<commit>[\d.]*)-?.*'
         try:
-            logging.debug(' '.join(cmd))
-            git_re = 'v(?P<tag>[\d.]*)-?(?P<commit>[\d.]*)-?.*'
             git_ver = subprocess.check_output(cmd, stderr=devnull)
             git_search = re.search(git_re, git_ver)
             if git_search.group('commit') == '':
-                return git_search.group('tag')
+                version = git_search.group('tag')
             else:
-                return '{tag}.dev{commit} '.format(**git_search.groupdict())
+                version = '{tag}.dev{commit}'.format(**git_search.groupdict())
+            break
         except Exception as e:
             logging.warn('{} {}'.format(type(e), e.message))
 
@@ -300,8 +303,8 @@ def version():
         """
         return version that was installed if available
         """
-        return pkg_resources.require("csvpandas")[0].version
+        version = pkg_resources.require("csvpandas")[0].version
     except pkg_resources.DistributionNotFound as e:
         logging.warn(e)
 
-    return '0.0.0'
+    return version or '0.0.0'
