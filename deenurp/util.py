@@ -9,6 +9,7 @@ import gzip
 import logging
 import os
 import os.path
+import pandas
 import pkg_resources
 import re
 import shutil
@@ -204,14 +205,38 @@ def file_opener(mode='r'):
     but opens compressed files for certain matching extensions, currently
     ``.bz2`` is treated as bzip2-compression, and ``.gz`` is treated as gzip.
     """
-    exts = {'.bz2': bz2.BZ2File,
-            '.gz': gzip.open}
 
-    def open_file(s):
-        ext = os.path.splitext(s)[1]
-        return exts.get(ext, open)(s, mode=mode)
+    def open_file(f):
+        out = None
+        if f is sys.stdout or f is sys.stdin:
+            out = f
+        elif f == '-':
+            out = sys.stdin if 'r' in mode else sys.stdout
+        elif f.endswith('.bz2'):
+            out = bz2.BZ2File(f, mode)
+        elif f.endswith('.gz'):
+            out = gzip.open(f, mode)
+        else:
+            out = open(f, mode)
+        return out
 
     return open_file
+
+
+def read_csv(fn, compression=None, **kwargs):
+    """Read a csv file using pandas.read_csv with compression defined by
+    the file suffix unless provided.
+    """
+
+    if compression is not None or fn in [sys.stdin, '-']:
+        compression = compression
+    else:
+        suffixes = {'.bz2': 'bz2', '.gz': 'gzip'}
+        compression = compression or suffixes.get(os.path.splitext(fn)[-1])
+
+    kwargs['compression'] = compression
+
+    return pandas.read_csv(fn, **kwargs)
 
 
 def which(executable_name, dirs=None):
