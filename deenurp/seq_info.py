@@ -17,7 +17,7 @@ _taxonomy = None
 
 info_fieldnames = ['version', 'accession', 'id', 'name', 'description',
                    'gi', 'tax_id', 'date', 'source', 'keywords', 'organism',
-                   'length', 'count_ambig', 'is_type', 'length', 'taxid_classified']
+                   'length', 'ambig_count', 'is_type', 'taxid_classified']
 
 ref_fieldnames = ['version', 'title', 'authors', 'comment',
                   'consrtm', 'journal', 'medline_id', 'pubmed_id']
@@ -187,7 +187,7 @@ class Seq_Info(Bio.SeqRecord.SeqRecord):
     def setAttributes(self):
         self.accession, self.version = accession_version_of_genbank(self)
         self.length = len(self)
-        self.count_ambig = count_ambiguous(str(self.seq))
+        self.ambig_count = count_ambiguous(str(self.seq))
         self.is_type = is_type(self)
         self.date = self.annotations['date']
         self.gi = self.annotations.get('gi', '')
