@@ -10,6 +10,7 @@ commands = (
     'filter_outliers',
     'hrefpkg_build',
     'pairwise_distances',
+    'partition-refs',
     'rdp_extract_genbank',
     'rdp_sequence_filter',
     'search_sequences',
