@@ -1,5 +1,5 @@
 """
-Test extract-sequences output, records.csv and references.csv
+Test extract-genbank output, records.csv and references.csv
 """
 
 import os
@@ -22,17 +22,22 @@ class ExtractGenbankTestCase(unittest.TestCase):
         """
 
         test_input = data_path('records.gb')
-        test_reference = data_path('records.csv')
+        test_seqinfo = data_path('records.csv')
+        test_fasta = data_path('records.fa')
 
         class args(object):
             infile = test_input
-            out = StringIO()
+            seqinfo_out = StringIO()
+            fasta_out = StringIO()
             references_out = None
             database = None
 
         extract_genbank.action(args)
 
-        self.assertEqual(open(test_reference).read(), args.out.getvalue())
+        self.assertEqual(open(test_fasta).read(),
+                         args.fasta_out.getvalue())
+        self.assertEqual(open(test_seqinfo).read(),
+                         args.seqinfo_out.getvalue())
 
     def test02(self):
         """
@@ -44,7 +49,8 @@ class ExtractGenbankTestCase(unittest.TestCase):
 
         class args(object):
             infile = test_input
-            out = StringIO()
+            fasta_out = StringIO()
+            seqinfo_out = StringIO()
             references_out = StringIO()
             database = None
 
@@ -58,14 +64,19 @@ class ExtractGenbankTestCase(unittest.TestCase):
         test null case
         """
 
-        test_reference = data_path('records.csv')
+        test_seqinfo = data_path('records.csv')
+        test_reference = data_path('references.csv')
 
         class args(object):
             infile = StringIO('')
-            out = StringIO()
-            references_out = None
+            seqinfo_out = StringIO()
+            fasta_out = StringIO()
+            references_out = StringIO()
             database = None
 
         extract_genbank.action(args)
 
-        self.assertEqual(next(open(test_reference)), args.out.getvalue())
+        self.assertEqual(next(open(test_seqinfo)),
+                         args.seqinfo_out.getvalue())
+        self.assertEqual(next(open(test_reference)),
+                         args.references_out.getvalue())

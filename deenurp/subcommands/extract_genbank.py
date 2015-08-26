@@ -31,6 +31,7 @@ def build_parser(parser):
 
     # outputs
     parser.add_argument('fasta_out',
+                        metavar='FASTA',
                         type=util.file_opener(mode='w'),
                         help='output fasta')
     parser.add_argument('seqinfo_out',
