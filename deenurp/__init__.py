@@ -1,3 +1,3 @@
-import util
+import version
 
-__version__ = util.version()
+__version__ = version.version()

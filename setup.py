@@ -2,8 +2,7 @@ import os
 import sys
 import re
 import logging
-
-from deenurp import util
+import version
 
 # set up logging
 vflag = ([f for f in sys.argv if re.search('^-v{1,4}', f)] or ['-'])[0]
@@ -67,7 +66,7 @@ class run_audit(Command):
 install_requires = []
 
 setup(name='deenurp',
-      version=util.version(),
+      version=version.version(),
       package_data={'deenurp': ['data/*', 'test/data/*']},
       entry_points={
           'console_scripts': {'deenurp = deenurp.scripts.deenurp:main'}},
