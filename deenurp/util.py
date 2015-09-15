@@ -6,6 +6,7 @@ import bz2
 import contextlib
 import functools
 import gzip
+import itertools
 import os
 import os.path
 import pandas
@@ -258,3 +259,16 @@ class MissingDependencyError(ValueError):
 def require_executable(executable_name):
     if not which(executable_name):
         raise MissingDependencyError(executable_name)
+
+
+def chunker(iterable, n, fillvalue=None):
+    """
+    Continuously chunk an iterator n items at a time
+    """
+
+    while True:
+        chunk = list(itertools.islice(iterable, n))
+        if chunk:
+            yield chunk
+        else:
+            return
