@@ -9,6 +9,8 @@ commands = (
     'fill_lonely',
     'filter_outliers',
     'hrefpkg_build',
+    'ncbi_extract_genbank',
+    'ncbi_esearch',
     'pairwise_distances',
     'partition-refs',
     'rdp_extract_genbank',
