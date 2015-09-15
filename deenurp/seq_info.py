@@ -15,7 +15,7 @@ from deenurp import util
 
 _taxonomy = None
 
-info_fieldnames = ['version', 'accession', 'id', 'name', 'description',
+info_fieldnames = ['seqname', 'version', 'accession', 'name', 'description',
                    'gi', 'tax_id', 'date', 'source', 'keywords', 'organism',
                    'length', 'ambig_count', 'is_type', 'taxid_classified']
 
@@ -68,7 +68,12 @@ def accession_version_of_genbank(record):
     annotations = record.annotations
     accession = annotations.get('accessions', [''])[0]
     if accession:
-        version = annotations.get('sequence_version', 1)
+        if 'sequence_version' in annotations:
+            version = int(annotations.get('sequence_version'))
+        elif record.id.startswith(accession + '.'):
+            version = int(record.id.split('.', 1)[1])
+        else:
+            version = 1
         version = '{}.{}'.format(accession, version)
     else:
         version = ''
@@ -108,8 +113,7 @@ def species_is_classified(tax_id):
 
 def parse(handle, *args, **kwargs):
     records = Bio.SeqIO.parse(handle, *args, **kwargs)
-    for record in records:
-        yield convert_record(record, Seq_Info)
+    return (convert_record(r, Seq_Info) for r in records)
 
 
 def count_ambiguous(seq):
@@ -197,6 +201,11 @@ class Seq_Info(Bio.SeqRecord.SeqRecord):
         self.tax_id = update_taxid(tax_of_genbank(self), self.organism)
         self.taxid_classified = species_is_classified(self.tax_id)
         return self
+
+    def fasta_str(self):
+        if not hasattr(self, self.fasta):
+            self.fasta = '{name}\n{seq.seq}'.format(**self.__dict__)
+        return self.fasta
 
 
 class Seq_Ref(Bio.SeqFeature.Reference):
