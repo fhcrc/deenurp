@@ -14,8 +14,8 @@
 #    along with Entrez.py.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-NCBI Entrez tool for downloading nucleotide Genbank or Accession numbers
-given list of accession numbers, GI numbers or esearch -term.  Provides
+NCBI Entrez tool for downloading nucleotide Genbank records
+given list of accession numbers, GI numbers. Provides
 multiprocessing and record chunking.
 
 general rules: http://www.ncbi.nlm.nih.gov/books/NBK25497/
@@ -25,35 +25,51 @@ feature tables: http://www.ncbi.nlm.nih.gov/projects/Sequin/table.html
 http retrying: https://pypi.python.org/pypi/retrying
 """
 
-import argparse
+import csv
 import functools
 import itertools
 import logging
 import multiprocessing
-import pandas
 import re
-import sys
+import sqlalchemy
 
 from deenurp import util, entrez
 from sqlalchemy.sql import select
+from taxtastic.taxonomy import Taxonomy
+from taxtastic import ncbi
 
 log = logging.getLogger(__name__)
 
 seq_info_columns = ['seqname', 'version', 'accession', 'name', 'description',
                     'gi', 'tax_id', 'date', 'source', 'keywords', 'organism',
-                    'length', 'ambig_count', 'is_type', 'taxid_classified']
+                    'length', 'ambig_count', 'is_type', 'taxid_classified',
+                    'seq_start', 'seq_stop']
 
 ref_info_columns = ['version', 'title', 'authors', 'comment',
                     'consrtm', 'journal', 'medline_id', 'pubmed_id']
 
 
 def build_parser(parser):
+    # ins
     parser.add_argument('email', help='user email')
-
     parser.add_argument('ids',
-                        type=util.file_opener('r'),
+                        type=util.file_opener(mode='r'),
                         help=('file list of GIs or accessions to fetch; '
                               'will be added to any search terms'))
+
+    # outs
+    parser.add_argument('fasta_out',
+                        metavar='FASTA',
+                        type=util.file_opener(mode='w'),
+                        help='[stdout]')
+    parser.add_argument('info_out',
+                        metavar='CSV',
+                        type=util.file_opener(mode='w'),
+                        help='write seq_info file')
+    parser.add_argument('--refs-out',
+                        metavar='CSV',
+                        type=util.file_opener(mode='w'),
+                        help='output references')
 
     parser.add_argument('--taxonomy',
                         metavar='DB',
@@ -97,19 +113,6 @@ def build_parser(parser):
                                 table columns via string pattern
                                 feature_key:qualifier_key:qualifier_value.
                                 ex: rRNA:product:16S""")
-
-    outs = parser.add_argument_group('various output options')
-    outs.add_argument('--out',
-                      metavar='FASTA',
-                      type=argparse.FileType('w'),
-                      default=sys.stdout,
-                      help='[stdout]')
-    outs.add_argument('--info-out',
-                      metavar='CSV',
-                      help='write seq_info file')
-    outs.add_argument('--refs-out',
-                      metavar='CSV',
-                      help='output references')
 
     return parser
 
@@ -184,17 +187,17 @@ def update_taxid(tax_id, name, taxonomy):
         new_tax_id = taxonomy._get_merged(tax_id)
         if new_tax_id != tax_id:
             msg = 'tax_id {} merged to {}'.format(tax_id, new_tax_id)
-            logging.warn(msg)
+            log.warn(msg)
             tax_id = new_tax_id
         elif name:
             try:
                 tax_id, _, _ = taxonomy.primary_from_name(name)
             except KeyError as err:
-                logging.warn(err)
+                log.warn(err)
                 tax_id = None
         else:
             msg = 'taxid {} not found in taxonomy, dropping'
-            logging.warn(msg.format(tax_id))
+            log.warn(msg.format(tax_id))
             tax_id = None
 
     return tax_id
@@ -260,6 +263,7 @@ def parse_record(record, taxonomy=None, seq_start=None,
                 is_type=is_type(record),
                 date=record.annotations['date'],
                 description=record.description,
+                gi=record.annotations.get('gi', ''),
                 keywords=';'.join(record.annotations.get('keywords', [])),
                 name=record.name,
                 organism=organism,
@@ -271,22 +275,21 @@ def parse_record(record, taxonomy=None, seq_start=None,
                 seq_stop=seq_stop,
                 strand=strand,
                 version=version)
-    return pandas.Series(info)
+    return info
 
 
-def parse_references(record, version):
+def parse_references(record):
     references = []
     for r in record.annotations['references']:
         references.append(
-            dict(version=version,
-                 title=r.title,
+            dict(title=r.title,
                  authors=r.authors,
                  comment=r.comment,
                  consrtm=r.consrtm,
                  journal=r.journal,
                  medline_id=r.medline_id,
                  pubmed_id=r.pubmed_id))
-    return pandas.DataFrame(references)
+    return references
 
 
 def action(args):
@@ -295,7 +298,6 @@ def action(args):
     chunksize = min(entrez.RETMAX, args.chunksize)  # 10k is ncbi max right now
 
     ids = (i.strip() for i in args.ids)  # remove newlines, etc
-    ids = itertools.chain(ids, args.ids)
     ids = itertools.islice(ids, args.max_records)
 
     # take latest version accession
@@ -305,6 +307,12 @@ def action(args):
 
     # break up ids into specified chunks
     ids = (chunk for chunk in util.chunker(ids, chunksize))
+
+    if args.taxonomy:
+        e = sqlalchemy.create_engine('sqlite:///{0}'.format(args.taxonomy))
+        taxonomy = Taxonomy(e, ncbi.ranks)
+    else:
+        taxonomy = None
 
     fetch_args = dict(db='nucleotide',
                       retry=args.retry,
@@ -319,28 +327,24 @@ def action(args):
     else:
         func = functools.partial(entrez.gbfullfetch, **fetch_args)
 
-    records, references = [], []
     pool = multiprocessing.Pool(processes=args.threads)
-    try:
-        gbs = itertools.chain.from_iterable(pool.imap_unordered(func, ids))
-    except Exception as e:
-        log.error(e)
+    gbs = itertools.chain.from_iterable(pool.imap_unordered(func, ids))
+    # gbs = itertools.chain.from_iterable(itertools.imap(func, ids))  # testing
 
-    for g, seq_start, seq_stop in gbs:
-        record = parse_record(g, taxonomy=args.taxonomy,
-                              seq_start=seq_start, seq_stop=seq_stop)
-        records.append(record)
-        if args.refs_out:
-            references.append(parse_references(g, record['version']))
-
-    df_records = pandas.DataFrame(records)
-    to_fasta = lambda x: '>{seqname}\n{seq}'.format(**x)
-    args.out.write('\n'.join(df_records.apply(to_fasta, axis=1)))
-
-    if args.info_out:
-        df_records.to_csv(
-            args.info_out, index=False, columns=seq_info_columns)
-
+    info_out = csv.DictWriter(
+        args.info_out, fieldnames=seq_info_columns, extrasaction='ignore')
+    info_out.writeheader()
     if args.refs_out:
-        pandas.concat(references).to_csv(
-            args.refs_out, index=False, columns=ref_info_columns)
+        refs_out = csv.DictWriter(args.refs_out, fieldnames=ref_info_columns)
+        refs_out.writeheader()
+
+    for g, seq_start, seq_stop in util.Counter(gbs, report_every=0.01):
+        record = parse_record(
+            g, taxonomy=taxonomy, seq_start=seq_start, seq_stop=seq_stop)
+        args.fasta_out.write('>{seqname}\n{seq}\n'.format(**record))
+        info_out.writerow(record)
+        if args.refs_out:
+            # add version
+            version = record['version']
+            refs = [dict(version=version, **r) for r in parse_references(g)]
+            refs_out.writerows(refs)
