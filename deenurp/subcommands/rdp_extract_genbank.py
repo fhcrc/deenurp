@@ -12,7 +12,8 @@ from sqlalchemy.sql import select
 from taxtastic.taxonomy import Taxonomy
 from taxtastic import ncbi
 
-from deenurp import util, seq_info
+from deenurp import util
+from deenurp.subcommands import ncbi_extract_genbank
 
 type_keywords = ['(T)', 'ATCC', 'NCTC', 'NBRC', 'CCUG',
                  'DSM', 'JCM', 'NCDO', 'NCIB', 'CIP']
@@ -126,7 +127,7 @@ def action(a):
             a.fasta_out as fasta_fp:
         records = SeqIO.parse(fp, 'genbank')
         records = util.Counter(records, prefix='Record ')
-        taxa = ((record, seq_info.tax_of_genbank(record))
+        taxa = ((record, ncbi_extract_genbank.tax_of_genbank(record))
                 for record in records)
         taxa = ((record, tax_id, record.annotations['organism'])
                 for record, tax_id in taxa)
@@ -143,13 +144,13 @@ def action(a):
             writer.writerow(header)
 
         for record, tax_id in taxa:
-            accession, version = seq_info.accession_version_of_genbank(record)
+            accession, version = ncbi_extract_genbank.accession_version_of_genbank(record)
             rdp_lineage = ';'.join(record.annotations.get('taxonomy', []))
             rdp_lineage = rdp_lineage.replace('"', '')
 
             row = (version, record.name, tax_id, accession, record.description,
                    len(record), count_ambiguous(str(record.seq)),
-                   str(seq_info.is_type(record)).upper(),
+                   str(ncbi_extract_genbank.is_type(record)).upper(),
                    rdp_lineage, is_classified(tax_id))
 
             writer.writerow(row)
