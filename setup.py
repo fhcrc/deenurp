@@ -1,16 +1,6 @@
 import os
 import sys
-import re
-import logging
 import version
-
-# set up logging
-vflag = ([f for f in sys.argv if re.search('^-v{1,4}', f)] or ['-'])[0]
-loglevel = {'-v': logging.INFO,
-            '--v': logging.DEBUG}.get(vflag, logging.WARNING)
-logformat = '%(levelname)s %(module)s %(lineno)s %(message)s' \
-            if loglevel < logging.WARNING else '%(message)s'
-logging.basicConfig(file=sys.stdout, format=logformat, level=loglevel)
 
 # Fix for `setup.py test`
 # See http://bugs.python.org/issue15881
@@ -69,9 +59,9 @@ setup(name='deenurp',
       version=version.version(),
       package_data={'deenurp': ['data/*', 'test/data/*']},
       entry_points={
-          'console_scripts': {'deenurp = deenurp.scripts.deenurp:main'}},
+          'console_scripts': {'deenurp = deenurp:main'}},
       install_requires=install_requires,
       cmdclass={'audit': run_audit},
       test_suite='deenurp.test.suite',
-      packages=find_packages()
+      packages=find_packages(exclude=['tests'])
       )
