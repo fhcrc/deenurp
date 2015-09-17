@@ -229,4 +229,5 @@ def gbfullfetch(ids, **args):
     Simple wrapper to utilize efetch while returning
     None for seq_start and seq_stop
     """
-    return tuple((records, None, None) for records in efetch(ids, **args))
+
+    return [(record, None, None) for record in efetch(ids, **args)]
