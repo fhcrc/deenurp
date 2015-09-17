@@ -22,7 +22,7 @@ class Counter(object):
 
     """
     Count objects processed in iterable. By default, progress is written to
-    stderr every 1000 items.
+    stderr every 0.3 seconds of work.
     """
 
     def __init__(self, iterable, stream=sys.stderr, report_every=0.3,
@@ -196,7 +196,7 @@ def cd(path):
         os.chdir(curdir)
 
 
-def file_opener(mode='r'):
+def file_opener(mode='r', buffering=-1):
     """
     Returns a function that behaves similarly to ``open(...)``,
     but opens compressed files for certain matching extensions, currently
@@ -210,11 +210,11 @@ def file_opener(mode='r'):
         elif f == '-':
             out = sys.stdin if 'r' in mode else sys.stdout
         elif f.endswith('.bz2'):
-            out = bz2.BZ2File(f, mode)
+            out = bz2.BZ2File(f, mode=mode, buffering=buffering)
         elif f.endswith('.gz'):
-            out = gzip.open(f, mode)
+            out = gzip.open(f, mode=mode)
         else:
-            out = open(f, mode)
+            out = open(f, mode=mode, buffering=buffering)
         return out
 
     return open_file
