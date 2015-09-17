@@ -14,14 +14,12 @@
 #    along with Entrez.py.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-NCBI Entrez tool for downloading nucleotide Genbank or Accession numbers
-given list of accession numbers, GI numbers or esearch -term.  Provides
-multiprocessing and record chunking.
+NCBI Entrez tool for downloading nucleotide Accession numbers
+given esearch -term.  Provides multiprocessing and record chunking.
 
 general rules: http://www.ncbi.nlm.nih.gov/books/NBK25497/
 esearch and efetch: http://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4
 sequence identifiers: http://www.ncbi.nlm.nih.gov/genbank/sequenceids/
-feature tables: http://www.ncbi.nlm.nih.gov/projects/Sequin/table.html
 http retrying: https://pypi.python.org/pypi/retrying
 """
 
@@ -83,12 +81,8 @@ def action(args):
     ids = entrez.esearch(args.term, **search_args)
     ids = itertools.islice(ids, args.max_records)
     id_chunks = (chunk for chunk in util.chunker(ids, chunksize))
-    fetch_args = dict(db='nucleotide',
-                      retry=args.retry,
-                      rettype='acc',
-                      retmax=chunksize,
-                      retmode='text',
-                      complexity=1)
+    fetch_args = dict(db='nucleotide', retry=args.retry, rettype='acc',
+                      retmax=chunksize, retmode='text', complexity=1)
     func = functools.partial(entrez.efetch, **fetch_args)
     pool = multiprocessing.Pool(processes=args.threads)
     for versions in pool.imap_unordered(func, id_chunks):
