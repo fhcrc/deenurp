@@ -3,7 +3,10 @@ filters by length and percent ambiguity.
 
 partions: named, unnamed, types, published
 
+TODO: write out records dropped with deduplication to another csv
 """
+import hashlib
+
 from Bio import SeqIO
 
 from deenurp.util import Counter, file_opener, read_csv
@@ -24,6 +27,11 @@ def build_parser(p):
         '--references',
         metavar='CSV',
         help='csv file with columns: version,pubmed_id')
+
+    # options
+    p.add_argument(
+        '--deduplicate-group',
+        help='deduplicate sequences on seq_info fields')
 
     # outputs
     info_outs = p.add_argument_group('outputs for seq_info\'s')
@@ -89,8 +97,30 @@ def build_parser(p):
 
 def action(args):
     # load seq_info
-    seq_info = read_csv(args.seqinfo)
-    seq_info = seq_info.set_index('id')
+    seq_info = read_csv(args.seqinfo, dtype=str).set_index('seqname')
+
+    if args.deduplicate_group:
+        group_cols = args.deduplicate_group.split(',')
+        with args.fasta as fasta:
+            """
+            read in fasta file and generate the hash for deduplication later
+            """
+            for seq in SeqIO.parse(fasta, 'fasta'):
+                if seq.name in seq_info.index:
+                    checksum = hashlib.sha1(str(seq.seq).lower()).hexdigest()
+                    seq_info.loc[seq.name, 'hash'] = checksum
+
+        def dedup_seqs(df):
+            """
+            sort by is_type and taxid_classified in non ascending order
+            (True first). Then we will drop duplicates taking the
+            *first* instance.
+            """
+            df = df.sort(
+                columns=['is_type', 'taxid_classified'], ascending=False)
+            return df.drop_duplicates(subset=['hash'], take_last=False)
+
+        seq_info = seq_info.groupby(by=group_cols).apply(dedup_seqs)
 
     # raw min_length filtering
     if args.min_length:
