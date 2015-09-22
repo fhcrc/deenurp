@@ -55,6 +55,9 @@ def action(args):
             '--top_hits_only',
             '--quiet']
 
+    if args.threads:
+        prog.extend(['--threads', args.threads])
+
     if args.out_notmatched:
         prog.extend(['--notmatched', args.out_notmatched])
 
