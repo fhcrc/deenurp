@@ -128,8 +128,9 @@ def efetch(ids, retry=0, **args):
     while ids[head:tail]:
         try:
             records.extend(get_records(ids[head:tail]))
-        except HTTPError as err:
-            log.error('{}, no results found.'.format(err))
+        except Exception as err:
+            log.error('{} {}'.format(err, ids))
+            raise
         head = tail
         tail += args['retmax']
 
