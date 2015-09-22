@@ -80,12 +80,12 @@ def setup_logging(namespace):
         3: logging.DEBUG,
     }.get(namespace.verbosity, logging.DEBUG)
 
-    if namespace.verbosity > 1:
-        logformat = '%(levelname)s %(module)s %(lineno)s %(message)s'
-    else:
-        logformat = '%(message)s'
+    log_format = '%(asctime)s %(levelname)s %(lineno)s %(message)s'
+    datefmt = '%Y-%m-%d %H:%M:%S'
 
-    logging.basicConfig(stream=namespace.log, format=logformat, level=loglevel)
+    logging.basicConfig(stream=namespace.log, format=log_format,
+                        level=loglevel, log_format=log_format,
+                        datefmt=datefmt)
 
 
 def parse_version(parser):
