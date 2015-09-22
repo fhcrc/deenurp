@@ -87,5 +87,4 @@ def action(args):
             SeqIO.write([record], out, 'fasta')
 
     if args.out_csv:
-        columns.remove('qstrand')
-        vsearch.to_csv(args.out_csv, columns=columns)
+        vsearch.to_csv(args.out_csv, columns=['target', 'tilo', 'tihi'])
