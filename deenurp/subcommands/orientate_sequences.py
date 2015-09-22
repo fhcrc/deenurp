@@ -35,7 +35,7 @@ def build_parser(parser):
                       help='[stdout]')
     outs.add_argument('--out_csv',
                       metavar='csv',
-                      help='output csv with columns query,target,tilo,tihi')
+                      help='output csv with columns query,target,id,tilo,tihi')
     outs.add_argument('--out_notmatched',
                       metavar='fasta',
                       help='seqnames that did not match tseqs at id threshold')
@@ -43,8 +43,8 @@ def build_parser(parser):
 
 
 def action(args):
-    columns = ['query', 'target', 'qstrand', 'tilo', 'tihi']
-    dtype = dict(zip(columns, [str, str, str, int, int]))
+    columns = ['query', 'target', 'qstrand', 'id', 'tilo', 'tihi']
+    dtype = dict(zip(columns, [str, str, str, float, int, int]))
 
     prog = ['vsearch', '--usearch_global', args.qseqs,
             '--db', args.tseqs,
@@ -87,4 +87,4 @@ def action(args):
             SeqIO.write([record], out, 'fasta')
 
     if args.out_csv:
-        vsearch.to_csv(args.out_csv, columns=['target', 'tilo', 'tihi'])
+        vsearch.to_csv(args.out_csv, columns=['target', 'id', 'tilo', 'tihi'])
