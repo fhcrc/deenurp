@@ -15,6 +15,7 @@ import functools
 import itertools
 import logging
 import multiprocessing
+import os
 import re
 import sqlalchemy
 
@@ -45,15 +46,12 @@ def build_parser(parser):
     # outs
     parser.add_argument('fasta_out',
                         metavar='FASTA',
-                        type=util.file_opener(mode='w'),
                         help='[stdout]')
     parser.add_argument('info_out',
                         metavar='CSV',
-                        type=util.file_opener(mode='w'),
                         help='write seq_info file')
-    parser.add_argument('--refs-out',
+    parser.add_argument('refs_out',
                         metavar='CSV',
-                        type=util.file_opener(mode='w'),
                         help='output references')
 
     parser.add_argument('--taxonomy',
@@ -149,7 +147,11 @@ def species_is_classified(tax_id, taxonomy):
     """
     return is_valid from ncbi taxonomy
     """
-    tax_id, is_valid, parent_id, rank = fetch_tax_info(tax_id, taxonomy)
+    res = fetch_tax_info(tax_id, taxonomy)
+    if not res:
+        return False
+
+    tax_id, is_valid, parent_id, rank = res
     if rank == 'species':
         return is_valid
     elif tax_id == parent_id:
@@ -277,12 +279,44 @@ def parse_references(record):
     return references
 
 
+def write_or_append(info_out, refs_out, fasta_out):
+    if os.path.isfile(info_out):
+        log.info('{} exists, appending new results'.format(info_out))
+        info_out = csv.DictWriter(
+            open(info_out, 'a'),
+            fieldnames=seq_info_columns,
+            extrasaction='ignore')
+    else:
+        info_out = csv.DictWriter(
+            open(info_out, 'w'),
+            fieldnames=seq_info_columns,
+            extrasaction='ignore')
+        info_out.writeheader()
+
+    if os.path.isfile(refs_out):
+        log.info('{} exists, appending new results'.format(refs_out))
+        refs_out = csv.DictWriter(
+            open(refs_out, 'a'), fieldnames=ref_info_columns)
+    else:
+        refs_out = csv.DictWriter(
+            open(refs_out, 'w'), fieldnames=ref_info_columns)
+        refs_out.writeheader()
+
+    if os.path.isfile(fasta_out):
+        log.info('{} exists, appending new results'.format(fasta_out))
+        fasta_out = open(fasta_out, 'a')
+    else:
+        fasta_out = open(fasta_out, 'w')
+
+    return info_out, refs_out, fasta_out
+
+
 def action(args):
     entrez.set_email(args.email)
 
     chunksize = min(entrez.RETMAX, args.chunksize)  # 10k is ncbi max right now
 
-    ids = (i.strip() for i in args.ids)  # remove newlines, etc
+    ids = (i.strip() for i in args.ids)  # remove newlines
     ids = itertools.islice(ids, args.max_records)
 
     # take latest version accession
@@ -316,20 +350,16 @@ def action(args):
     gbs = itertools.chain.from_iterable(pool.imap_unordered(func, ids))
     # gbs = itertools.chain.from_iterable(itertools.imap(func, ids))  # testing
 
-    info_out = csv.DictWriter(
-        args.info_out, fieldnames=seq_info_columns, extrasaction='ignore')
-    info_out.writeheader()
-    if args.refs_out:
-        refs_out = csv.DictWriter(args.refs_out, fieldnames=ref_info_columns)
-        refs_out.writeheader()
+    info_out, refs_out, fasta_out = write_or_append(
+        args.info_out, args.refs_out, args.fasta_out)
 
     for g, seq_start, seq_stop in util.Counter(gbs, report_every=0.01):
         record = parse_record(
             g, taxonomy=taxonomy, seq_start=seq_start, seq_stop=seq_stop)
-        args.fasta_out.write('>{seqname}\n{seq}\n'.format(**record))
+        fasta_out.write('>{seqname}\n{seq}\n'.format(**record))
         info_out.writerow(record)
-        if args.refs_out:
-            # add version
-            version = record['version']
-            refs = [dict(version=version, **r) for r in parse_references(g)]
-            refs_out.writerows(refs)
+
+        version = record['version']
+        refs = [dict(version=version, **r)  # add version
+                for r in parse_references(g)]
+        refs_out.writerows(refs)
