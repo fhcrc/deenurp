@@ -15,8 +15,11 @@ log = logging.getLogger(__name__)
 
 
 def build_parser(parser):
-    parser.add_argument('qseqs', metavar='fasta', help='input sequences')
-    parser.add_argument('tseqs', metavar='fasta', help='target sequences')
+    ins = parser.add_argument_group(title='inputs')
+    ins.add_argument('qseqs', metavar='fasta', help='input sequences')
+    ins.add_argument('tseqs', metavar='fasta', help='target sequences')
+    ins.add_argument('--seq_info',
+                     help='will split the seq_info file if provided')
 
     parser.add_argument('--threads',
                         metavar='NUM',
@@ -39,7 +42,24 @@ def build_parser(parser):
     outs.add_argument('--out_notmatched',
                       metavar='fasta',
                       help='seqnames that did not match tseqs at id threshold')
+    outs.add_argument('--out_notmatched_info',
+                      help='seq_info file of notmatched seqs')
+    outs.add_argument('--out_seq_info',
+                      help='seq_info file with notmatched seqs removed')
+
     return parser
+
+
+def read_seq_info(seq_info):
+    to_bool = lambda yes: yes in {'yes'}
+    info_dtypes = {'seqname': str, 'tax_id': str, 'tax_name': str,
+                   'parent_id': str, 'rank': str, 'new_node': bool,
+                   'accession': str, 'ambig_count': int}
+    seq_info_df = pandas.read_csv(
+        seq_info, dtype=info_dtypes,
+        converters={'new_node': to_bool},
+        index_col='seqname')
+    return seq_info_df
 
 
 def action(args):
@@ -56,7 +76,7 @@ def action(args):
             '--quiet']
 
     if args.threads:
-        prog.extend(['--threads', args.threads])
+        prog.extend(['--threads', str(args.threads)])
 
     if args.out_notmatched:
         prog.extend(['--notmatched', args.out_notmatched])
@@ -88,3 +108,12 @@ def action(args):
 
     if args.out_csv:
         vsearch.to_csv(args.out_csv, columns=['target', 'id', 'tilo', 'tihi'])
+
+    if args.seq_info and (args.out_seq_info or args.out_notmatched_info):
+        seq_info = read_seq_info(args.seq_info)
+        matched = seq_info.index.isin(vsearch.index)
+        if args.out_seq_info:
+            seq_info[matched].to_csv(args.out_seq_info)
+
+        if args.out_notmatched_info:
+            seq_info[~matched].to_csv(args.out_notmatched_info)
