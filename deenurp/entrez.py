@@ -96,26 +96,18 @@ def efetch(ids, retry=0, **args):
     occassionally and unexpectedly return an http 503 error when doing so.
     """
 
-    def not_bad_requests(exception):
+    def print_retry_message(exception):
         """
         http exceptions: http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
         retrying api: https://pypi.python.org/pypi/retrying
-
-        No retry if Bad Request if returned.
         """
 
-        bad_requests = ((isinstance(exception, HTTPError) and
-                         exception.getcode() == 400) or
-                        isinstance(exception, ValueError))
+        seconds = float(retry) / 1000
+        msg = '{}, retrying in {} seconds...'.format(exception, seconds)
+        log.error(msg)
+        return True
 
-        if not bad_requests:
-            seconds = float(retry) / 1000
-            msg = '{}, retrying in {} seconds...'.format(exception, seconds)
-            log.error(msg)
-
-        return not bad_requests
-
-    @retrying.retry(retry_on_exception=not_bad_requests, wait_fixed=retry)
+    @retrying.retry(retry_on_exception=print_retry_message, wait_fixed=retry)
     def get_records(ids=[]):
         log.info(entrez_pprint('efetch', '-id', liststr(ids), **args))
         records = parse(Entrez.efetch(id=ids, **args), args['rettype'])
@@ -126,11 +118,7 @@ def efetch(ids, retry=0, **args):
     records = []
 
     while ids[head:tail]:
-        try:
-            records.extend(get_records(ids[head:tail]))
-        except Exception as err:
-            log.error('{} {}'.format(err, ids))
-            raise
+        records.extend(get_records(ids[head:tail]))
         head = tail
         tail += args['retmax']
 
