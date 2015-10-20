@@ -39,8 +39,7 @@ fi
 mkdir -p src
 
 VENV_VERSION=1.11.6
-PPLACER_BINARY_VERSION=1.1
-PPLACER_BUILD=1.1.alpha16
+PPLACER_BUILD=1.1.alpha17
 INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
@@ -84,7 +83,8 @@ source $venv/bin/activate
 venv=$VIRTUAL_ENV
 
 # install pplacer and accompanying python scripts
-PPLACER_TGZ=pplacer-v${PPLACER_BINARY_VERSION}-Linux.tar.gz
+PPLACER_DIR=pplacer-Linux-v${PPLACER_BUILD}
+PPLACER_ZIP=${PPLACER_DIR}.zip
 
 pplacer_is_installed(){
     $venv/bin/pplacer --version 2> /dev/null | grep -q "$PPLACER_BUILD"
@@ -96,15 +96,15 @@ if pplacer_is_installed; then
 else
     mkdir -p src && \
 	(cd src && \
-	wget -N http://matsen.fhcrc.org/pplacer/builds/$PPLACER_TGZ && \
-	tar -xf $PPLACER_TGZ && \
-	cp $(srcdir $PPLACER_TGZ)/{pplacer,guppy,rppr} $venv/bin && \
-	pip install -U $(srcdir $PPLACER_TGZ)/scripts)
+	wget -N https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP && \
+	unzip $PPLACER_ZIP && \
+	cp $PPLACER_DIR/{pplacer,guppy,rppr} $venv/bin && \
+	pip install -U $PPLACER_DIR/scripts)
     # confirm that we have installed the requested build
     if ! pplacer_is_installed; then
 	echo -n "Error: you requested pplacer build $PPLACER_BUILD "
 	echo "but $($venv/bin/pplacer --version) was installed."
-	echo "Try removing src/$PPLACER_TGZ first."
+	echo "Try removing src/$PPLACER_ZIP first."
 	exit 1
     fi
 fi
@@ -201,6 +201,7 @@ fi
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
+  pip wheel "$line"
   pip install "$line"
 done < "$DEENURP/requirements.txt"
 

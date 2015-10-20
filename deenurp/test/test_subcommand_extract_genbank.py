@@ -1,5 +1,7 @@
 """
 Test extract-genbank output, records.csv and references.csv
+
+FIXME:
 """
 
 import os
@@ -7,7 +9,7 @@ import unittest
 
 from cStringIO import StringIO
 
-from deenurp.subcommands import extract_genbank
+from deenurp.subcommands import ncbi_extract_genbank
 
 
 def data_path(*args):
@@ -32,7 +34,7 @@ class ExtractGenbankTestCase(unittest.TestCase):
             references_out = None
             database = None
 
-        extract_genbank.action(args)
+        ncbi_extract_genbank.action(args)
 
         self.assertEqual(open(test_fasta).read(),
                          args.fasta_out.getvalue())
@@ -54,7 +56,7 @@ class ExtractGenbankTestCase(unittest.TestCase):
             references_out = StringIO()
             database = None
 
-        extract_genbank.action(args)
+        ncbi_extract_genbank.action(args)
 
         self.assertEqual(open(test_reference).read(),
                          args.references_out.getvalue())
@@ -74,7 +76,7 @@ class ExtractGenbankTestCase(unittest.TestCase):
             references_out = StringIO()
             database = None
 
-        extract_genbank.action(args)
+        ncbi_extract_genbank.action(args)
 
         self.assertEqual(next(open(test_seqinfo)),
                          args.seqinfo_out.getvalue())

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
+import deenurp
 import sys
-
-from deenurp.scripts import deenurp
 
 sys.exit(deenurp.main())

@@ -4,6 +4,8 @@
 
 0.1.2-dev
 =========
+* bumping pplacer support to v1.1.alpha17
+* adding pandas support to versions 0.17.*
 * ``deenurp orientate_sequences`` takes a training set (data/types.fasta) and aligns sequences reverse complementing when necessary (issue: 34)
 * travis caching is setup for pip installs (issue: 22)
 * fixed pep 440 versioning bug when installing and running unittests (issue: 31)
