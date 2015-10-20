@@ -53,6 +53,10 @@ def build_parser(parser):
     parser.add_argument('refs_out',
                         metavar='CSV',
                         help='output references')
+    parser.add_argument('--no-features',
+                        type=util.file_opener(mode='a'),
+                        help=('output version numbers of records with no '
+                              'matching features'))
 
     parser.add_argument('--taxonomy',
                         metavar='DB',
@@ -267,15 +271,16 @@ def parse_record(record, taxonomy=None, seq_start=None,
 
 def parse_references(record):
     references = []
-    for r in record.annotations['references']:
-        references.append(
-            dict(title=r.title,
-                 authors=r.authors,
-                 comment=r.comment,
-                 consrtm=r.consrtm,
-                 journal=r.journal,
-                 medline_id=r.medline_id,
-                 pubmed_id=r.pubmed_id))
+    if 'references' in record.annotations:
+        for r in record.annotations['references']:
+            references.append(
+                dict(title=r.title,
+                     authors=r.authors,
+                     comment=r.comment,
+                     consrtm=r.consrtm,
+                     journal=r.journal,
+                     medline_id=r.medline_id,
+                     pubmed_id=r.pubmed_id))
     return references
 
 
@@ -347,19 +352,25 @@ def action(args):
         func = functools.partial(entrez.gbfullfetch, **fetch_args)
 
     pool = multiprocessing.Pool(processes=args.threads)
-    gbs = itertools.chain.from_iterable(pool.imap_unordered(func, ids))
-    # gbs = itertools.chain.from_iterable(itertools.imap(func, ids))  # testing
+    records = pool.imap_unordered(func, ids)
+    # records = itertools.imap(func, ids)
 
     info_out, refs_out, fasta_out = write_or_append(
         args.info_out, args.refs_out, args.fasta_out)
 
-    for g, seq_start, seq_stop in util.Counter(gbs, report_every=0.01):
-        record = parse_record(
-            g, taxonomy=taxonomy, seq_start=seq_start, seq_stop=seq_stop)
-        fasta_out.write('>{seqname}\n{seq}\n'.format(**record))
-        info_out.writerow(record)
+    for gbs, no_features in records:
+        for g, seq_start, seq_stop in gbs:
+            record = parse_record(
+                g, taxonomy=taxonomy, seq_start=seq_start, seq_stop=seq_stop)
+            fasta_out.write('>{seqname}\n{seq}\n'.format(**record))
+            info_out.writerow(record)
 
-        version = record['version']
-        refs = [dict(version=version, **r)  # add version
-                for r in parse_references(g)]
-        refs_out.writerows(refs)
+            version = record['version']
+            refs = [dict(version=version, **r)  # add version
+                    for r in parse_references(g)]
+            refs_out.writerows(refs)
+
+        if no_features:
+            log.warn('no features found ' + entrez.liststr(no_features))
+            if args.no_features:
+                args.no_features.write('\n'.join(no_features) + '\n')
