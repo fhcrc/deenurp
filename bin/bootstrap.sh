@@ -202,7 +202,7 @@ fi
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
   pip wheel --verbose "$line" # --verbose helps with the travis test timeouts
-  pip install --verbose "$line"
+  pip install --verbose --upgrade "$line"
 done < "$DEENURP/requirements.txt"
 
 pip install -e "$DEENURP"
