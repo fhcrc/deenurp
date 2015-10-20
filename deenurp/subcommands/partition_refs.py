@@ -97,7 +97,8 @@ def build_parser(p):
 
 def action(args):
     # load seq_info
-    seq_info = read_csv(args.seqinfo, dtype=str).set_index('seqname')
+    dtype = {'tax_id': str, 'gi': str}
+    seq_info = read_csv(args.seqinfo, dtype=dtype).set_index('seqname')
 
     if args.deduplicate_group:
         group_cols = args.deduplicate_group.split(',')
