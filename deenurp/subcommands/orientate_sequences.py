@@ -18,7 +18,10 @@ def build_parser(parser):
     ins = parser.add_argument_group(title='inputs')
     ins.add_argument('qseqs', metavar='fasta', help='input sequences')
     ins.add_argument('tseqs', metavar='fasta', help='target sequences')
-    ins.add_argument('--seq_info',
+
+    opt = parser.add_argument_group(title='optional inputs')
+    opt.add_argument('--seq_info',
+                     metavar='csv',
                      help='will split the seq_info file if provided')
 
     parser.add_argument('--threads',
@@ -26,9 +29,9 @@ def build_parser(parser):
                         type=int,
                         help='number of available threads [all]')
     parser.add_argument('--id',
-                        default=.8,
+                        default=0.80,
                         type=float,
-                        help='alignment identity percent')
+                        help='alignment identity percent [%(default)s]')
 
     # outputs
     outs = parser.add_argument_group(title='outputs')
@@ -51,13 +54,12 @@ def build_parser(parser):
 
 
 def read_seq_info(seq_info):
-    to_bool = lambda yes: yes in {'yes'}
     info_dtypes = {'seqname': str, 'tax_id': str, 'tax_name': str,
                    'parent_id': str, 'rank': str, 'new_node': bool,
                    'accession': str, 'ambig_count': int}
     seq_info_df = pandas.read_csv(
         seq_info, dtype=info_dtypes,
-        converters={'new_node': to_bool},
+        true_values=['yes'], false_values=['no'],
         index_col='seqname')
     return seq_info_df
 
