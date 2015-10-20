@@ -23,6 +23,7 @@ def liststr(l):
     """
     Concise string representation of list.
     """
+    l = list(l)
     s = ''
     if len(l) == 0:
         s = 'None'
@@ -111,6 +112,7 @@ def efetch(ids, retry=0, **args):
     def get_records(ids=[]):
         log.info(entrez_pprint('efetch', '-id', liststr(ids), **args))
         records = parse(Entrez.efetch(id=ids, **args), args['rettype'])
+        log.info('received {} {}'.format(args['rettype'], liststr(ids)))
         return records
 
     head, tail = 0, args['retmax']
@@ -210,7 +212,12 @@ def ffetch(features, ids, **args):
         fetched = efetch([accession], seq_start=seq_start,
                          seq_stop=seq_stop, strand=strand, **args)
         records.append((fetched[0], seq_start, seq_stop))
-    return records
+
+        # remove ids with features
+        if accession in ids:
+            ids.remove(accession)
+
+    return records, ids  # ids = no features
 
 
 def gbfullfetch(ids, **args):
@@ -219,4 +226,4 @@ def gbfullfetch(ids, **args):
     None for seq_start and seq_stop
     """
 
-    return [(record, None, None) for record in efetch(ids, **args)]
+    return [(record, None, None) for record in efetch(ids, **args)], []
