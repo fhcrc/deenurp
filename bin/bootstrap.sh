@@ -201,8 +201,8 @@ fi
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
-  pip wheel "$line"
-  pip install "$line"
+  pip wheel --verbose "$line" # --verbose helps with the travis test timeouts
+  pip install --verbose "$line"
 done < "$DEENURP/requirements.txt"
 
 pip install -e "$DEENURP"
