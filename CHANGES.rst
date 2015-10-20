@@ -2,9 +2,16 @@
  Changes for deenurp
 =====================
 
-0.1.2-HEAD
-==========
+0.1.2-dev
+=========
+* bumping pplacer support to v1.1.alpha17
+* adding pandas support to versions 0.17.*
+* ``deenurp orientate_sequences`` takes a training set (data/types.fasta) and aligns sequences reverse complementing when necessary (issue: 34)
+* travis caching is setup for pip installs (issue: 22)
+* fixed pep 440 versioning bug when installing and running unittests (issue: 31)
 
+0.1.2
+=====
 * ``deenurp rdp_extract_sequences`` now updates old tax_ids instead of dropping them (issue: 27)
 * ``deenurp rdp_extract_sequences`` creates new column taxid_classified instead of dropping tax_ids of unclassified sequences (issue: 28)
 * function tax_of_genbank no longer returns None if string 'uncultured bacterium' is in the organism name (issue: 29)

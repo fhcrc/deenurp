@@ -6,8 +6,10 @@ import bz2
 import contextlib
 import functools
 import gzip
+import itertools
 import os
 import os.path
+import pandas
 import shutil
 import sys
 import time
@@ -20,7 +22,7 @@ class Counter(object):
 
     """
     Count objects processed in iterable. By default, progress is written to
-    stderr every 1000 items.
+    stderr every 0.3 seconds of work.
     """
 
     def __init__(self, iterable, stream=sys.stderr, report_every=0.3,
@@ -194,20 +196,44 @@ def cd(path):
         os.chdir(curdir)
 
 
-def file_opener(mode='r'):
+def file_opener(mode='r', buffering=-1):
     """
     Returns a function that behaves similarly to ``open(...)``,
     but opens compressed files for certain matching extensions, currently
     ``.bz2`` is treated as bzip2-compression, and ``.gz`` is treated as gzip.
     """
-    exts = {'.bz2': bz2.BZ2File,
-            '.gz': gzip.open}
 
-    def open_file(s):
-        ext = os.path.splitext(s)[1]
-        return exts.get(ext, open)(s, mode=mode)
+    def open_file(f):
+        out = None
+        if f is sys.stdout or f is sys.stdin:
+            out = f
+        elif f == '-':
+            out = sys.stdin if 'r' in mode else sys.stdout
+        elif f.endswith('.bz2'):
+            out = bz2.BZ2File(f, mode=mode, buffering=buffering)
+        elif f.endswith('.gz'):
+            out = gzip.open(f, mode=mode)
+        else:
+            out = open(f, mode=mode, buffering=buffering)
+        return out
 
     return open_file
+
+
+def read_csv(fn, compression=None, **kwargs):
+    """Read a csv file using pandas.read_csv with compression defined by
+    the file suffix unless provided.
+    """
+
+    if compression is not None or fn in [sys.stdin, '-']:
+        compression = compression
+    else:
+        suffixes = {'.bz2': 'bz2', '.gz': 'gzip'}
+        compression = compression or suffixes.get(os.path.splitext(fn)[-1])
+
+    kwargs['compression'] = compression
+
+    return pandas.read_csv(fn, **kwargs)
 
 
 def which(executable_name, dirs=None):
@@ -235,30 +261,14 @@ def require_executable(executable_name):
         raise MissingDependencyError(executable_name)
 
 
-def accession_version_of_genbank(record):
+def chunker(iterable, n, fillvalue=None):
     """
-    Return the accession and version of a Bio.SeqRecord.SeqRecord
+    Continuously chunk an iterator n items at a time
     """
-    annotations = record.annotations
-    accession = annotations.get('accessions', [''])[0]
-    if accession:
-        version = annotations.get('sequence_version', 1)
-        version = '{}.{}'.format(accession, version)
-    else:
-        version = ''
-    return accession, version
 
-
-def tax_of_genbank(gb):
-    """
-    Get the tax id from a genbank record, returning None if no taxonomy is
-    available.
-    """
-    # Check for bad name
-    try:
-        source = next(i for i in gb.features if i.type == 'source')
-        taxon = next(i[6:] for i in source.qualifiers.get('db_xref', [])
-                     if i.startswith('taxon:'))
-        return taxon
-    except StopIteration:
-        return
+    while True:
+        chunk = list(itertools.islice(iterable, n))
+        if chunk:
+            yield chunk
+        else:
+            return

@@ -1,24 +1,6 @@
-import subprocess
 import os
 import sys
-import re
-import logging
-
-subprocess.call(
-    ('mkdir -p deenurp/data && '
-     'git describe --tags --dirty > deenurp/data/ver.tmp'
-     '&& mv deenurp/data/ver.tmp deenurp/data/ver '
-     '|| rm -f deenurp/data/ver.tmp'),
-    shell=True, stderr=open(os.devnull, "w"))
-
-from deenurp import __version__
-
-# set up logging
-vflag = ([f for f in sys.argv if re.search('^-v{1,4}', f)] or ['-'])[0]
-loglevel = {'-v': logging.INFO, '--v': logging.DEBUG}.get(vflag, logging.WARNING)
-logformat = '%(levelname)s %(module)s %(lineno)s %(message)s' \
-            if loglevel < logging.WARNING else '%(message)s'
-logging.basicConfig(file=sys.stdout, format=logformat, level=loglevel)
+import version
 
 # Fix for `setup.py test`
 # See http://bugs.python.org/issue15881
@@ -37,6 +19,7 @@ except ImportError:
 
 
 class run_audit(Command):
+
     """Audits source code using PyFlakes for following issues:
         - Names which are used but not defined or used before they are defined.
         - Names which are redefined without having been used.
@@ -73,10 +56,12 @@ class run_audit(Command):
 install_requires = []
 
 setup(name='deenurp',
-      version=__version__,
+      version=version.version(),
       package_data={'deenurp': ['data/*', 'test/data/*']},
-      entry_points={'console_scripts': {'deenurp = deenurp.scripts.deenurp:main'}},
+      entry_points={
+          'console_scripts': {'deenurp = deenurp:main'}},
       install_requires=install_requires,
       cmdclass={'audit': run_audit},
       test_suite='deenurp.test.suite',
-      packages=find_packages())
+      packages=find_packages(exclude=['tests'])
+      )

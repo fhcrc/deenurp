@@ -9,6 +9,6 @@ DATA=../../deenurp/test/data
 mkdir -p output
 
 for aligner in cmalign muscle vsearch; do
-    time $DEENURP pairwise-distances --aligner $aligner \
+    time $DEENURP pairwise_distances --aligner $aligner \
 	 $DATA/test_db_head.fasta output/${aligner}.csv
 done
