@@ -48,6 +48,11 @@ specified by ``--filtered-seqinfo`` contains the filtered subset of
 * x, y - coordinates calculated by multidimensional scaling of the
   pairwise distance matrix.
 
+This can all take a while if there are many sequences. If a pool of
+candidate sequences needs to be updated, use ``--previous-details`` to
+provide the output of ``--detailed-seqinfo`` from a previous run to
+avoid re-analyzing tax_ids represented by the same set of sequences.
+
 """
 
 import argparse
@@ -84,15 +89,22 @@ def build_parser(p):
     p.add_argument(
         'taxonomy', help="""Taxtable""", type=argparse.FileType('r'))
 
+    input_group = p.add_argument_group('other inputs')
+    input_group.add_argument(
+        '--previous-details', metavar='FILE',
+        help="""Output of --detailed-seqinfo from a previous run. If provided, use
+        the previous results for any tax_ids represented by the same set of
+        sequences in both sequence_file and this file.""")
+
     output_group = p.add_argument_group('output options')
     output_group.add_argument(
         'output_fp', help="""Destination for sequences""",
-        type=argparse.FileType('w'))
+        type=argparse.FileType('w'), metavar='FILE')
     output_group.add_argument(
-        '--filtered-seqinfo', type=argparse.FileType('w'),
+        '--filtered-seqinfo', type=argparse.FileType('w'), metavar='FILE',
         help="""Path to write filtered sequence info""")
     output_group.add_argument(
-        '--detailed-seqinfo', type=argparse.FileType('w'),
+        '--detailed-seqinfo', type=argparse.FileType('w'), metavar='FILE',
         help="""Sequence info, including filtering details""")
 
     filter_group = p.add_argument_group('filtering options')
@@ -147,7 +159,7 @@ def build_parser(p):
 
     p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
                    help="""number of taxa to process concurrently (one
-                   process per multiple alignment)""")
+                   process per multiple alignment) [default %(default)s]""")
 
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
@@ -421,9 +433,16 @@ def action(a):
                                   'muscle': 'muscle',
                                   'vsearch': wrap.VSEARCH}[a.aligner]
 
-    outcomes = []  # accumulate DatFrame objects
-
     filter_rank_col = '{}_id'.format(a.filter_rank)
+
+    if a.previous_details:
+        dtype = {'seqname': str, 'tax_id': str, filter_rank_col: str}
+        # columns in output of `filter_worker`
+        filter_worker_cols = ['centroid', 'dist', 'is_out', 'seqname', 'x', 'y']
+        previous_details = pd.read_csv(
+            a.previous_details, dtype=dtype).groupby(filter_rank_col)
+
+    outcomes = []  # accumulate DatFrame objects
 
     # Sequences which are classified above the desired rank should just be kept
     names_above_rank = list(sequences_above_rank(taxonomy, a.filter_rank))
@@ -443,6 +462,11 @@ def action(a):
         for i, node in enumerate(nodes):
             seqs = frozenset(node.subtree_sequence_ids())
 
+            if a.previous_details:
+                prev_seqs = previous_details.get_group(node.tax_id)
+
+            # in each case, `f` is a Future returning a DataFrame (see
+            # filter_sequences)
             if not seqs:
                 logging.debug("No sequences for %s (%s)", node.tax_id, node.name)
                 continue
@@ -451,8 +475,11 @@ def action(a):
                               len(seqs), node.tax_id, node.name, a.rare_taxon_action)
                 f = executor.submit(mock_filter, seqs=list(seqs),
                                     keep=a.rare_taxon_action == KEEP)
+            elif a.previous_details and set(prev_seqs['seqname']) == seqs:
+                # use previous results
+                logging.info('using previous results for tax_id {}'.format(node))
+                f = executor.submit(lambda f: f, f=prev_seqs[filter_worker_cols])
             else:
-                # `f` is a DataFrame (output of filter_sequences)
                 f = executor.submit(
                     filter_worker,
                     tax_id=node.tax_id,
