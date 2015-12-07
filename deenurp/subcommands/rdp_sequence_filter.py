@@ -1,9 +1,11 @@
 """Splits RDP sequence file into named/unnamed sections,
-filters by length, percent ambiguity.
+filters by length, percent ambiguity. [DEPRECATED]
 
 Assumes sequences in fasta_file and records in seqinfo_file are in the
 same order.
 
+NOTE: this command is obsolete and unsupported.  To get support email
+crosenth@uw.edu
 """
 import csv
 import itertools

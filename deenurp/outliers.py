@@ -6,7 +6,6 @@ import os
 import logging
 import subprocess
 import tempfile
-import sys
 
 import numpy as np
 import pandas as pd
@@ -15,6 +14,7 @@ import scipy
 import scipy.cluster
 
 log = logging
+
 
 def read_dists(fobj):
     """
@@ -197,7 +197,7 @@ def find_cluster_medoids(X, clusters):
 
     return pd.DataFrame.from_items([
         ('cluster', uclusters), ('count', counts), ('medoid', medoids), ('dist', dists)
-    ]).sort('count', ascending=False)
+    ]).sort_values(by='count', ascending=False)
 
 
 def choose_clusters(df, min_size, max_dist):

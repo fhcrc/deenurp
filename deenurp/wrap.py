@@ -12,6 +12,9 @@ import subprocess
 import sys
 import re
 from distutils.version import LooseVersion
+from cStringIO import StringIO
+
+import pandas as pd
 
 from Bio import SeqIO
 import peasel
@@ -20,7 +23,7 @@ from taxtastic.refpkg import Refpkg
 from .util import (as_fasta, ntf, tempdir, nothing, maybe_tempfile,
                    which, require_executable, MissingDependencyError)
 
-CMALIGN_THREADS = 1
+CMALIGN_THREADS = 4
 
 MUSCLE_MAXITERS = 2
 
@@ -202,6 +205,26 @@ def _require_cmalign_11(cmalign='cmalign'):
         raise MissingDependencyError(msg)
 
 
+def cmalign_scores(text):
+    """
+    Parse stdout of cmalign into a data.frame
+    """
+
+    lines = []
+    for line in text.splitlines():
+        if line.startswith('# idx'):
+            line = ' ' + line[1:].replace(' (Mb)', '')
+            # replace single spaces
+            line = re.sub(r'(?<! ) (?! )', '_', line)
+        elif line.startswith('#'):
+            continue
+        lines.append(line)
+
+    buf = StringIO('\n'.join(lines))
+    tab = pd.read_fwf(buf, index_col=1)
+    return tab
+
+
 def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
     cmd = ['cmalign']
     require_executable(cmd[0])
@@ -212,11 +235,17 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
     cmd.extend(['-o', output_file, cm, input_file])
     logging.debug(' '.join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    logging.debug(p.stdout.read().strip())
+    output = p.stdout.read().strip()
+    logging.debug(output)
+
+    scores = cmalign_scores(output)
+
     error = p.stderr.read().strip()
     if p.wait() != 0:
         # TODO: preserve output files (input_file, output_file)
         raise subprocess.CalledProcessError(p.returncode, error)
+
+    return scores
 
 
 def cmalign(sequences, output=None, cm=CM, cpu=CMALIGN_THREADS):
