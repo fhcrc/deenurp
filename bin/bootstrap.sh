@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Usage: [PYTHON=path/to/python] [DEENURP=path/to/deenurp] bootstrap.sh [virtualenv-name]
 #
 # Create a virtualenv, and install requirements to it.
@@ -11,10 +13,17 @@
 
 # Will attempt to install python packages from wheels if $PIP_FIND_LINKS is defined
 # and pip --use-wheel is specified
+
 # Will attempt to create wheels if $PIP_WHEEL_DIR is defined
 # see https://pip.pypa.io/en/latest/user_guide.html#environment-variables
 
-set -e
+# use values of $PIP_WHEEL_DIR and $PIP_FIND_LINKS from environment if
+# possible, otherwise use a location in src
+SRCDIR=$(readlink -f src)
+PIP_WHEEL_DIR=${PIP_WHEEL_DIR-$SRCDIR/cache/pip/wheels}
+PIP_FIND_LINKS=${PIP_FIND_LINKS-file://$PIP_WHEEL_DIR}
+
+mkdir -p $PIP_WHEEL_DIR
 
 srcdir(){
     tar -tf $1 | head -1
@@ -44,7 +53,7 @@ INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
-VSEARCH_VERSION=1.1.3
+VSEARCH_VERSION=1.9.5
 
 check_version(){
     # usage: check_version module version-string
@@ -170,10 +179,11 @@ if vsearch_is_installed; then
     $venv/bin/vsearch --version
 else
     (cd src && \
-	    wget -N https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64 && \
-	    mv vsearch-${VSEARCH_VERSION}-linux-x86_64 $venv/bin && \
-	    chmod +x $venv/bin/vsearch-${VSEARCH_VERSION}-linux-x86_64 && \
-	    ln -f $venv/bin/vsearch-${VSEARCH_VERSION}-linux-x86_64 $venv/bin/vsearch)
+	    wget -N https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
+	    tar -xf vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
+	    cp vsearch-${VSEARCH_VERSION}-linux-x86_64/bin/vsearch $venv/bin && \
+	    chmod +x $venv/bin/vsearch
+    )
 fi
 
 # install MUSCLE
@@ -193,16 +203,21 @@ else
 fi
 
 # install wheels library
-if [ -n "$PIP_WHEEL_DIR" ]; then 
-  pip install wheel
-  pip wheel wheel
-fi
+# if [ -n "$PIP_WHEEL_DIR" ]; then
+#   pip install wheel
+#   pip wheel wheel
+# fi
+
+# required to build and cache wheels - doing this greatly speeds up travis CI tests
+pip install -U pip
+pip install -U wheel
+pip wheel wheel
 
 # install python requirements; note that `pip install -r
 # requirements.txt` fails due to install-time dependencies.
 while read line; do
-  pip wheel --verbose "$line" # --verbose helps with the travis test timeouts
-  pip install --verbose --upgrade "$line"
+  pip wheel "$line" # --verbose helps with the travis test timeouts
+  pip install --upgrade "$line"
 done < "$DEENURP/requirements.txt"
 
 pip install -e "$DEENURP"

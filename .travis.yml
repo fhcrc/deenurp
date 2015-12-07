@@ -28,7 +28,7 @@ addons:
       - liblapack-dev
 
 install:
-  - bin/bootstrap.sh $VIRTUAL_ENV
+  - travis_wait "bin/bootstrap.sh $VIRTUAL_ENV"
 
 script:
   - python setup.py test
