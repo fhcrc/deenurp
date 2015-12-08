@@ -2,7 +2,7 @@
 
 set -e
 
-# Usage: [PYTHON=path/to/python] [DEENURP=path/to/deenurp] bootstrap.sh [virtualenv-name]
+# Usage: [PYTHON=path/to/python] [DEENURP=path/to/deenurp] bootstrap.sh
 #
 # Create a virtualenv, and install requirements to it.
 #
@@ -10,6 +10,8 @@ set -e
 # `PYTHON=path/to/python bootstrap.sh`
 # specify path to the deenurp source directory using
 # `DEENURP=path/to/deenurp bootstrap.sh`
+
+# installs deenurp and dependencies to $VIRTUAL_ENV if defined
 
 # Will attempt to install python packages from wheels if $PIP_FIND_LINKS is defined
 # and pip --use-wheel is specified
@@ -23,16 +25,19 @@ SRCDIR=$(readlink -f src)
 export PIP_WHEEL_DIR=${PIP_WHEEL_DIR-$SRCDIR/cache/pip/wheels}
 export PIP_FIND_LINKS=${PIP_FIND_LINKS-file://$PIP_WHEEL_DIR}
 
+mkdir -p src
 mkdir -p $PIP_WHEEL_DIR
 
 srcdir(){
     tar -tf $1 | head -1
 }
 
-if [[ -z $1 ]]; then
-    venv=$(basename $(pwd))-env
+if [[ -n "$1" ]]; then
+    venv="$1"
+elif [[ -n $VIRTUAL_ENV ]]; then
+    venv=$VIRTUAL_ENV
 else
-    venv=$1
+    venv=$(basename $(pwd))-env
 fi
 
 if [[ -z $PYTHON ]]; then
@@ -44,8 +49,6 @@ fi
 if [[ -z $DEENURP ]]; then
     DEENURP=$(cd $(dirname $BASH_SOURCE) && cd .. && pwd)
 fi
-
-mkdir -p src
 
 VENV_VERSION=1.11.6
 PPLACER_BUILD=1.1.alpha17
@@ -105,8 +108,8 @@ if pplacer_is_installed; then
 else
     mkdir -p src && \
 	(cd src && \
-	wget -N https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP && \
-	unzip $PPLACER_ZIP && \
+	wget -nc https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP && \
+	unzip -o $PPLACER_ZIP && \
 	cp $PPLACER_DIR/{pplacer,guppy,rppr} $venv/bin && \
 	pip install -U $PPLACER_DIR/scripts)
     # confirm that we have installed the requested build
@@ -123,7 +126,7 @@ INFERNAL=infernal-${INFERNAL_VERSION}-linux-intel-gcc
 
 if [ ! -f $venv/bin/cmalign ]; then
     (cd src && \
-	wget -N http://selab.janelia.org/software/infernal/${INFERNAL}.tar.gz && \
+	wget -nc http://selab.janelia.org/software/infernal/${INFERNAL}.tar.gz && \
 	for binary in cmalign cmconvert esl-alimerge esl-sfetch; do
 	    tar xvf ${INFERNAL}.tar.gz --no-anchored binaries/$binary
 	done && \
@@ -137,7 +140,7 @@ fi
 # install uclust
 if [ ! -f $venv/bin/uclust ]; then
     (cd $venv/bin && \
-	wget -N http://drive5.com/uclust/uclustq${UCLUST_VERSION}_i86linux64 && \
+	wget -nc http://drive5.com/uclust/uclustq${UCLUST_VERSION}_i86linux64 && \
 	chmod +x uclustq${UCLUST_VERSION}_i86linux64 && \
 	ln -f uclustq${UCLUST_VERSION}_i86linux64 uclust)
 else
@@ -147,8 +150,8 @@ fi
 # install FastTree and FastTreeMP
 if [ ! -f $venv/bin/FastTree ] | [ ! -f $venv/bin/FastTreeMP ]; then
     (cd $venv/bin && \
-	wget -N http://www.microbesonline.org/fasttree/FastTree && \
-	wget -N http://www.microbesonline.org/fasttree/FastTreeMP && \
+	wget -nc http://www.microbesonline.org/fasttree/FastTree && \
+	wget -nc http://www.microbesonline.org/fasttree/FastTreeMP && \
 	chmod +x FastTree*)
 else
     echo "FastTree is already installed: $(FastTree -expert 2>&1 | head -1)"
@@ -157,7 +160,7 @@ fi
 # install raxmlHPC-SSE3 and raxmlHPC-PTHREADS-SSE3
 if [ ! -f $venv/bin/raxmlHPC-SSE3 ] | [ ! -f $venv/bin/raxmlHPC-PTHREADS-SSE3 ]; then
     (cd src && \
-	wget -N https://github.com/stamatak/standard-RAxML/archive/v${RAXML_VERSION}.tar.gz && \
+	wget -nc https://github.com/stamatak/standard-RAxML/archive/v${RAXML_VERSION}.tar.gz && \
 	tar -xf v${RAXML_VERSION}.tar.gz && \
 	cd standard-RAxML-${RAXML_VERSION} && \
 	rm -f *.o && make -f Makefile.SSE3.gcc && \
@@ -167,6 +170,8 @@ if [ ! -f $venv/bin/raxmlHPC-SSE3 ] | [ ! -f $venv/bin/raxmlHPC-PTHREADS-SSE3 ];
 else
     echo "raxml is already installed: $(raxmlHPC-SSE3 | grep RAxML)"
 fi
+
+echo $venv
 
 # install VSEARCH
 vsearch_is_installed(){
@@ -178,7 +183,7 @@ if vsearch_is_installed; then
     $venv/bin/vsearch --version
 else
     (cd src && \
-	    wget -N https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
+	    wget -nc https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
 	    tar -xf vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
 	    cp vsearch-${VSEARCH_VERSION}-linux-x86_64/bin/vsearch $venv/bin && \
 	    chmod +x $venv/bin/vsearch
@@ -195,7 +200,7 @@ if muscle_is_installed; then
     $venv/bin/muscle -version
 else
     (cd src && \
-	    wget -N http://www.drive5.com/muscle/downloads${MUSCLE_VERSION}/muscle${MUSCLE_VERSION}_src.tar.gz && \
+	    wget -nc http://www.drive5.com/muscle/downloads${MUSCLE_VERSION}/muscle${MUSCLE_VERSION}_src.tar.gz && \
 	    tar -xf muscle${MUSCLE_VERSION}_src.tar.gz && \
 	    cd muscle${MUSCLE_VERSION}/src && \
 	    ./mk && cp muscle $venv/bin)
