@@ -20,8 +20,8 @@ set -e
 # use values of $PIP_WHEEL_DIR and $PIP_FIND_LINKS from environment if
 # possible, otherwise use a location in src
 SRCDIR=$(readlink -f src)
-PIP_WHEEL_DIR=${PIP_WHEEL_DIR-$SRCDIR/cache/pip/wheels}
-PIP_FIND_LINKS=${PIP_FIND_LINKS-file://$PIP_WHEEL_DIR}
+export PIP_WHEEL_DIR=${PIP_WHEEL_DIR-$SRCDIR/cache/pip/wheels}
+export PIP_FIND_LINKS=${PIP_FIND_LINKS-file://$PIP_WHEEL_DIR}
 
 mkdir -p $PIP_WHEEL_DIR
 
@@ -120,7 +120,6 @@ fi
 
 # install infernal and easel binaries
 INFERNAL=infernal-${INFERNAL_VERSION}-linux-intel-gcc
-venv_abspath=$(readlink -f $venv)
 
 if [ ! -f $venv/bin/cmalign ]; then
     (cd src && \
