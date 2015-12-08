@@ -86,7 +86,7 @@ class VsearchTestCase(unittest.TestCase):
 
     def test_vsearch_version_fail(self):
         self.assertRaises(MissingDependencyError,
-                          wrap._require_vsearch_version, version='1.9')
+                          wrap._require_vsearch_version, version='1.0')
 
     def test_vsearch_allpairs_files(self):
         with deenurp.util.ntf(suffix='.blast6out', mode='rw') as outfile:
