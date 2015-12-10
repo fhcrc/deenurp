@@ -153,6 +153,7 @@ def parse_subcommands(parser, argv):
             imp = '{}.{}'.format(subcommands.__name__, name)
             mod = importlib.import_module(imp)
         except Exception, e:
+            log.error('error importing subcommand {}'.format(name))
             log.error(e)
             continue
 
