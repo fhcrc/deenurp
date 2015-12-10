@@ -30,7 +30,9 @@ MUSCLE_MAXITERS = 2
 VSEARCH = 'vsearch'
 VSEARCH_VERSION = '1.0.7'
 VSEARCH_IDDEF = 2
-VSEARCH_THREADS = 1
+VSEARCH_THREADS = 2
+
+FASTTREE_THREADS = 4
 
 """Path to item in data directory"""
 data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
@@ -40,7 +42,7 @@ CM = data_path('RRNA_16S_BACTERIA.cm')
 
 
 @contextlib.contextmanager
-def as_refpkg(sequences, name='temp.refpkg', threads=None):
+def as_refpkg(sequences, name='temp.refpkg', threads=FASTTREE_THREADS):
     """Context manager yielding a temporary reference package for a
     collection of aligned sequences.
 
@@ -88,7 +90,7 @@ def redupfile_of_seqs(sequences, **kwargs):
 
 
 def fasttree(sequences, output_fp, log_path=None, quiet=True,
-             gtr=False, gamma=False, threads=None, prefix=None):
+             gtr=False, gamma=False, threads=FASTTREE_THREADS, prefix=None):
 
     executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
     if executable == 'FastTreeMP' and not which('FastTreeMP'):

@@ -56,13 +56,13 @@ def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
 
 @log_error
 def select_sequences_for_cluster(ref_seqs, query_seqs, cluster_name,
-        cluster_weight, max_sample, max_weight, norm_sw, keep_leaves=5):
+                                 cluster_weight, max_sample, max_weight, norm_sw, keep_leaves=5):
     """
     Given a set of reference sequences and query sequences, select
     keep_leaves appropriate references.
     """
     logging.info('Cluster %s: Max sample abundance: %.3f%% of %s, %d hits',
-            cluster_name, max_weight * 100, max_sample, len(query_seqs))
+                 cluster_name, max_weight * 100, max_sample, len(query_seqs))
     # Cluster
     ref_seqs = _cluster(ref_seqs)
     for ref in ref_seqs:
@@ -75,10 +75,10 @@ def select_sequences_for_cluster(ref_seqs, query_seqs, cluster_name,
     c = itertools.chain(ref_seqs, query_seqs)
     ref_ids = frozenset(i.id for i in ref_seqs)
     aligned = list(cmalign(c))
-    with as_refpkg((i for i in aligned if i.id in ref_ids), threads=1) as rp, \
-             as_fasta(aligned) as fasta, \
-             tempdir(prefix='jplace') as placedir, \
-             redupfile_of_seqs(query_seqs) as redup_path:
+    with as_refpkg((i for i in aligned if i.id in ref_ids)) as rp, \
+         as_fasta(aligned) as fasta, \
+         tempdir(prefix='jplace') as placedir, \
+         redupfile_of_seqs(query_seqs) as redup_path:
 
         jplace = pplacer(rp.path, fasta, out_dir=placedir(), threads=1)
         # Redup
