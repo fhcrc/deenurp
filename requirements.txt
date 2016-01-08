@@ -6,6 +6,6 @@ biopython>=1.65
 cogent>=1.5.1
 git+https://github.com/biocore/tax2tree.git@63b220f115633ceb028ad7c96b04f9f494cf6ef7
 git+https://github.com/cmccoy/peasel.git@b1d5783d8d6d56cb0274e7977d093583c9c5f968
-taxtastic==0.5.3
+taxtastic>=0.5.3
 futures>=2.0
 retrying
