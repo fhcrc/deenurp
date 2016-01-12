@@ -273,14 +273,29 @@ def parse_type_strain_set(types_file):
     return types
 
 
+def expand_accession_ranges(accessions):
+    for a in accessions:
+        if '-' in a or ':' in a:
+            prefix = re.findall('\D+', a)[0]
+            a_range = re.findall('\d+', a)
+            a_range = map(int, a_range)  # integers for xrange
+            a_range = xrange(*a_range)  # expand range
+            a_range = map(str, a_range)  # back to strings
+            for acc in a_range:
+                yield prefix + acc
+        else:
+            yield a
+
+
 def action(args):
     entrez.set_email(args.email)
 
     chunksize = min(entrez.RETMAX, args.chunksize)  # 10k is ncbi max right now
 
-    ids = (i.strip() for i in args.ids)  # remove newlines
-    ids = (i for i in args.ids if i)  # ignore blank lines
     ids = (i for i in args.ids if not i.startswith('#'))  # ignore comments
+    ids = (i.strip() for i in ids)  # remove newlines
+    ids = (i for i in ids if i)  # ignore blank lines
+    ids = expand_accession_ranges(ids)  # ranges
     ids = itertools.islice(ids, args.max_records)
 
     # take latest version accession
