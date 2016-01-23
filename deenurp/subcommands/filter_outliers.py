@@ -45,7 +45,7 @@ the following additional fields:
 * centroid - the group centroid
 * dist - distance to the group centroid
 * is_out - whether the sequence is an outlier
-* {rank}_id - the tax_id at the taxonomic rank used for grouping
+* {rank} - the tax_id at the taxonomic rank used for grouping
 * x, y - coordinates calculated by multidimensional scaling of the
   pairwise distance matrix.
 
@@ -86,6 +86,7 @@ BLAST6NAMES = ['query', 'target', 'pct_id', 'align_len', 'mismatches', 'gaps',
 # from the taxonomy
 # TODO: remove this and fix in taxtastic
 class TaxNode(_TaxNode):
+
     def populate_from_seqinfo(self, seqinfo):
         """Populate sequence_ids below this node from a seqinfo file object."""
         for row in csv.DictReader(seqinfo):
@@ -118,7 +119,7 @@ def build_parser(p):
         '--filtered-seqinfo', type=argparse.FileType('w'), metavar='FILE',
         help="""Path to write filtered sequence info""")
     output_group.add_argument(
-        '--detailed-seqinfo', type=argparse.FileType('w'), metavar='FILE',
+        '--detailed-seqinfo', metavar='FILE',
         help="""Sequence info, including filtering details""")
 
     filter_group = p.add_argument_group('filtering options')
@@ -204,7 +205,11 @@ def distmat_muscle(sequence_file, prefix, maxiters=wrap.MUSCLE_MAXITERS):
     return taxa, distmat
 
 
-def distmat_cmalign(sequence_file, prefix, cpu=wrap.CMALIGN_THREADS, min_bitscore=10):
+def distmat_cmalign(
+        sequence_file,
+        prefix,
+        cpu=wrap.CMALIGN_THREADS,
+        min_bitscore=10):
 
     with util.ntf(prefix=prefix, suffix='.aln') as a_sto, \
             util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
@@ -213,8 +218,8 @@ def distmat_cmalign(sequence_file, prefix, cpu=wrap.CMALIGN_THREADS, min_bitscor
 
         low_scores = scores['bit_sc'] < min_bitscore
         if low_scores.any():
-            log.warning('The following sequences aligned with bit score < {}: {}'.format(
-                min_bitscore, scores[low_scores].index))
+            msg = 'The following sequences aligned with bit score < {}: {}'
+            log.warning(msg.format(min_bitscore, scores[low_scores].index))
 
         # FastTree requires FASTA
         SeqIO.convert(a_sto, 'stockholm', a_fasta, 'fasta')
@@ -453,7 +458,8 @@ def action(a):
         taxonomy.populate_from_seqinfo(fp)
         n_added = sum(1 for i in taxonomy.subtree_sequence_ids())
         if n_added == 0:
-            log.error('No sequences were added. Are all tax_ids present in the taxonomy?')
+            log.error('No sequences were added. Are all '
+                      'tax_ids present in the taxonomy?')
             sys.exit(1)
         log.info('Added %d sequences', n_added)
 
@@ -461,10 +467,8 @@ def action(a):
                                   'muscle': 'muscle',
                                   'vsearch': wrap.VSEARCH}[a.aligner]
 
-    filter_rank_col = '{}_id'.format(a.filter_rank)
-
-    if a.previous_details:
-        dtype = {'seqname': str, 'tax_id': str, filter_rank_col: str}
+    if a.previous_details and os.path.isfile(a.previous_details):
+        dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str}
         # columns in output of `filter_worker`
         filter_worker_cols = [
             'centroid',
@@ -474,7 +478,9 @@ def action(a):
             'x',
             'y']
         previous_details = pd.read_csv(
-            a.previous_details, dtype=dtype).groupby(filter_rank_col)
+            a.previous_details, dtype=dtype).groupby(a.filter_rank)
+    else:
+        previous_details = None
 
     outcomes = []  # accumulate DatFrame objects
 
@@ -483,7 +489,7 @@ def action(a):
     log.info('Keeping %d sequences classified above %s',
              len(names_above_rank), a.filter_rank)
     above_rank = mock_filter(names_above_rank, keep=True)
-    above_rank[filter_rank_col] = pd.Series(numpy.nan, index=above_rank.index)
+    above_rank[a.filter_rank] = pd.Series(numpy.nan, index=above_rank.index)
     outcomes.append(above_rank)
 
     # For each filter-rank, filter
@@ -501,7 +507,7 @@ def action(a):
         for i, node in enumerate(nodes):
             seqs = frozenset(node.subtree_sequence_ids())
 
-            if a.previous_details:
+            if previous_details:
                 prev_seqs = previous_details.get_group(node.tax_id)
 
             # in each case, `f` is a Future returning a DataFrame (see
@@ -514,7 +520,7 @@ def action(a):
                     len(seqs), node.tax_id, node.name, a.rare_taxon_action))
                 f = executor.submit(mock_filter, seqs=list(seqs),
                                     keep=a.rare_taxon_action == KEEP)
-            elif a.previous_details and set(prev_seqs['seqname']) == seqs:
+            elif previous_details and set(prev_seqs['seqname']) == seqs:
                 # use previous results
                 log.info(
                     'using previous results for tax_id {}'.format(node))
@@ -555,7 +561,7 @@ def action(a):
                 filtered = f.result()  # here's the DataFrame again...
 
                 # add a column for tax_d at filter_rank
-                filtered[filter_rank_col] = pd.Series(
+                filtered[a.filter_rank] = pd.Series(
                     info['node'].tax_id, index=filtered.index)
                 outcomes.append(filtered)
 
@@ -599,4 +605,5 @@ def action(a):
             columns=seqinfo.columns)
 
     if a.detailed_seqinfo:
-        merged.to_csv(a.detailed_seqinfo)
+        with open(a.detailed_seqinfo, 'w') as detailed_seqinfo:
+            merged.to_csv(detailed_seqinfo)
