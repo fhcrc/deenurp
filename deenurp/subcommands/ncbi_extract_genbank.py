@@ -202,9 +202,13 @@ def parse_record(record, seq_start=None, seq_stop=None,
 
 
 def parse_references(record):
+    """
+    Parse reference annotations that have a pubmed_id
+    """
     references = []
     if 'references' in record.annotations:
-        for r in record.annotations['references']:
+        refs = [r for r in record.annotations['references'] if r.pubmed_id]
+        for r in refs:
             references.append(
                 dict(title=r.title,
                      authors=r.authors,
