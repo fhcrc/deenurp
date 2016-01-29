@@ -2,8 +2,6 @@
 filters by length and percent ambiguity.
 
 partions: named, unnamed, types, published
-
-TODO: write out records dropped with deduplication to another csv
 """
 import pandas
 
@@ -27,11 +25,6 @@ def build_parser(p):
         '--references',
         metavar='CSV',
         help='csv file with columns: version,pubmed_id')
-
-    # options
-    p.add_argument(
-        '--deduplicate-group',
-        help='deduplicate sequences on seq_info fields')
 
     # outputs
     info_outs = p.add_argument_group('outputs for seq_info\'s')
