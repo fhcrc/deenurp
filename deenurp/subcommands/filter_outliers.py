@@ -507,8 +507,10 @@ def action(a):
         for i, node in enumerate(nodes):
             seqs = frozenset(node.subtree_sequence_ids())
 
-            if previous_details:
+            if previous_details and node.tax_id in previous_details:
                 prev_seqs = previous_details.get_group(node.tax_id)
+            else:
+                prev_seqs = None
 
             # in each case, `f` is a Future returning a DataFrame (see
             # filter_sequences)
@@ -520,7 +522,7 @@ def action(a):
                     len(seqs), node.tax_id, node.name, a.rare_taxon_action))
                 f = executor.submit(mock_filter, seqs=list(seqs),
                                     keep=a.rare_taxon_action == KEEP)
-            elif previous_details and set(prev_seqs['seqname']) == seqs:
+            elif prev_seqs and set(prev_seqs['seqname']) == seqs:
                 # use previous results
                 log.info(
                     'using previous results for tax_id {}'.format(node))
