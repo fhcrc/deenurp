@@ -241,8 +241,9 @@ def parse_usearch_allpairs(filename, seqnames):
 
     """
 
-    data = pd.io.parsers.read_table(filename, header=None, names=BLAST6NAMES)
-    data['dist'] = pd.Series(1.0 - data['pct_id'] / 100.0, index=data.index)
+    data = pd.read_table(filename, header=None, names=BLAST6NAMES)
+    data['dist'] = pd.Series(
+        1.0 - data['pct_id'] / 100.0, index=data.index)
 
     # for each sequence pair, select the longest alignment if there is
     # more than one (chooses first occurrence if there are two the same
@@ -489,7 +490,8 @@ def action(a):
     log.info('Keeping %d sequences classified above %s',
              len(names_above_rank), a.filter_rank)
     above_rank = mock_filter(names_above_rank, keep=True)
-    above_rank[a.filter_rank] = pd.Series(numpy.nan, index=above_rank.index)
+    above_rank[a.filter_rank] = pd.Series(
+        numpy.nan, index=above_rank.index)
     outcomes.append(above_rank)
 
     # For each filter-rank, filter
@@ -507,7 +509,7 @@ def action(a):
         for i, node in enumerate(nodes):
             seqs = frozenset(node.subtree_sequence_ids())
 
-            if previous_details and node.tax_id in previous_details:
+            if previous_details and node.tax_id in previous_details.groups:
                 prev_seqs = previous_details.get_group(node.tax_id)
             else:
                 prev_seqs = None
@@ -522,7 +524,7 @@ def action(a):
                     len(seqs), node.tax_id, node.name, a.rare_taxon_action))
                 f = executor.submit(mock_filter, seqs=list(seqs),
                                     keep=a.rare_taxon_action == KEEP)
-            elif prev_seqs and set(prev_seqs['seqname']) == seqs:
+            elif prev_seqs is not None and set(prev_seqs['seqname']) == seqs:
                 # use previous results
                 log.info(
                     'using previous results for tax_id {}'.format(node))
@@ -563,7 +565,7 @@ def action(a):
                 filtered = f.result()  # here's the DataFrame again...
 
                 # add a column for tax_d at filter_rank
-                filtered[a.filter_rank] = pd.Series(
+                filtered.loc[:, a.filter_rank] = pd.Series(
                     info['node'].tax_id, index=filtered.index)
                 outcomes.append(filtered)
 
@@ -593,7 +595,7 @@ def action(a):
         wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
 
     # Filter seqinfo for sequences that passed.
-    seqinfo = pd.io.parsers.read_csv(
+    seqinfo = pd.read_csv(
         a.seqinfo_file, dtype={'seqname': str, 'tax_id': str})
     seqinfo.set_index('seqname', inplace=True)
 
