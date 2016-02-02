@@ -252,7 +252,7 @@ def write_or_append(fasta_path, info_path, pubmed_ids_path, references_path):
             extrasaction='ignore')
         info_out.writeheader()
 
-    if os.path.isfile(pubmed_ids_path):
+    if pubmed_ids_path is not None and os.path.isfile(pubmed_ids_path):
         log.info('{} exists, appending new results'.format(pubmed_ids_path))
 
         # get column order
@@ -264,12 +264,14 @@ def write_or_append(fasta_path, info_path, pubmed_ids_path, references_path):
 
         pubmed_ids_out = csv.DictWriter(
             open(pubmed_ids_path, 'a'), fieldnames=fieldnames)
-    else:
+    elif pubmed_ids_path is not None:
         pubmed_ids_out = csv.DictWriter(
             open(pubmed_ids_path, 'w'), fieldnames=pubmed_columns)
         pubmed_ids_out.writeheader()
+    else:
+        pubmed_ids_out = None
 
-    if os.path.isfile(references_path):
+    if references_path is not None and os.path.isfile(references_path):
         log.info('{} exists, appending new results'.format(references_path))
 
         # get column order
@@ -281,10 +283,12 @@ def write_or_append(fasta_path, info_path, pubmed_ids_path, references_path):
 
         references_out = csv.DictWriter(
             open(references_path, 'a'), fieldnames=fieldnames)
-    else:
+    elif references_path is not None:
         references_out = csv.DictWriter(
             open(references_path, 'w'), fieldnames=reference_columns)
         references_out.writeheader()
+    else:
+        references_out = None
 
     return fasta_out, info_out, pubmed_ids_out, references_out
 
