@@ -20,10 +20,11 @@ def meta_writer(fp):
     def inner(sequences):
         with fp:
             for sequence in sequences:
-                writer.writerow((sequence.id,
-                                 sequence.annotations['cluster_name'],
-                                 sequence.annotations['max_weight'],
-                                 sequence.annotations['mean_weight']))
+                writer.writerow(
+                    (sequence.id,
+                     sequence.annotations['cluster_name'],
+                     sequence.annotations['max_weight'],
+                     sequence.annotations['mean_weight']))
                 yield sequence
 
     return inner
@@ -35,6 +36,7 @@ class track_attr(object):
 
     Results are stored in ``seen``
     """
+
     def __init__(self, attr, iterable):
         self.attr = attr
         self.iterable = iterable
@@ -48,33 +50,47 @@ class track_attr(object):
 
 def build_parser(p):
     p.add_argument(
-        'search_db', help="""Output of `deenurp search-sequences`""")
+        'search_db',
+        help="""Output of `deenurp search-sequences`""")
     p.add_argument(
-        'output', help="Output file (fasta)", type=argparse.FileType('w'))
+        'output',
+        type=argparse.FileType('w'),
+        help="Output file (fasta)")
+
     p.add_argument(
-        '--threads', help="""Number of threads [default:%(default)d]""",
-        type=int, default=config.DEFAULT_THREADS)
+        '--threads',
+        help="""Number of threads [default:%(default)d]""",
+        type=int,
+        default=config.DEFAULT_THREADS)
 
     selection_options = p.add_argument_group('Selection Options')
     selection_options.add_argument(
-        '--refs-per-cluster', type=int, default=5,
+        '--refs-per-cluster',
+        type=int,
+        default=5,
         help="""Maximum references per cluster [default: %(default)d]""")
     selection_options.add_argument(
-        '--min-mass-prop', help="""Minimum proportion of total mass in
+        '--min-mass-prop',
+        help="""Minimum proportion of total mass in
         a cluster to require before including references [default:
-        %(default)f]""", type=float, default=-1.0)
+        %(default)f]""",
+        type=float,
+        default=-1.0)
     selection_options.add_argument(
-        '--whitelist', type=argparse.FileType('r'),
+        '--whitelist',
+        type=argparse.FileType('r'),
         help="""Select sequences for cluster IDs in %(metavar)s,
         regardless of whether they had hits among the query
         sequences""")
 
     info_options = p.add_argument_group('Sequence info options')
     info_options.add_argument(
-        '--seqinfo-out', type=argparse.FileType('w'),
+        '--seqinfo-out',
+        type=argparse.FileType('w'),
         help="""File to write merged metadata""")
     info_options.add_argument(
-        '--output-meta', help="""File to write selection metadata""",
+        '--output-meta',
+        help="""File to write selection metadata""",
         type=argparse.FileType('w'))
 
 
@@ -111,7 +127,8 @@ def action(args):
 
             with args.output as fp:
                 # Unique IDs
-                sequences = util.unique(sequences, key=operator.attrgetter('id'))
+                sequences = util.unique(
+                    sequences, key=operator.attrgetter('id'))
                 sequences = util.unique(sequences, key=lambda s: str(s.seq))
                 if args.output_meta:
                     sequences = meta_writer(args.output_meta)(sequences)
