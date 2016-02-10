@@ -19,24 +19,37 @@ from concurrent import futures
 from . import util, wrap
 from .config import DEFAULT_THREADS
 from .util import as_fasta, tempdir
-from .wrap import cmalign, as_refpkg, redupfile_of_seqs, \
-    rppr_min_adcl, guppy_redup, pplacer, esl_sfetch
+from .wrap import (cmalign, as_refpkg, redupfile_of_seqs,
+                   rppr_min_adcl, guppy_redup, pplacer, esl_sfetch)
 
 CLUSTER_THRESHOLD = 0.998
 
+"""
+Minimum proportion of total mass in a cluster
+to require before including references
+"""
+MIN_CLUSTER_PROP = -1.0
+
 
 def log_error(fn):
+    """
+    Log errors but still raise them
+    """
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         try:
             return fn(*args, **kwargs)
         except:
-            logging.exception("ERROR in %s", fn.__name__)
+            logging.exception("ERROR in {}".format(fn.__name__))
             raise
     return wrapper
 
 
 def seqrecord(name, residues, **annotations):
+    """
+    Takes a seqname and sequence plus annotations, constucts
+    and return a Bio.SeqRecord.SeqRecord
+    """
     sr = SeqRecord(Seq(residues), name)
     sr.annotations.update(annotations)
     return sr
@@ -44,7 +57,9 @@ def seqrecord(name, residues, **annotations):
 
 def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
     """
-    Cluster ``sequences`` at ``threshold``, returning seeds.
+    Cluster ``sequences`` at ``threshold``, returning only the seeds.
+
+    see CLUSTER_THRESHOLD
     """
     sequences = list(sequences)
     assert sequences
@@ -75,15 +90,18 @@ def select_sequences_for_cluster(
     """
     logging.info('Cluster %s: Max sample abundance: %.3f%% of %s, %d hits',
                  cluster_name, max_weight * 100, max_sample, len(query_seqs))
-    # Cluster
-    ref_seqs = _cluster(ref_seqs)
+
+    # shrink ref_seqs by clustering first at 99.8% (CLUSTER_THRESHOLD)
+    ref_seqs = _cluster(ref_seqs, threshold=CLUSTER_THRESHOLD)
     mean_weight = sum(norm_sw.values()) / len(norm_sw)
     for ref in ref_seqs:
         ref.annotations.update({'cluster_name': cluster_name,
                                 'max_weight': max_weight,
                                 'mean_weight': mean_weight})
+
     if len(ref_seqs) <= keep_leaves:
         return ref_seqs
+    # else: find some more reps
 
     c = itertools.chain(ref_seqs, query_seqs)
     ref_ids = frozenset(i.id for i in ref_seqs)
@@ -97,9 +115,7 @@ def select_sequences_for_cluster(
         # Redup
         guppy_redup(jplace, redup_path, placedir('redup.jplace'))
         prune_leaves = set(
-            rppr_min_adcl(
-                placedir('redup.jplace'),
-                keep_leaves))
+            rppr_min_adcl(placedir('redup.jplace'), keep_leaves))
 
     result = frozenset(i.id for i in ref_seqs) - prune_leaves
     assert len(result) == keep_leaves
@@ -114,9 +130,10 @@ def select_sequences_for_whitelist_cluster(
     """
     Selects a subset of ``ref_seqs`` using ``rppr min_adcl_tree``
     """
-    logging.info("Whitelisted cluster %s", cluster_name)
+    logging.info("Whitelisted cluster {}".format(cluster_name))
 
-    ref_seqs = _cluster(ref_seqs)
+    # shrink ref_seqs by clustering first at 99.8% (CLUSTER_THRESHOLD)
+    ref_seqs = _cluster(ref_seqs, threshold=CLUSTER_THRESHOLD)
     ref_ids = set(i.id for i in ref_seqs)
     for ref in ref_seqs:
         ref.annotations.update({'cluster_name': cluster_name,
@@ -135,6 +152,8 @@ def select_sequences_for_whitelist_cluster(
 
 
 def fetch_cluster_members(cluster_info_file, group_field):
+    """
+    """
     d = collections.defaultdict(list)
     with open(cluster_info_file) as fp:
         r = csv.DictReader(fp)
@@ -156,6 +175,7 @@ def get_sample_weights(con, sequence_names):
         INNER JOIN sequences_samples ss USING (sequence_id)
         INNER JOIN samples USING (sample_id)
         WHERE s.name = ?"""
+        logging.debug(sql.replace('?', '{}').format(sequence))
         cursor.execute(sql, [sequence])
         res = cursor.fetchone()
         if not res:
@@ -166,6 +186,8 @@ def get_sample_weights(con, sequence_names):
 
 
 def sequences_hitting_cluster(con, cluster_name):
+    """
+    """
     sql = """SELECT DISTINCT sequences.name
         FROM sequences
         INNER JOIN best_hits USING (sequence_id)
@@ -173,11 +195,14 @@ def sequences_hitting_cluster(con, cluster_name):
         WHERE cluster_name = ?
         ORDER BY sequences.name"""
     cursor = con.cursor()
+    logging.debug(sql.replace('?', '{}').format(cluster_name))
     cursor.execute(sql, [cluster_name])
     return [name for name, in cursor]
 
 
 def esl_sfetch_seqs(sequence_file, sequence_names, **kwargs):
+    """
+    """
     with tempfile.NamedTemporaryFile(prefix='esl', suffix='.fasta') as tf:
         esl_sfetch(sequence_file, sequence_names, tf, **kwargs)
         tf.seek(0)
@@ -185,11 +210,14 @@ def esl_sfetch_seqs(sequence_file, sequence_names, **kwargs):
 
 
 def get_total_weight_per_sample(con):
+    """
+    """
     sql = """SELECT name, SUM(weight) AS weight
     FROM sequences_samples
       INNER JOIN samples USING (sample_id)
     GROUP BY name"""
     cursor = con.cursor()
+    logging.debug(sql)
     cursor.execute(sql)
     return dict(cursor)
 
@@ -198,11 +226,15 @@ def choose_references(
         deenurp_db,
         refs_per_cluster=5,
         threads=DEFAULT_THREADS,
-        min_cluster_prop=0.0,
-        whitelist=None):
+        min_cluster_prop=MIN_CLUSTER_PROP,
+        whitelist=None,
+        blacklist=None):
     """
     Choose reference sequences from a search, choosing refs_per_cluster
     reference sequences for each nonoverlapping cluster.
+
+    min_cluster_prop - Minimum proportion of total mass in a cluster to
+                       require before including references
     """
     whitelist = whitelist or set()
     params = search.load_params(deenurp_db)
@@ -216,7 +248,7 @@ def choose_references(
     cursor = deenurp_db.cursor()
 
     # Select all clusters above cutoff
-    cursor.execute("""
+    sql = """
 SELECT ref_seqs.cluster_name,
        sample_id,
        SUM(sequences_samples.weight) AS total_weight
@@ -227,8 +259,13 @@ FROM ref_seqs
 GROUP BY ref_seqs.cluster_name, sample_id
 HAVING SUM(sequences_samples.weight) > ?
 ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
-""", [min_cluster_prop])
+"""
+    logging.debug(sql.replace('?', '{}').format(min_cluster_prop))
+    cursor.execute(sql, [min_cluster_prop])
     grouped = itertools.groupby(cursor, operator.itemgetter(0))
+
+    # remove blacklist items
+    grouped = ((k, v) for k, v in grouped if k not in blacklist)
 
     selected_clusters = set()
     futs = set()
@@ -237,9 +274,11 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
             cluster_seq_names = sequences_hitting_cluster(
                 deenurp_db, cluster_name)
             sample_weights = get_sample_weights(deenurp_db, cluster_seq_names)
-            norm_sw = {
-                k: v / sample_total_weights[k] for k,
-                v in sample_weights.items()}
+
+            norm_sw = dict()
+            for k, v in sample_weights.items():
+                norm_sw[k] = v / sample_total_weights[k]
+
             max_sample, max_weight = max(
                 norm_sw.items(), key=operator.itemgetter(1))
 
@@ -250,7 +289,6 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
                 max_weight * 100,
                 len(cluster_seq_names))
 
-            assert cluster_name in cluster_members
             cluster_refs = esl_sfetch_seqs(
                 ref_fasta, cluster_members[cluster_name])
 
@@ -261,22 +299,26 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
                 use_temp=True)
 
             if max_weight < min_cluster_prop:
-                logging.info("Skipping.")
+                msg = 'ID: {} max_weight {} < min_mass {}, skipping'
+                msg = msg.format(cluster_name, max_weight, min_cluster_prop)
+                logging.info(msg)
                 continue
 
             selected_clusters.add(cluster_name)
             futs.add(executor.submit(
-                select_sequences_for_cluster,
-                cluster_refs, query_seqs, cluster_name=cluster_name,
-                norm_sw=norm_sw, cluster_weight=sum(v[-1] for v in values),
-                max_sample=max_sample, max_weight=max_weight,
+                select_sequences_for_cluster, cluster_refs, query_seqs,
+                cluster_name=cluster_name,
+                norm_sw=norm_sw,
+                cluster_weight=sum(v[-1] for v in values),
+                max_sample=max_sample,
+                max_weight=max_weight,
                 keep_leaves=refs_per_cluster))
+
         # Whitelist
         for cluster in whitelist:
             if cluster in selected_clusters:
-                logging.info(
-                    "Sequences for whitelist cluster %s already selected",
-                    cluster)
+                msg = 'Sequences for whitelist cluster {} already selected'
+                logging.info(msg.format(cluster))
                 continue
             else:
                 cluster_refs = esl_sfetch_seqs(
