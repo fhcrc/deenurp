@@ -52,7 +52,7 @@ fi
 
 VENV_VERSION=1.11.6
 PPLACER_BUILD=1.1.alpha17
-INFERNAL_VERSION=1.1
+INFERNAL_VERSION=1.1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
@@ -126,7 +126,7 @@ INFERNAL=infernal-${INFERNAL_VERSION}-linux-intel-gcc
 
 if [ ! -f $venv/bin/cmalign ]; then
     (cd src && \
-	wget -nc http://selab.janelia.org/software/infernal/${INFERNAL}.tar.gz && \
+	wget -nc http://eddylab.org/infernal/${INFERNAL}.tar.gz && \
 	for binary in cmalign cmconvert esl-alimerge esl-sfetch; do
 	    tar xvf ${INFERNAL}.tar.gz --no-anchored binaries/$binary
 	done && \
