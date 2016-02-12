@@ -2,7 +2,7 @@
  Changes for deenurp
 =====================
 
-0.1.2-dev
+0.1.3
 =========
 * bumping pplacer support to v1.1.alpha17
 * adding pandas support to versions 0.17.*

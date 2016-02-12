@@ -27,8 +27,10 @@ seq_info_columns = ['seqname', 'version', 'accession', 'name',
                     'keywords', 'organism', 'length', 'ambig_count',
                     'is_type', 'seq_start', 'seq_stop']
 
-ref_info_columns = ['version', 'title', 'authors', 'comment',
-                    'consrtm', 'journal', 'medline_id', 'pubmed_id']
+reference_columns = ['pubmed_id', 'medline_id', 'title',
+                     'authors', 'journal', 'consrtm', 'comment']
+
+pubmed_columns = ['pubmed_id', 'version', 'accession']
 
 
 def build_parser(parser):
@@ -41,39 +43,43 @@ def build_parser(parser):
 
     # outs
     parser.add_argument('fasta_out',
-                        metavar='FASTA',
-                        help='')
+                        metavar='fasta',
+                        help='sequence file')
     parser.add_argument('info_out',
-                        metavar='CSV',
+                        metavar='csv',
                         help='write seq_info file')
-    parser.add_argument('refs_out',
-                        metavar='CSV',
-                        help='output references')
+    parser.add_argument('--pubmed_ids',
+                        metavar='csv',
+                        help=('csv with columns '
+                              '[version, accession, pubmed_id]'))
+    parser.add_argument('--references',
+                        metavar='csv',
+                        help=('reference details'))
     parser.add_argument('--no-features',
                         type=util.file_opener(mode='a'),
                         help=('output version numbers of records with no '
                               'matching features'))
 
     parser.add_argument('--threads',
-                        metavar='NUM',
+                        metavar='int',
                         default=int(multiprocessing.cpu_count()),
                         type=int,
                         help='number of available threads [%(default)s]')
     parser.add_argument('--chunksize',
-                        metavar='NUM',
+                        metavar='int',
                         default=entrez.RETMAX,
                         type=int,
                         help="""number of records to return
                                 per query max 10k [%(default)s]""")
     parser.add_argument('--retry',
-                        metavar='MILLISECONDS',
+                        metavar='milliseconds',
                         type=int,
                         default=60000,
                         help="""after http exception time to
                                 wait before trying again [%(default)s]""")
     parser.add_argument('--max-records',
                         type=int,
-                        metavar='N',
+                        metavar='int',
                         help="""limit number of records from
                                 esearch or ids file to N""")
 
@@ -184,7 +190,7 @@ def parse_record(record, seq_start=None, seq_stop=None,
                 ambig_count=count_ambiguous(seq),
                 length=len(record),
                 seqname=seq_id,
-                is_type=record in types,
+                is_type=version in types,
                 date=record.annotations['date'],
                 description=record.description,
                 gi=record.annotations.get('gi', ''),
@@ -202,9 +208,13 @@ def parse_record(record, seq_start=None, seq_stop=None,
 
 
 def parse_references(record):
+    """
+    Parse reference annotations that have a pubmed_id
+    """
     references = []
     if 'references' in record.annotations:
-        for r in record.annotations['references']:
+        refs = [r for r in record.annotations['references'] if r.pubmed_id]
+        for r in refs:
             references.append(
                 dict(title=r.title,
                      authors=r.authors,
@@ -216,21 +226,25 @@ def parse_references(record):
     return references
 
 
-def write_or_append(info_path, refs_path, fasta_path):
+def write_or_append(fasta_path, info_path, pubmed_ids_path, references_path):
+    if os.path.isfile(fasta_path):
+        log.info('{} exists, appending new results'.format(fasta_path))
+        fasta_out = open(fasta_path, 'a')
+    else:
+        fasta_out = open(fasta_path, 'w')
+
     if os.path.isfile(info_path):
         log.info('{} exists, appending new results'.format(info_path))
 
         # get column order
-        with open(info_path) as info_out:
-            fieldnames = csv.DictReader(info_out).fieldnames
+        with open(info_path) as info_in:
+            fieldnames = csv.DictReader(info_in).fieldnames
         if set(fieldnames) != set(seq_info_columns):
             msg = 'input columns {} != {}'.format(fieldnames, seq_info_columns)
             raise ValueError(msg)
 
         info_out = csv.DictWriter(
-            open(info_path, 'a'),
-            fieldnames=fieldnames,
-            extrasaction='ignore')
+            open(info_path, 'a'), fieldnames=fieldnames, extrasaction='ignore')
     else:
         info_out = csv.DictWriter(
             open(info_path, 'w'),
@@ -238,29 +252,45 @@ def write_or_append(info_path, refs_path, fasta_path):
             extrasaction='ignore')
         info_out.writeheader()
 
-    if os.path.isfile(refs_path):
-        log.info('{} exists, appending new results'.format(refs_path))
+    if pubmed_ids_path is not None and os.path.isfile(pubmed_ids_path):
+        log.info('{} exists, appending new results'.format(pubmed_ids_path))
 
         # get column order
-        with open(refs_path) as refs_out:
-            fieldnames = csv.DictReader(refs_out).fieldnames
-        if set(fieldnames) != set(ref_info_columns):
-            msg = 'input columns {} != {}'.format(fieldnames, ref_info_columns)
+        with open(pubmed_ids_path) as pubmed_ids_in:
+            fieldnames = csv.DictReader(pubmed_ids_in).fieldnames
+        if set(fieldnames) != set(pubmed_columns):
+            msg = 'input columns {} != {}'.format(fieldnames, pubmed_columns)
             raise ValueError(msg)
 
-        refs_out = csv.DictWriter(open(refs_path, 'a'), fieldnames=fieldnames)
+        pubmed_ids_out = csv.DictWriter(
+            open(pubmed_ids_path, 'a'), fieldnames=fieldnames)
+    elif pubmed_ids_path is not None:
+        pubmed_ids_out = csv.DictWriter(
+            open(pubmed_ids_path, 'w'), fieldnames=pubmed_columns)
+        pubmed_ids_out.writeheader()
     else:
-        refs_out = csv.DictWriter(
-            open(refs_path, 'w'), fieldnames=ref_info_columns)
-        refs_out.writeheader()
+        pubmed_ids_out = None
 
-    if os.path.isfile(fasta_path):
-        log.info('{} exists, appending new results'.format(fasta_path))
-        fasta_out = open(fasta_path, 'a')
+    if references_path is not None and os.path.isfile(references_path):
+        log.info('{} exists, appending new results'.format(references_path))
+
+        # get column order
+        with open(references_path) as references_in:
+            fieldnames = csv.DictReader(references_in).fieldnames
+        if set(fieldnames) != set(reference_columns):
+            msg = 'input columns {} != {}'
+            raise ValueError(msg.format(fieldnames, reference_columns))
+
+        references_out = csv.DictWriter(
+            open(references_path, 'a'), fieldnames=fieldnames)
+    elif references_path is not None:
+        references_out = csv.DictWriter(
+            open(references_path, 'w'), fieldnames=reference_columns)
+        references_out.writeheader()
     else:
-        fasta_out = open(fasta_path, 'w')
+        references_out = None
 
-    return info_out, refs_out, fasta_out
+    return fasta_out, info_out, pubmed_ids_out, references_out
 
 
 def parse_type_strain_set(types_file):
@@ -273,14 +303,29 @@ def parse_type_strain_set(types_file):
     return types
 
 
+def expand_accession_ranges(accessions):
+    for a in accessions:
+        if '-' in a or ':' in a:
+            prefix = re.findall('\D+', a)[0]
+            a_range = re.findall('\d+', a)
+            a_range = map(int, a_range)  # integers for xrange
+            a_range = xrange(*a_range)  # expand range
+            a_range = map(str, a_range)  # back to strings
+            for acc in a_range:
+                yield prefix + acc
+        else:
+            yield a
+
+
 def action(args):
     entrez.set_email(args.email)
 
     chunksize = min(entrez.RETMAX, args.chunksize)  # 10k is ncbi max right now
 
-    ids = (i.strip() for i in args.ids)  # remove newlines
-    ids = (i for i in args.ids if i)  # ignore blank lines
     ids = (i for i in args.ids if not i.startswith('#'))  # ignore comments
+    ids = (i.strip() for i in ids)  # remove newlines
+    ids = (i for i in ids if i)  # ignore blank lines
+    ids = expand_accession_ranges(ids)  # id ranges
     ids = itertools.islice(ids, args.max_records)
 
     # take latest version accession
@@ -308,8 +353,8 @@ def action(args):
     records = pool.imap_unordered(func, ids)
     # records = itertools.imap(func, ids)
 
-    info_out, refs_out, fasta_out = write_or_append(
-        args.info_out, args.refs_out, args.fasta_out)
+    fasta_out, info_out, pubmed_ids_out, references_out = write_or_append(
+        args.fasta_out, args.info_out, args.pubmed_ids, args.references)
 
     types = parse_type_strain_set(args.type_strains)
 
@@ -320,10 +365,15 @@ def action(args):
             fasta_out.write('>{seqname}\n{seq}\n'.format(**record))
             info_out.writerow(record)
 
-            version = record['version']
-            refs = [dict(version=version, **r)  # add version
-                    for r in parse_references(g)]
-            refs_out.writerows(refs)
+            if pubmed_ids_out:
+                references = parse_references(g)
+                for r in references:
+                    pubmed_ids_out.writerow(
+                        {'version': record['version'],
+                         'accession': record['accession'],
+                         'pubmed_id': r['pubmed_id']})
+                if references_out:
+                    references_out.writerows(references)
 
         if no_features:
             log.warn('no features found ' + entrez.liststr(no_features))

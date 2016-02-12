@@ -16,8 +16,8 @@ log = logging.getLogger(__name__)
 
 def build_parser(parser):
     ins = parser.add_argument_group(title='inputs')
-    ins.add_argument('qseqs', metavar='fasta', help='input sequences')
-    ins.add_argument('tseqs', metavar='fasta', help='target sequences')
+    ins.add_argument('qseqs', help='input sequences')
+    ins.add_argument('tseqs', help='target sequences')
 
     opt = parser.add_argument_group(title='optional inputs')
     opt.add_argument('--seq_info',
