@@ -56,7 +56,7 @@ INFERNAL_VERSION=1.1
 UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
-VSEARCH_VERSION=1.9.5
+VSEARCH_VERSION=1.10.0
 
 check_version(){
     # usage: check_version module version-string
