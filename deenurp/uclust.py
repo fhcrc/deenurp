@@ -1,14 +1,13 @@
-"""
-Wrapper and parsers for UCLUST.
-
-UCLUST is a precursor to USEARCH, released freely with PyNAST and QIIME. The
-binary we have is 64-bit, so large database searches are possible.
+"""Wrapper and parsers for vsearch as a replacement for UCLUST.
 
 Note that memory use can be high: searching against 2.2 million 16S
 sequences from RDP takes ~30GB of memory for one strand search
+
+TODO: rename this module and functions herein - keeping ``uclust`` for
+now to avoid refactoring.
+
 """
 
-import os.path
 import collections
 import contextlib
 import csv
@@ -110,8 +109,7 @@ def hits_by_sequence(uclust_records):
     """
     # Only interested in hit (H) and NoHit (N) records
     uclust_records = (i for i in uclust_records if i.type in ('H', 'N'))
-    grouped = itertools.groupby(uclust_records,
-            operator.attrgetter('query_label'))
+    grouped = itertools.groupby(uclust_records, operator.attrgetter('query_label'))
     for g, v in grouped:
         # Only return hits
         yield g, [i for i in v if i.type == 'H']
@@ -150,8 +148,7 @@ def cluster_map(uclust_records):
 
 
 def search(database, query, output, pct_id=DEFAULT_PCT_ID,
-           maxaccepts=None, maxrejects=None, quiet=False, trunclabels=False,
-           wordcountreject=True, search_pct_id=None):
+           maxaccepts=None, maxrejects=None, quiet=False, search_pct_id=None):
     """
     Run UCLUST against a sequence database in FASTA format.
 
@@ -160,38 +157,30 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
      query:           Path to query file
      output:          Path for uclust output
      pct_id:          Minimum identity for match (provided to ``uclust --id``)
-     wordcountreject: Pre-filter based on word count in common between query
-                      and target seqs. When true, decreases sensitivity, but
-                      decreases speed by 50-70%.
      search_pct_id:   If given, the database is searched at search_pct_id, then
                       the results filtered to only include sequences that match
-                      at greater than pct_id. *May* produce the same results as
-                      disabling wordcountreject, will be faster.
+                      at greater than pct_id.
 
                       Note: If search_pct_id is specified, cluster sizes will
                       be inaccurate.
 
-    Others: see ``uclust --help``
+    Others: see ``vsearch --help``
     """
-    require_executable('uclust')
-    with _maybe_tempfile_name(output if not search_pct_id else None, prefix='uclust-') as o:
-        cmd = ['uclust',
-               '--input', query,
-               '--lib', database,
+    require_executable('vsearch')
+    with _maybe_tempfile_name(
+            output if not search_pct_id else None, prefix='vsearch-') as o:
+        cmd = ['vsearch',
+               '--usearch_global', query,
+               '--db', database,
                '--uc', o,
-               '--libonly',       # Don't generate new clusters when no DB hits
-               '--allhits',       # output all hits
+               '--uc_allhits',  # show all, not just top hit with uc output
                '--id', str(search_pct_id or pct_id)]  # Prefer search_pct_id
-        if not wordcountreject:
-            cmd.append('--nowordcountreject')
         if maxaccepts:
             cmd.extend(('--maxaccepts', str(maxaccepts)))
         if maxrejects:
             cmd.extend(('--maxrejects', str(maxrejects)))
         if quiet:
             cmd.append('--quiet')
-        if trunclabels:
-            cmd.append('--trunclabels')
 
         _check_call(cmd)
 
@@ -208,23 +197,21 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
 
 
 def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
-            usersort=False, trunclabels=False, wordcountreject=True):
+            usersort=False):
+    """Cluster de novo. If ``usersort`` id True, vsearch assumes that
+    sequences are pre-sorted by length. See ``vsearch --help`` for
+    details.
+
     """
-    Cluster de novo
-    """
-    require_executable('uclust')
-    cmd = ['uclust',
-           '--input', sequence_file,
+    require_executable('vsearch')
+    cmd = ['vsearch',
+           '--cluster_smallmem' if usersort else '--cluster_fast', sequence_file,
            '--uc', output,
            '--id', str(pct_id)]
-    if not wordcountreject:
-        cmd.append('--nowordcountreject')
     if quiet:
         cmd.append('--quiet')
     if usersort:
         cmd.append('--usersort')
-    if trunclabels:
-        cmd.append('--trunclabels')
     _check_call(cmd)
 
 
@@ -250,28 +237,6 @@ def cluster_seeds(sequence_file, uclust_out):
         raise ValueError(
             "Some expected seeds were not found in the FASTA file: {0}".format(
                 ','.join(seeds - seen_seeds)))
-
-
-def sort(sequence_file, output, quiet=False):
-    """
-    sort by descending length
-    """
-    require_executable('uclust')
-    cmd = ['uclust', '--sort', sequence_file, '--output', output]
-    if quiet:
-        cmd.append('--quiet')
-    _check_call(cmd)
-
-
-def sort_and_cluster(sequence_file, output, **kwargs):
-    """
-    Sort sequence_file by descending length, then cluster.
-
-    Additional arguments are passed to cluster
-    """
-    with tempfile.NamedTemporaryFile(prefix=os.path.basename(sequence_file)) as tf:
-        sort(sequence_file, tf.name, kwargs.get('quiet'))
-        cluster(tf.name, output, **kwargs)
 
 # Functions to convert uclust output into format usable by `guppy redup -m`
 

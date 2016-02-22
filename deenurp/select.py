@@ -65,8 +65,7 @@ def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
     assert sequences
     with as_fasta(sequences) as fasta_name, \
             tempfile.NamedTemporaryFile(prefix='uc-') as ntf:
-        uclust.sort_and_cluster(fasta_name, ntf.name, pct_id=threshold,
-                                quiet=True, wordcountreject=False)
+        uclust.cluster(fasta_name, ntf.name, pct_id=threshold, quiet=True)
         ntf.seek(0)
         r = list(uclust.cluster_seeds(fasta_name, ntf))
 
@@ -237,6 +236,7 @@ def choose_references(
                        require before including references
     """
     whitelist = whitelist or set()
+    blacklist = blacklist or set()
     params = search.load_params(deenurp_db)
     fasta_file = params['fasta_file']
     ref_fasta = params['ref_fasta']
@@ -262,6 +262,7 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
 """
     logging.debug(sql.replace('?', '{}').format(min_cluster_prop))
     cursor.execute(sql, [min_cluster_prop])
+
     grouped = itertools.groupby(cursor, operator.itemgetter(0))
 
     # remove blacklist items

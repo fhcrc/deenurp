@@ -53,7 +53,6 @@ fi
 VENV_VERSION=1.11.6
 PPLACER_BUILD=1.1.alpha17
 INFERNAL_VERSION=1.1
-UCLUST_VERSION=1.2.22
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
 VSEARCH_VERSION=1.10.0
@@ -135,16 +134,6 @@ if [ ! -f $venv/bin/cmalign ]; then
     )
 else
     echo "cmalign is already installed: $(cmalign -h | sed -n 2p)"
-fi
-
-# install uclust
-if [ ! -f $venv/bin/uclust ]; then
-    (cd $venv/bin && \
-	wget -nc http://drive5.com/uclust/uclustq${UCLUST_VERSION}_i86linux64 && \
-	chmod +x uclustq${UCLUST_VERSION}_i86linux64 && \
-	ln -f uclustq${UCLUST_VERSION}_i86linux64 uclust)
-else
-    echo "$(uclust --version) is already installed"
 fi
 
 # install FastTree and FastTreeMP
