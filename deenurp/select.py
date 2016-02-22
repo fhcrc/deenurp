@@ -103,6 +103,7 @@ def select_sequences_for_cluster(
     # else: find some more reps
 
     c = itertools.chain(ref_seqs, query_seqs)
+
     ref_ids = frozenset(i.id for i in ref_seqs)
     aligned = list(cmalign(c))
     with as_refpkg((i for i in aligned if i.id in ref_ids)) as rp, \
@@ -226,8 +227,10 @@ def choose_references(
         refs_per_cluster=5,
         threads=DEFAULT_THREADS,
         min_cluster_prop=MIN_CLUSTER_PROP,
-        whitelist=None,
-        blacklist=None):
+        include_clusters=None,
+        exclude_clusters=None,
+        include_sequences=None,
+        exclude_sequences=None):
     """
     Choose reference sequences from a search, choosing refs_per_cluster
     reference sequences for each nonoverlapping cluster.
@@ -235,8 +238,6 @@ def choose_references(
     min_cluster_prop - Minimum proportion of total mass in a cluster to
                        require before including references
     """
-    whitelist = whitelist or set()
-    blacklist = blacklist or set()
     params = search.load_params(deenurp_db)
     fasta_file = params['fasta_file']
     ref_fasta = params['ref_fasta']
@@ -263,10 +264,12 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
     logging.debug(sql.replace('?', '{}').format(min_cluster_prop))
     cursor.execute(sql, [min_cluster_prop])
 
-    grouped = itertools.groupby(cursor, operator.itemgetter(0))
+    if exclude_clusters:
+        clusters = (c for c in cursor if c[0] not in exclude_clusters)
+    else:
+        clusters = cursor
 
-    # remove blacklist items
-    grouped = ((k, v) for k, v in grouped if k not in blacklist)
+    grouped = itertools.groupby(clusters, operator.itemgetter(0))
 
     selected_clusters = set()
     futs = set()
@@ -316,20 +319,21 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
                 keep_leaves=refs_per_cluster))
 
         # Whitelist
-        for cluster in whitelist:
-            if cluster in selected_clusters:
-                msg = 'Sequences for whitelist cluster {} already selected'
-                logging.info(msg.format(cluster))
-                continue
-            else:
-                cluster_refs = esl_sfetch_seqs(
-                    ref_fasta, cluster_members[cluster])
-                futs.add(
-                    executor.submit(
-                        select_sequences_for_whitelist_cluster,
-                        cluster_refs,
-                        cluster,
-                        keep_leaves=refs_per_cluster))
+        if include_clusters:
+            for cluster in include_clusters:
+                if cluster in selected_clusters:
+                    msg = 'Sequences for whitelist cluster {} already selected'
+                    logging.info(msg.format(cluster))
+                    continue
+                else:
+                    cluster_refs = esl_sfetch_seqs(
+                        ref_fasta, cluster_members[cluster])
+                    futs.add(
+                        executor.submit(
+                            select_sequences_for_whitelist_cluster,
+                            cluster_refs,
+                            cluster,
+                            keep_leaves=refs_per_cluster))
 
         while futs:
             try:
@@ -338,8 +342,14 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
                 for f in done:
                     if f.exception():
                         raise f.exception()
-                    for ref in f.result():
-                        assert hasattr(ref, 'id')
+
+                    if exclude_sequences:
+                        result = (r for r in f.result()
+                                  if r.id not in exclude_sequences)
+                    else:
+                        result = f.result()
+
+                    for ref in result:
                         yield ref
             except futures.TimeoutError:
                 pass  # Keep waiting
