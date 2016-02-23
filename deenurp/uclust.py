@@ -197,20 +197,20 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
 
 
 def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
-            usersort=False):
-    """Cluster de novo. If ``usersort`` id True, vsearch assumes that
-    sequences are pre-sorted by length. See ``vsearch --help`` for
-    details.
+            pre_sorted=False):
+    """Cluster de novo. If ``pre_sorted`` is True, assume that sequences
+    are pre-sorted by length (and cluster using --cluster_smallmem
+    rather than --cluster_fast). See ``vsearch --help`` for details.
 
     """
     require_executable('vsearch')
     cmd = ['vsearch',
-           '--cluster_smallmem' if usersort else '--cluster_fast', sequence_file,
+           '--cluster_smallmem' if pre_sorted else '--cluster_fast', sequence_file,
            '--uc', output,
            '--id', str(pct_id)]
     if quiet:
         cmd.append('--quiet')
-    if usersort:
+    if not pre_sorted:
         cmd.append('--usersort')
     _check_call(cmd)
 
