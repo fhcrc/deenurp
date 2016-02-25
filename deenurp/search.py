@@ -6,15 +6,16 @@ import csv
 import functools
 import logging
 import operator
+import os
 import sqlite3
 import tempfile
 
 from deenurp import uclust
 from Bio import SeqIO
 
-_ntf = tempfile.NamedTemporaryFile
-
 from .util import SingletonDefaultDict, memoize
+
+_ntf = tempfile.NamedTemporaryFile
 
 SELECT_THRESHOLD = 0.05
 SEARCH_THRESHOLD = 0.90
@@ -30,7 +31,9 @@ def dedup_info_to_counts(fp, sample_map=None):
     """
     if sample_map is None:
         sample_map = SingletonDefaultDict('default')
-    result = collections.defaultdict(functools.partial(collections.defaultdict, float))
+    result = collections.defaultdict(
+        functools.partial(
+            collections.defaultdict, float))
     rows = csv.reader(fp)
     for i, j, c in rows:
         result[i][sample_map[j]] += float(c)
@@ -68,7 +71,9 @@ def load_params(con):
     Load parameters from the ``params`` table
     """
     cursor = con.cursor()
-    cursor.execute('select key, val from params')
+    sql = 'select key, val from params'
+    logging.debug(sql)
+    cursor.execute(sql)
     result = {}
     for k, v in cursor:
         if v:
@@ -82,22 +87,28 @@ def _table_exists(con, table_name):
     Returns whether or not ``table_name`` exists in ``con``
     """
     cursor = con.cursor()
-    cursor.execute("""SELECT tbl_name
-FROM sqlite_master
-WHERE type = 'table' AND tbl_name = ?""", [table_name])
+    sql = ('SELECT tbl_name '
+           'FROM sqlite_master '
+           'WHERE type = "table" AND tbl_name = ?')
+    logging.debug(sql.replace('?', '{}').format(table_name))
+    cursor.execute(sql, [table_name])
     return cursor.fetchone() is not None
 
 
 def select_hits(hits_by_seq, threshold=SELECT_THRESHOLD):
     """
-    Select all hits for each sequence within ``threshold`` of the best percent id
+    Select all hits for each sequence within ``threshold``
+    of the best percent id
     """
     for seq, hits in hits_by_seq:
         hits = list(hits)
         hits.sort(key=operator.attrgetter('pct_id'), reverse=True)
         result = [hits[0]]
         best_pct_id = hits[0].pct_id
-        result.extend(i for i in hits[1:] if best_pct_id - i.pct_id < threshold)
+        result.extend(
+            i for i in hits[
+                1:] if best_pct_id -
+            i.pct_id < threshold)
         yield seq, result
 
 
@@ -117,26 +128,35 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
 
     @memoize
     def add_hit(hit_name, clusterj):
-        ins = "INSERT INTO ref_seqs(name, cluster_name) VALUES (?, ?)"
+        ins = 'INSERT INTO ref_seqs(name, cluster_name) VALUES (?, ?)'
+        logging.debug(ins.replace('?', '{}').format(hit_name, cluster))
         cursor.execute(ins, [hit_name, cluster])
         return cursor.lastrowid
 
     @memoize
     def get_seq_id(name):
-        cursor.execute('SELECT sequence_id FROM sequences WHERE name = ?', [name])
+        sql = 'SELECT sequence_id FROM sequences WHERE name = ?'
+        logging.debug(sql.replace('?', '{}').format(name))
+        cursor.execute(sql, [name])
         return cursor.fetchone()[0]
 
     with _ntf(prefix='usearch') as uc_fp:
-        uclust.search(ref_name, p['fasta_file'], uc_fp.name, pct_id=search_threshold,
-                      trunclabels=True, maxaccepts=p['maxaccepts'],
-                      maxrejects=p['maxrejects'], quiet=quiet)
+        uclust.search(
+            ref_name,
+            p['fasta_file'],
+            uc_fp.name,
+            pct_id=search_threshold,
+            trunclabels=True,
+            maxaccepts=p['maxaccepts'],
+            maxrejects=p['maxrejects'],
+            quiet=quiet)
 
         # import shutil
         # shutil.copy(uc_fp.name, '.')
 
         records = uclust.parse_uclust_out(uc_fp)
-        records = (i for i in records
-                   if i.type == 'H' and i.pct_id >= p['search_identity'] * 100.0)
+        records = (i for i in records if i.type ==
+                   'H' and i.pct_id >= p['search_identity'] * 100.0)
         by_seq = uclust.hits_by_sequence(records)
         by_seq = select_hits(by_seq, select_threshold)
 
@@ -146,7 +166,9 @@ VALUES (?, ?, ?, ?)
 """
         for _, hits in by_seq:
             # Drop clusters from blacklist
-            hits = (h for h in hits if not cluster_info[h.target_label] in blacklist)
+            hits = (
+                h for h in hits if not cluster_info[
+                    h.target_label] in blacklist)
             seen_clusters = set()
             for i, h in enumerate(hits):
                 cluster = cluster_info[h.target_label]
@@ -159,7 +181,10 @@ VALUES (?, ?, ?, ?)
 
                 # Hit id
                 hit_id = add_hit(h.target_label, cluster)
-                cursor.execute(sql, [get_seq_id(h.query_label), i, hit_id, h.pct_id])
+                seq_id = get_seq_id(h.query_label)
+                logging.debug(sql.replace('?', '{}').format(
+                    seq_id, i, hit_id, h.pct_id))
+                cursor.execute(sql, [seq_id, i, hit_id, h.pct_id])
                 count += 1
 
     return count
@@ -176,20 +201,27 @@ def _load_sequences(con, sequence_file, weights=None):
     @memoize
     def get_sample_id(sample_name):
         cursor = con.cursor()
-        cursor.execute("""SELECT sample_id FROM samples WHERE name = ?""", [sample_name])
+        sql = 'SELECT sample_id FROM samples WHERE name = ?'
+        logging.debug(sql.replace('?', '{}').format(sample_name))
+        cursor.execute(sql, [sample_name])
         result = cursor.fetchone()
         if result:
             return result[0]
         else:
-            cursor.execute("""INSERT INTO samples (name) VALUES (?)""", [sample_name])
+            sql = """INSERT INTO samples (name) VALUES (?)"""
+            logging.debug(sql.replace('?', '{}').format(sample_name))
+            cursor.execute(sql, [sample_name])
             return cursor.lastrowid
 
     sequences = SeqIO.parse(sequence_file, 'fasta')
     cursor = con.cursor()
     sequence_insert_sql = """INSERT INTO sequences (name, length)
 VALUES (?, ?)"""
+    debug = sequence_insert_sql.replace('?', '{}')
     for sequence in sequences:
-        cursor.execute(sequence_insert_sql, [sequence.id, len(sequence)])
+        seq_len = len(sequence)
+        logging.debug(debug.format(sequence.id, seq_len))
+        cursor.execute(sequence_insert_sql, [sequence.id, seq_len])
         seq_id = cursor.lastrowid
         seq_count += 1
         if sequence.id not in weights:
@@ -203,85 +235,38 @@ VALUES (?, ?)"""
     return seq_count
 
 
-def _create_tables(con, ref_fasta, ref_meta, fasta_file,
-                   maxaccepts=1, maxrejects=8, search_identity=SEARCH_IDENTITY, quiet=True,
-                   group_field='cluster'):
+def _create_tables(
+        con,
+        ref_fasta,
+        ref_meta,
+        fasta_file,
+        maxaccepts=1,
+        maxrejects=8,
+        search_identity=SEARCH_IDENTITY,
+        quiet=True,
+        group_field='cluster'):
+    schema = os.path.join(os.path.dirname(__file__), 'data', 'search.schema')
     cursor = con.cursor()
-    cursor.executescript(SCHEMA)
+    cursor.executescript(open(schema).read().strip())
     # Save parameters
     rows = [(k, locals().get(k)) for k in _PARAMS.keys()]
     cursor.executemany("INSERT INTO params VALUES (?, ?)", rows)
 
-# Database schema
-SCHEMA = """
-CREATE TABLE samples (
-  sample_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR UNIQUE
-);
 
-CREATE TABLE sequences (
-  sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR,
-  length INT
-);
-CREATE UNIQUE INDEX ix_sequences_name ON sequences(name);
-
-CREATE TABLE sequences_samples (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sequence_id INT REFERENCES sequences(sequence_id) ON DELETE CASCADE,
-  sample_id INT REFERENCES samples(sample_id) ON DELETE CASCADE,
-  weight FLOAT
-);
-CREATE INDEX ix_sequences_samples_sequence_id ON sequences_samples(sequence_id);
-CREATE INDEX ix_sequences_samples_sample_id ON sequences_samples(sample_id);
-
-CREATE TABLE ref_seqs (
-  ref_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR UNIQUE,
-  cluster_name VARCHAR
-);
-
-CREATE INDEX ix_ref_seqs_cluster_name ON ref_seqs(cluster_name);
-
-CREATE TABLE best_hits (
-  hit_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ref_id INTEGER REFERENCES ref_seqs(ref_id) ON DELETE CASCADE,
-  sequence_id INTEGER REFERENCES sequences(sequence_id) ON DELETE CASCADE,
-  hit_idx INT,
-  pct_id FLOAT
-);
-
-CREATE INDEX ix_best_hits_sequence_id ON best_hits(sequence_id);
-CREATE INDEX ix_best_hits_ref_id ON best_hits(ref_id);
-
-CREATE TABLE params (
-  key VARCHAR PRIMARY KEY,
-  val VARCHAR
-);
-
-CREATE VIEW vw_cluster_weights AS
-SELECT cluster_name, SUM(weight) AS total_weight FROM
-(SELECT DISTINCT s.sequence_id, ss.weight as weight, ref_seqs.cluster_name
- FROM sequences s
-     INNER JOIN sequences_samples ss USING (sequence_id)
-     INNER JOIN best_hits USING (sequence_id)
-     INNER JOIN ref_seqs USING (ref_id)) q
-GROUP BY cluster_name;
-
-CREATE VIEW vw_sample_weights AS
-SELECT s.sample_id, s.name, SUM(ss.weight) AS total_weight
-FROM samples s
-INNER JOIN sequences_samples ss USING (sample_id)
-GROUP BY s.sample_id, s.name
-"""
-
-
-def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
-                    maxaccepts=1, maxrejects=8, search_identity=SEARCH_IDENTITY,
-                    select_threshold=SELECT_THRESHOLD,
-                    search_threshold=SEARCH_THRESHOLD,
-                    quiet=True, group_field='cluster',
-                    blacklist=None):
+def create_database(
+        con,
+        fasta_file,
+        ref_fasta,
+        ref_meta,
+        weights=None,
+        maxaccepts=1,
+        maxrejects=8,
+        search_identity=SEARCH_IDENTITY,
+        select_threshold=SELECT_THRESHOLD,
+        search_threshold=SEARCH_THRESHOLD,
+        quiet=True,
+        group_field='cluster',
+        blacklist=None):
     """
     Create a database of sequences searched against a sequence database for
     reference set creation.
@@ -300,9 +285,9 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
     # try to avoid issues with floating point comparison
     allowed_difference = 0.0001
     if search_threshold - search_identity > allowed_difference:
-        raise ValueError(
-            "search_identity ({}) should not be less than than search_threshold ({})".format(
-                search_identity, search_threshold))
+        msg = ('search_identity ({}) should not be less '
+               'than than search_threshold ({})')
+        raise ValueError(msg.format(search_identity, search_threshold))
 
     con.row_factory = sqlite3.Row
 
@@ -313,9 +298,16 @@ def create_database(con, fasta_file, ref_fasta, ref_meta, weights=None,
     logging.info("Creating database")
 
     with con:
-        _create_tables(con, maxaccepts=maxaccepts, maxrejects=maxrejects,
-                       search_identity=search_identity, quiet=quiet, ref_fasta=ref_fasta,
-                       ref_meta=ref_meta, fasta_file=fasta_file, group_field=group_field)
+        _create_tables(
+            con,
+            maxaccepts=maxaccepts,
+            maxrejects=maxrejects,
+            search_identity=search_identity,
+            quiet=quiet,
+            ref_fasta=ref_fasta,
+            ref_meta=ref_meta,
+            fasta_file=fasta_file,
+            group_field=group_field)
 
         seq_count = _load_sequences(con, fasta_file, weights=weights)
         logging.info("Inserted %d sequences", seq_count)

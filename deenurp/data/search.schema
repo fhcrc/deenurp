@@ -1,0 +1,59 @@
+CREATE TABLE samples (
+  sample_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR UNIQUE
+);
+
+CREATE TABLE sequences (
+  sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR,
+  length INT
+);
+CREATE UNIQUE INDEX ix_sequences_name ON sequences(name);
+
+CREATE TABLE sequences_samples (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sequence_id INT REFERENCES sequences(sequence_id) ON DELETE CASCADE,
+  sample_id INT REFERENCES samples(sample_id) ON DELETE CASCADE,
+  weight FLOAT
+);
+CREATE INDEX ix_sequences_samples_sequence_id ON sequences_samples(sequence_id);
+CREATE INDEX ix_sequences_samples_sample_id ON sequences_samples(sample_id);
+
+CREATE TABLE ref_seqs (
+  ref_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR UNIQUE,
+  cluster_name VARCHAR
+);
+
+CREATE INDEX ix_ref_seqs_cluster_name ON ref_seqs(cluster_name);
+
+CREATE TABLE best_hits (
+  hit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ref_id INTEGER REFERENCES ref_seqs(ref_id) ON DELETE CASCADE,
+  sequence_id INTEGER REFERENCES sequences(sequence_id) ON DELETE CASCADE,
+  hit_idx INT,
+  pct_id FLOAT
+);
+
+CREATE INDEX ix_best_hits_sequence_id ON best_hits(sequence_id);
+CREATE INDEX ix_best_hits_ref_id ON best_hits(ref_id);
+
+CREATE TABLE params (
+  key VARCHAR PRIMARY KEY,
+  val VARCHAR
+);
+
+CREATE VIEW vw_cluster_weights AS
+SELECT cluster_name, SUM(weight) AS total_weight FROM
+(SELECT DISTINCT s.sequence_id, ss.weight as weight, ref_seqs.cluster_name
+ FROM sequences s
+     INNER JOIN sequences_samples ss USING (sequence_id)
+     INNER JOIN best_hits USING (sequence_id)
+     INNER JOIN ref_seqs USING (ref_id)) q
+GROUP BY cluster_name;
+
+CREATE VIEW vw_sample_weights AS
+SELECT s.sample_id, s.name, SUM(ss.weight) AS total_weight
+FROM samples s
+INNER JOIN sequences_samples ss USING (sample_id)
+GROUP BY s.sample_id, s.name
