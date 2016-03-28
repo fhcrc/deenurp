@@ -1,6 +1,6 @@
 import os
 import sys
-import version
+import deenurp
 
 # Fix for `setup.py test`
 # See http://bugs.python.org/issue15881
@@ -56,7 +56,7 @@ class run_audit(Command):
 install_requires = []
 
 setup(name='deenurp',
-      version=version.version(),
+      version=deenurp.version.version(),
       package_data={'deenurp': ['data/*', 'test/data/*']},
       entry_points={
           'console_scripts': {'deenurp = deenurp:main'}},
