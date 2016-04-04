@@ -4,8 +4,8 @@ set -e
 
 vsearch --version
 
-(cd tests/search-select && ./run.sh)
-exit
+# (cd tests/search-select && ./run.sh)
+# exit
 
 TESTS_DIR=$(dirname $BASH_SOURCE)
 
