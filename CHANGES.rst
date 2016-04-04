@@ -2,8 +2,15 @@
  Changes for deenurp
 =====================
 
+0.1.7
+=====
+
+* replace uclust with vsearch (uclust dropped as dependency)
+* ``bootstrap.sh`` installs python requirements in specified order with ``--no-deps``
+* installs vsearch 1.10.2
+
 0.1.3
-=========
+=====
 * bumping pplacer support to v1.1.alpha17
 * adding pandas support to versions 0.17.*
 * ``deenurp orientate_sequences`` takes a training set (data/types.fasta) and aligns sequences reverse complementing when necessary (GH-34)
