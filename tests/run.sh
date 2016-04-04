@@ -2,10 +2,12 @@
 
 set -e
 
-while read testdir; do
-    if echo $testdir | grep -qv -E '^#'; then
-	echo $testdir
-	(cd $testdir && ./run.sh)
+TESTS_DIR=$(dirname $BASH_SOURCE)
+
+while read subdir; do
+    if echo $subdir | grep -qv -E '^#'; then
+	echo $subdir
+	(cd $TESTS_DIR/$subdir && ./run.sh)
     fi
 done <<EOF
 search-select
