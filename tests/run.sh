@@ -2,10 +2,19 @@
 
 set -e
 
-vsearch --version
+while read testdir; do
+    if echo $testdir | grep -qv -E '^#'; then
+	echo $testdir
+	(cd $testdir && ./run.sh)
+    fi
+done <<EOF
+search-select
+fill-lonely
+pairwise-distances
+hrefpkg-build
+filter-outliers
+EOF
 
-(cd tests/pairwise-distances && ./run.sh)
-(cd tests/search-select && ./run.sh)
 exit
 
 TESTS_DIR=$(dirname $BASH_SOURCE)
