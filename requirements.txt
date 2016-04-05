@@ -19,8 +19,8 @@ cogent==1.5.3
 futures==3.0.5
 git+https://github.com/cmccoy/peasel.git@b1d5783d8d6d56cb0274e7977d093583c9c5f968
 retrying==1.3.3
-scikit-learn==0.17.1
 scipy==0.17.0
+scikit-learn==0.17.1
 git+https://github.com/biocore/tax2tree.git@63b220f115633ceb028ad7c96b04f9f494cf6ef7
 git+https://github.com/fhcrc/taxtastic.git@v0.5.7
 wheel==0.29.0
