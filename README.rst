@@ -12,6 +12,8 @@ Installation
 The Easy Way
 ------------
 
+* confirm availability of necessary libraries to compile dependencies
+  (on Ubuntu: ``sudo apt-get install gfortran libopenblas-dev liblapack-dev``)
 * Install Python 2.7
 * run `bin/bootstrap.sh`
 * run `source deenurp-env/bin/activate`
@@ -20,6 +22,8 @@ the `deenurp` executable should now be on your `$PATH`
 
 The Hard Way
 ------------
+
+See required system libraries above.
 
 First, install binary dependencies:
 
@@ -31,14 +35,13 @@ First, install binary dependencies:
         + Run ``pip install PACKAGE`` for every PACKAGE listed in requirements.txt, e.g.
           ``cat requirements.txt | xargs -n 1 pip install``
 
-* uclust 1.1
+* vsearch
 * Infernal version 1.1, (http://infernal.janelia.org/)
 * pplacer suite (http://matsen.fhcrc.org/pplacer)
 * FastTree 2 (http://www.microbesonline.org/fasttree/#Install)
 
 Optional (for ``filter-outliers`` and ``pairwise-distances``):
 
-* vsearch (https://github.com/torognes/vsearch)
 * muscle (http://www.drive5.com/muscle/)
 
 Finally, install::

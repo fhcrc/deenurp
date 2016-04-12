@@ -83,7 +83,7 @@ def action(a):
 
         # Search sequences against unnamed
         r = uclust_search(expand_fp.name, a.unnamed_file, pct_id=a.pct_id,
-                maxaccepts=4, search_pct_id=0.9, trunclabels=True)
+                maxaccepts=4, search_pct_id=0.9)
         hits = list(r)
         # Map from hit to group
         hit_group = {i.target_label: seq_group[i.query_label] for i in hits}
@@ -95,7 +95,7 @@ def action(a):
 
         # Search hits back against named file
         r = uclust_search(hits_fp.name, expand_fp.name, pct_id=a.pct_id,
-                maxaccepts=1, search_pct_id=0.9, trunclabels=True)
+                maxaccepts=1, search_pct_id=0.9)
 
         # Sequences which hit the same group
         update_hits = dict((i.query_label, seq_group[i.target_label])

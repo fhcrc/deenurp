@@ -65,8 +65,7 @@ def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
     assert sequences
     with as_fasta(sequences) as fasta_name, \
             tempfile.NamedTemporaryFile(prefix='uc-') as ntf:
-        uclust.sort_and_cluster(fasta_name, ntf.name, pct_id=threshold,
-                                quiet=True, wordcountreject=False)
+        uclust.cluster(fasta_name, ntf.name, pct_id=threshold, quiet=True)
         ntf.seek(0)
         r = list(uclust.cluster_seeds(fasta_name, ntf))
 
