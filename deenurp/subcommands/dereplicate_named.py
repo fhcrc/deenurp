@@ -8,7 +8,7 @@ import pandas as pd
 
 from deenurp import uclust, wrap, util
 
-log = logging(__name__)
+log = logging.getLogger(__name__)
 
 
 def build_parser(parser):
