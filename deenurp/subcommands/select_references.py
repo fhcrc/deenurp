@@ -75,13 +75,25 @@ def build_parser(p):
         a cluster to require before including references [default:
         %(default)f]""",
         type=float,
-        default=-1.0)
+        default=select.MIN_CLUSTER_PROP)
     selection_options.add_argument(
-        '--whitelist',
+        '--include-clusters',
         type=argparse.FileType('r'),
         help="""Select sequences for cluster IDs in %(metavar)s,
         regardless of whether they had hits among the query
         sequences""")
+    selection_options.add_argument(
+        '--exclude-clusters',
+        type=argparse.FileType('r'),
+        help=('List of cluster identifiers not to include in the results'))
+    selection_options.add_argument(
+        '--include-sequences',
+        type=argparse.FileType('r'),
+        help=('List of sequences to include in the results [NOT IMPLEMENTED]'))
+    selection_options.add_argument(
+        '--exclude-sequences',
+        type=argparse.FileType('r'),
+        help=('List of sequences not to include in the results'))
 
     info_options = p.add_argument_group('Sequence info options')
     info_options.add_argument(
@@ -110,10 +122,25 @@ def extract_meta(ids, search_db, out_fp):
 
 
 def action(args):
-    whitelist = set()
-    if args.whitelist:
-        with args.whitelist as fp:
-            whitelist = set(i.strip() for i in fp)
+    include_clusters = None
+    if args.include_clusters:
+        with args.include_clusters as fp:
+            include_clusters = set(i.strip() for i in fp)
+
+    exclude_clusters = None
+    if args.exclude_clusters:
+        with args.exclude_clusters as fp:
+            exclude_clusters = set(i.strip() for i in fp)
+
+    include_sequences = None
+    if args.include_sequences:
+        with args.include_sequences as fp:
+            include_sequences = set(i.strip() for i in fp)
+
+    exclude_sequences = None
+    if args.exclude_sequences:
+        with args.exclude_sequences as fp:
+            exclude_sequences = set(i.strip() for i in fp)
 
     with util.tempcopy(args.search_db) as search_path:
         search_db = sqlite3.connect(search_path)
@@ -123,7 +150,10 @@ def action(args):
                 args.refs_per_cluster,
                 threads=args.threads,
                 min_cluster_prop=args.min_mass_prop,
-                whitelist=whitelist)
+                include_clusters=include_clusters,
+                exclude_clusters=exclude_clusters,
+                include_sequences=include_sequences,
+                exclude_sequences=exclude_sequences)
 
             with args.output as fp:
                 # Unique IDs

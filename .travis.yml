@@ -7,6 +7,7 @@ cache:
   # https://github.com/travis-ci/travis-ci/issues/3239
   directories:
     - $HOME/.cache/pip
+    - $HOME/deenurp/src
 
 env:
   global:

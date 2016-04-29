@@ -146,7 +146,6 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
             p['fasta_file'],
             uc_fp.name,
             pct_id=search_threshold,
-            trunclabels=True,
             maxaccepts=p['maxaccepts'],
             maxrejects=p['maxrejects'],
             quiet=quiet)

@@ -11,22 +11,25 @@ set -e
 # specify path to the deenurp source directory using
 # `DEENURP=path/to/deenurp bootstrap.sh`
 
-# installs deenurp and dependencies to $VIRTUAL_ENV if defined
+# installs deenurp and dependencies to $VIRTUAL_ENV if defined;
+# otherwise creates a virtualenv locally.
 
 # Will attempt to install python packages from wheels if $PIP_FIND_LINKS is defined
 # and pip --use-wheel is specified
 
+# set $PIP_WHEEL_DIR and $PIP_FIND_LINKS in the parent environment if
+# desired
+
 # Will attempt to create wheels if $PIP_WHEEL_DIR is defined
 # see https://pip.pypa.io/en/latest/user_guide.html#environment-variables
 
-# use values of $PIP_WHEEL_DIR and $PIP_FIND_LINKS from environment if
-# possible, otherwise use a location in src
-SRCDIR=$(readlink -f src)
-export PIP_WHEEL_DIR=${PIP_WHEEL_DIR-$SRCDIR/cache/pip/wheels}
-export PIP_FIND_LINKS=${PIP_FIND_LINKS-file://$PIP_WHEEL_DIR}
 
 mkdir -p src
-mkdir -p $PIP_WHEEL_DIR
+SRCDIR=$(readlink -f src)
+
+if [[ -n "$PIP_WHEEL_DIR" ]]; then
+    mkdir -p "$PIP_WHEEL_DIR"
+fi
 
 srcdir(){
     tar -tf $1 | head -1
@@ -50,13 +53,12 @@ if [[ -z $DEENURP ]]; then
     DEENURP=$(cd $(dirname $BASH_SOURCE) && cd .. && pwd)
 fi
 
-VENV_VERSION=1.11.6
+VENV_VERSION=15.0.0
 PPLACER_BUILD=1.1.alpha17
-INFERNAL_VERSION=1.1
-UCLUST_VERSION=1.2.22
+INFERNAL_VERSION=1.1.1
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
-VSEARCH_VERSION=1.9.5
+VSEARCH_VERSION=1.10.2
 
 check_version(){
     # usage: check_version module version-string
@@ -80,7 +82,7 @@ if [[ ! -f "${venv:?}/bin/activate" ]]; then
 	if [[ ! -f src/virtualenv-${VENV_VERSION}/virtualenv.py ]]; then
 	    mkdir -p src
 	    (cd src && \
-		wget -N ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
+		wget -nc ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
 		tar -xf virtualenv-${VENV_VERSION}.tar.gz)
 	fi
 	"$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py "$venv"
@@ -126,7 +128,7 @@ INFERNAL=infernal-${INFERNAL_VERSION}-linux-intel-gcc
 
 if [ ! -f $venv/bin/cmalign ]; then
     (cd src && \
-	wget -nc http://eddylab.org/software/infernal/${INFERNAL}.tar.gz && \
+	wget -nc http://eddylab.org/infernal/${INFERNAL}.tar.gz && \
 	for binary in cmalign cmconvert esl-alimerge esl-sfetch; do
 	    tar xvf ${INFERNAL}.tar.gz --no-anchored binaries/$binary
 	done && \
@@ -135,16 +137,6 @@ if [ ! -f $venv/bin/cmalign ]; then
     )
 else
     echo "cmalign is already installed: $(cmalign -h | sed -n 2p)"
-fi
-
-# install uclust
-if [ ! -f $venv/bin/uclust ]; then
-    (cd $venv/bin && \
-	wget -nc http://drive5.com/uclust/uclustq${UCLUST_VERSION}_i86linux64 && \
-	chmod +x uclustq${UCLUST_VERSION}_i86linux64 && \
-	ln -f uclustq${UCLUST_VERSION}_i86linux64 uclust)
-else
-    echo "$(uclust --version) is already installed"
 fi
 
 # install FastTree and FastTreeMP
@@ -206,25 +198,20 @@ else
 	    ./mk && cp muscle $venv/bin)
 fi
 
-# install wheels library
-# if [ -n "$PIP_WHEEL_DIR" ]; then
-#   pip install wheel
-#   pip wheel wheel
-# fi
-
 # required to build and cache wheels - doing this greatly speeds up travis CI tests
 pip install -U pip
 pip install -U wheel
-pip wheel wheel
 
-# install python requirements; note that `pip install -r
-# requirements.txt` fails due to install-time dependencies.
-while read line; do
-  pip wheel "$line" # --verbose helps with the travis test timeouts
-  pip install --upgrade "$line"
-done < "$DEENURP/requirements.txt"
+# Preserve the order of installation. The requirements are sorted so
+# that secondary (and higher-order) dependencies appear first. See
+# bin/pipdeptree2requirements.py. We use --no-deps to prevent various
+# packages from being repeatedly installed, uninstalled, reinstalled,
+# etc.
+while read pkg; do
+    pip install "$pkg" --no-deps --upgrade
+done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
 
-pip install -e "$DEENURP"
+# pip install -e "$DEENURP"
 
 # correct any more shebang lines
 virtualenv --relocatable $venv
