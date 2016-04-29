@@ -38,7 +38,11 @@ def cluster(seqfile, seqnames, identity=1.0, prefix='cluster-', threads=None):
          util.ntf(prefix=prefix, suffix='.uc') as uc:
         wrap.esl_sfetch(seqfile, seqnames, fa)
         fa.flush()
-        uclust.cluster(fa.name, uc.name, pct_id=identity, pre_sorted=False, quiet=True,
+        uclust.cluster(fa.name,
+                       uc.name,
+                       pct_id=identity,
+                       pre_sorted=False,
+                       quiet=False,
                        threads=threads)
         df = uclust.parse_uclust_as_df(uc)
         df = df[df.type != 'C']
@@ -79,4 +83,4 @@ def action(args):
         all_clusters.to_csv(args.seq_info_out, header=True, index=False)
 
     if args.seqs_out:
-        wrap.esl_sfetch(args.seqs, all_clusters['target_label'].unique(), args.seqs_out)
+        wrap.esl_sfetch(args.seqs, all_clusters['seed'].unique(), args.seqs_out)
