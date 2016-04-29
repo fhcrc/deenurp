@@ -68,6 +68,7 @@ import csv
 
 from Bio import SeqIO
 from concurrent import futures
+import peasel
 
 from taxtastic.taxtable import TaxNode as _TaxNode
 from .. import config, wrap, util, outliers
@@ -87,15 +88,16 @@ BLAST6NAMES = ['query', 'target', 'pct_id', 'align_len', 'mismatches', 'gaps',
 # TODO: remove this and fix in taxtastic
 class TaxNode(_TaxNode):
 
-    def populate_from_seqinfo(self, seqinfo):
+    def populate_from_seqinfo(self, seqinfo, seqnames):
         """Populate sequence_ids below this node from a seqinfo file object."""
         for row in csv.DictReader(seqinfo):
-            node = self.index.get(row['tax_id'])
-            if node:
-                node.sequence_ids.add(row['seqname'])
-            else:
-                log.warning('tax_id {tax_id} (sequence {seqname}) '
-                            'was not found in the taxonomy'.format(**row))
+            if row['seqname'] in seqnames:
+                node = self.index.get(row['tax_id'])
+                if node:
+                    node.sequence_ids.add(row['seqname'])
+                else:
+                    log.warning('tax_id {tax_id} (sequence {seqname}) '
+                                'was not found in the taxonomy'.format(**row))
 
 
 def build_parser(p):
@@ -449,6 +451,9 @@ def action(a):
     except OSError:
         pass
 
+    # itemize sequences provided in the input file
+    seqnames = {seq.name for seq in peasel.read_seq_file(a.sequence_file)}
+
     # Load taxonomy
     with a.taxonomy as fp:
         taxonomy = TaxNode.from_taxtable(fp)
@@ -456,7 +461,7 @@ def action(a):
 
     # Load sequences into taxonomy
     with open(a.seqinfo_file) as fp:
-        taxonomy.populate_from_seqinfo(fp)
+        taxonomy.populate_from_seqinfo(fp, seqnames)
         n_added = sum(1 for i in taxonomy.subtree_sequence_ids())
         if n_added == 0:
             log.error('No sequences were added. Are all '
@@ -597,14 +602,14 @@ def action(a):
     # Filter seqinfo for sequences that passed.
     seqinfo = pd.read_csv(
         a.seqinfo_file, dtype={'seqname': str, 'tax_id': str})
+    seqinfo = seqinfo.loc[seqinfo['seqname'].isin(seqnames)]
     seqinfo.set_index('seqname', inplace=True)
 
     merged = seqinfo.join(all_outcomes, lsuffix='.left')
 
     # csv output
     if a.filtered_seqinfo:
-        merged[
-            ~merged.is_out].to_csv(
+        merged[merged.is_out == False].to_csv(
             a.filtered_seqinfo,
             columns=seqinfo.columns)
 
