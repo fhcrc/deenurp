@@ -24,7 +24,7 @@ outlier detection:
   clustering at a specified threshold T. All clusters of size 1 are
   discarded. In addition, medoids of each remaining cluster are
   identified, and all members of any cluster whose medoid has a
-  distance of 1.5 * T from the medoid of the largest cluster is also
+  distance > 1.5 * T from the medoid of the largest cluster is also
   discarded.
 
 There are two options for defining the threshold T:
@@ -172,9 +172,11 @@ def build_parser(p):
         help="""Action to perform when a taxon has <
             '--min-seqs-to-filter' representatives. [default: %(default)s]""")
 
-    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
-                   help="""number of taxa to process concurrently (one
-                   process per multiple alignment) [default %(default)s]""")
+    p.add_argument('-j', '--jobs', type=int, default=config.DEFAULT_THREADS,
+                   help="""number of taxa to process concurrently [default %(default)s]""")
+    p.add_argument('-t', '--threads-per-job', type=int, default=4,
+                   help="""number of threads per job (eg, value to pass 'cmalign --cpu')
+                   [default %(default)s]""")
 
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
@@ -324,7 +326,9 @@ def filter_sequences(tax_id,
                      cluster_type='single',
                      aligner='cmalign',
                      executable=None,
-                     maxiters=wrap.MUSCLE_MAXITERS, iddef=wrap.VSEARCH_IDDEF):
+                     maxiters=wrap.MUSCLE_MAXITERS,
+                     iddef=wrap.VSEARCH_IDDEF,
+                     threads=None):
     """
     Return a list of sequence names identifying outliers.
     """
@@ -336,12 +340,14 @@ def filter_sequences(tax_id,
 
     if distmat is None:
         if aligner == 'cmalign':
-            taxa, distmat = distmat_cmalign(sequence_file, prefix)
+            taxa, distmat = distmat_cmalign(
+                sequence_file, prefix, cpu=threads or wrap.CMALIGN_THREADS)
         elif aligner == 'muscle':
             taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
         elif aligner == 'vsearch':
             taxa, distmat = distmat_pairwise(
-                sequence_file, prefix, aligner, executable, iddef)
+                sequence_file, prefix, aligner, executable, iddef,
+                threads=threads or wrap.VSEARCH_THREADS)
     else:
         assert taxa is not None
 
@@ -403,7 +409,8 @@ def filter_worker(tax_id,
                   max_radius,
                   cluster_type,
                   aligner,
-                  executable):
+                  executable,
+                  threads):
     """
     Worker task for running filtering tasks.
 
@@ -439,7 +446,8 @@ def filter_worker(tax_id,
             min_radius=min_radius,
             max_radius=max_radius,
             aligner=aligner,
-            executable=executable)
+            executable=executable,
+            threads=threads)
 
         return filtered
 
@@ -502,13 +510,8 @@ def action(a):
     # For each filter-rank, filter
     nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
-    if executable == 'cmalign':
-        threads = int(math.ceil(a.threads / float(wrap.CMALIGN_THREADS)))
-    else:
-        threads = a.threads
-
-    # Filter each tax_id, running ``--threads`` tasks in parallel
-    with futures.ThreadPoolExecutor(threads) as executor:
+    # Filter each tax_id, running ``--jobs`` tasks in parallel
+    with futures.ThreadPoolExecutor(a.jobs) as executor:
         # dispatch a pool of tasks
         futs = {}
         for i, node in enumerate(nodes):
@@ -548,7 +551,8 @@ def action(a):
                     max_radius=a.max_distance,
                     cluster_type='single',
                     aligner=a.aligner,
-                    executable=executable)
+                    executable=executable,
+                    threads=a.threads_per_job)
 
             futs[f] = {'n_seqs': len(seqs), 'node': node}
 
