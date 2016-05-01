@@ -33,6 +33,13 @@ def build_parser(parser):
         CPU core]""")
 
 
+def mocked_cluster_output(seqnames):
+    columns = ['type', 'query_label', 'target_label']
+    d = {'type': ['S' for s in seqnames],
+         'query_label': seqnames, 'target_label': seqnames}
+    return pd.DataFrame(d, columns=columns)
+
+
 def cluster(seqfile, seqnames, identity=1.0, prefix='cluster-', threads=None):
     with util.ntf(prefix=prefix, suffix='.fasta') as fa, \
          util.ntf(prefix=prefix, suffix='.uc') as uc:
@@ -65,15 +72,18 @@ def action(args):
 
     frames = []
     for key, grp in grouped:
-        # TODO: is longer necessarily better?
-        grp = grp.sort_values(
-            by=['is_type', 'ambig_count', 'length'],
-            ascending=[False, True, False])
+        # don't cluster groups represented by only one seq
+        if grp.shape[0] == 1:
+            clusters = mocked_cluster_output(grp['seqname'])
+        else:
+            # TODO: is longer necessarily better?
+            grp = grp.sort_values(
+                by=['is_type', 'ambig_count', 'length'],
+                ascending=[False, True, False])
+            clusters = cluster(args.seqs, grp['seqname'], identity=args.id,
+                               prefix='{}-'.format(key), threads=args.threads)
 
-        clusters = cluster(args.seqs, grp['seqname'], identity=args.id,
-                           prefix='{}-'.format(key), threads=args.threads)
         clusters['group'] = key
-
         frames.append(clusters)
 
     all_clusters = pd.concat(frames)
