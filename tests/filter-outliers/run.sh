@@ -8,10 +8,13 @@ rm -f seqs.fasta.ssi
 BASE=../rdp_10_30_named1200bp_subset
 DEENURP=${DEENURP-../../deenurp.py}
 
+# for aligner in vsearch; do
 for aligner in cmalign muscle vsearch; do
     echo $aligner
+
     out=output/$aligner/radius
     mkdir -p $out
+
     time $DEENURP filter_outliers \
     	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
     	 $out/filtered.fasta \
@@ -22,6 +25,7 @@ for aligner in cmalign muscle vsearch; do
 
     out=output/$aligner/cluster
     mkdir -p $out
+
     time $DEENURP filter_outliers \
     	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
     	 $out/filtered.fasta \

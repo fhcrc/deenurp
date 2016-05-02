@@ -365,8 +365,9 @@ def filter_sequences(tax_id,
     log.info('strategy: {}'.format(strategy))
     if strategy == 'radius':
         medoid, dists, is_out = outliers.outliers(distmat, cutoff)
+        clusters = numpy.repeat(medoid, len(taxa))
     elif strategy == 'cluster':
-        medoid, dists, is_out = outliers.outliers_by_cluster(
+        medoid, dists, is_out, clusters = outliers.outliers_by_cluster(
             distmat, t=cutoff, D=cutoff * 1.5,
             min_size=2, cluster_type=cluster_type)
 
@@ -376,7 +377,8 @@ def filter_sequences(tax_id,
         'seqname': taxa,
         'centroid': numpy.repeat(taxa[medoid], len(taxa)),
         'dist': dists,
-        'is_out': is_out})
+        'is_out': is_out,
+        'cluster': clusters})
 
     mds = outliers.mds(distmat, taxa)
     result = pd.merge(result, mds, how='left', on='seqname')

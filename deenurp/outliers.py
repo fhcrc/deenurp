@@ -118,10 +118,11 @@ def outliers_by_cluster(distmat, t, D, min_size=2, cluster_type='single'):
     ``scipy.cluster.hierarchy`` and identifies the clsutering
     algorithm.
 
-    * medoid - the index of the centermost element of the largest cluster
+    * medoid - the index of the centermost element
     * dists - a vector of distances to the medoid of the largest cluster
     * to_prune - a boolean vector corresponding to the margin of `distmat`
       where True identifies outliers.
+    * clusters - an index into `distmat` representing each cluster
     """
 
     clusters, title = scipy_cluster(distmat, cluster_type, t=t)
@@ -142,7 +143,7 @@ def outliers_by_cluster(distmat, t, D, min_size=2, cluster_type='single'):
     # sense of the relative position of each sequence)
     dists = distmat[medoid, :]
 
-    return medoid, dists, to_prune
+    return medoid, dists, to_prune, clusters
 
 
 def scipy_cluster(X, module, t, **kwargs):
