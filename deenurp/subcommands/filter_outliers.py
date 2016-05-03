@@ -1,18 +1,23 @@
 """Remove mis-annotated or malformed sequences from a reference database.
 
+algorithm
+=========
+
 Inputs are a database of reference sequences in fasta format, sequence
 annotation, and a taxonomy file.
 
 Sequences are first grouped at a specified taxonomic rank (the default
-is species). For each group, all pairwise distances are calculated
-using a choice of alignment strategies. If ``--aligner=cmalign``, a
+is species). For each group of sequences, all pairwise distances are
+calculated using a choice of strategies. If ``--aligner=cmalign``, a
 multiple alignment is created using a 16S rRNA alignment profile. A
 multiple alignment of non-16S sequences can be created using
 ``--aligner=muscle``, but note that alignment of large numbers of
 sequences may be slow. For both multiple alignment strategies,
 pairwise distances are calculated using ``FastTree
 -makematrix``. Alternatively, ``--aligner=vsearch`` will calculate
-pairwise distances using global pairwise alignments.
+pairwise distances using global pairwise alignments. This tends to be
+faster for small groups of sequences, and seems acceptable for up to
+1000 or so records per group.
 
 Given a pairwise distance matrix, two strategies are available for
 outlier detection:
@@ -35,8 +40,9 @@ There are two options for defining the threshold T:
   defined using ``--{min,max}-distance``.
 * Alternatively, a fixed value may be defined using ``--distance-cutoff``
 
-At the species level, T will typically be 0.01 to 0.02; 0.015 is a
-reasonable to use as a fixed value.
+For full-length 16S rRNA sequences grouped at the species level, T
+will typically be 0.01 to 0.02; 0.015 is a reasonable to use as a
+fixed value.
 
 A filtered subset of the sequences are provided as output. The file
 specified by ``--filtered-seqinfo`` contains the filtered subset of
@@ -48,11 +54,24 @@ the following additional fields:
 * {rank} - the tax_id at the taxonomic rank used for grouping
 * x, y - coordinates calculated by multidimensional scaling of the
   pairwise distance matrix.
+* cluster - an integer identifying a cluster of reads when
+  ``--strategy=cluster`` is used, or the group centroid using
+  ``--strategy=radius``
 
 This can all take a while if there are many sequences. If a pool of
 candidate sequences needs to be updated, use ``--previous-details`` to
 provide the output of ``--detailed-seqinfo`` from a previous run to
 avoid re-analyzing tax_ids represented by the same set of sequences.
+
+runtime parameters
+==================
+
+Parallel execution is supported at two levels: ``--jobs`` defines the
+number of sequence groups that are processed in parallel, and
+``--threads-per-job`` determines the number of cpus or threads
+allocated to each job (eg via ``vsearch --threads`` or ``cmalign
+--cpu``). No effort is made to avoid exceeding available resources, so
+the user should consider the product of these two parameters.
 
 """
 
