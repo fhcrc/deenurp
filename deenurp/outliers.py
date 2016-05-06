@@ -188,21 +188,25 @@ def find_cluster_medoids(X, clusters):
     assert clusters.shape[0] == n, '`clusters` must be the size of the margin of `X`'
 
     uclusters, counts = np.unique(clusters, return_counts=True)
-    tallies = sorted(zip(counts, uclusters), reverse=True)
-    counts, uclusters = zip(*tallies)  # reorders uclusters and counts
+
+    # reorders uclusters and counts by decreasing size, placing tally
+    # of unclustered elements last
+    tallies = sorted(zip([0 if c == -1 else 1 for c in uclusters], counts, uclusters), reverse=True)
+
+    __, counts, uclusters = zip(*tallies)
 
     medoids = [(None if cluster == -1 else find_medoid(X, clusters == cluster))
-               for _, cluster in tallies]
+               for _, _, cluster in tallies]
 
-    # measure distances from the medoid of the largest cluster; this
-    # is the first one, unless the number of ourliers exceeds the size
-    # of the largest cluster.
-    idx_of_largest = min(i for i, m in enumerate(medoids) if m is not None)
-    dists = [None if medoid is None else X[medoids[idx_of_largest], medoid] for medoid in medoids]
+    # measure distances from the medoid of the first (largest) cluster
+    dists = [None if medoid is None else X[medoids[0], medoid] for medoid in medoids]
 
     return pd.DataFrame.from_items([
-        ('cluster', uclusters), ('count', counts), ('medoid', medoids), ('dist', dists)
-    ]).sort_values(by='count', ascending=False)
+        ('cluster', uclusters),
+        ('count', counts),
+        ('medoid', medoids),
+        ('dist', dists)
+    ])
 
 
 def choose_clusters(df, min_size, max_dist):
