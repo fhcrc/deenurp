@@ -43,7 +43,7 @@ def version():
                 version = '{tag}.dev{commit}'.format(**git_search.groupdict())
             break
         except Exception as e:
-            logging.warn(e)
+            logging.debug(e)
 
     if version is None:
         try:
@@ -52,6 +52,6 @@ def version():
             """
             version = pkg_resources.require("deenurp")[0].version
         except pkg_resources.DistributionNotFound as e:
-            logging.warn(e)
+            logging.debug(e)
 
     return version or '0.0.0'
