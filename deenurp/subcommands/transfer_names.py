@@ -92,7 +92,6 @@ def action(args):
 
     search = functools.partial(uclust.search,
             pct_id=args.percent_id,
-            trunclabels=True,
             search_pct_id=0.9, quiet=True)
 
     # Search the sequences from the reference package against the input sequences

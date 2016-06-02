@@ -35,8 +35,7 @@ def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
         uclust.search(named_sequence_file, to_cluster, tf.name,
                 pct_id=0.80,
                 maxaccepts=5,
-                maxrejects=100,
-                trunclabels=True)
+                maxrejects=100)
 
         # Uclust.search renames to tf, need a new handle.
         records = uclust.parse_uclust_out(tf)
@@ -60,11 +59,11 @@ def identify_otus_unnamed(seq_file, cluster_similarity):
     Identify sequences in OTUs at the given cluster similarity;
     """
     logging.info('Running UCLUST on unnamed sequences at %f',
-            cluster_similarity)
+                 cluster_similarity)
     with util.ntf(prefix='uclust') as tf:
         # Sort and cluster
-        uclust.sort_and_cluster(seq_file, tf.name, pct_id=cluster_similarity,
-                trunclabels=True, quiet=True)
+        uclust.cluster(
+            seq_file, tf.name, pct_id=cluster_similarity, quiet=True)
         clusters = uclust.sequences_by_cluster(uclust.parse_uclust_out(tf))
         for _, sequences in clusters:
             yield [i.query_label for i in sequences]
