@@ -6,7 +6,7 @@ with secondary (or higher-order) dependencies first.
 Usage:
 
   pip install pipdeptree
-  pipdeptree -f --nowarn | bin/pipdeptree2requirements.py
+  pipdeptree -f | bin/pipdeptree2requirements.py
 
 """
 
