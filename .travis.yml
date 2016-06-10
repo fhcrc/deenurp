@@ -33,7 +33,7 @@ install:
 
 script:
   - python setup.py test
-  - tests/run.sh
+  # - tests/run.sh
 
 notifications:
   email:

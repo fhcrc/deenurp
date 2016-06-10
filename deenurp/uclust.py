@@ -17,6 +17,8 @@ import operator
 import subprocess
 import tempfile
 
+import numpy as np
+import pandas as pd
 from Bio import SeqIO
 
 from .util import require_executable
@@ -94,6 +96,17 @@ def parse_uclust_out(ucout_fp):
         reader = csv.reader(rows, delimiter='\t')
         for row in reader:
             yield _parse_uclust_row(row)
+
+
+def parse_uclust_as_df(ucout_fp):
+    dtype = {'type': str, 'query_label': str,
+             'target_label': str, 'alignment': str}
+    df = pd.read_csv(ucout_fp, sep='\t', na_values='*', names=UCLUST_HEADERS, dtype=dtype)
+
+    # define target_label as query_label for seed sequences
+    df['target_label'] = np.where(df['type'] == 'S', df['query_label'], df['target_label'])
+
+    return df
 
 
 # Library search
@@ -197,7 +210,7 @@ def search(database, query, output, pct_id=DEFAULT_PCT_ID,
 
 
 def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
-            pre_sorted=False):
+            pre_sorted=False, threads=None):
     """Cluster de novo. If ``pre_sorted`` is True, assume that sequences
     are pre-sorted by length (and cluster using --cluster_smallmem
     rather than --cluster_fast). See ``vsearch --help`` for details.
@@ -212,6 +225,8 @@ def cluster(sequence_file, output, pct_id=DEFAULT_PCT_ID, quiet=False,
         cmd.append('--quiet')
     if not pre_sorted:
         cmd.append('--usersort')
+    if threads is not None:
+        cmd.extend(['--threads', str(threads)])
     _check_call(cmd)
 
 

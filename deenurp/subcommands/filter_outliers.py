@@ -1,18 +1,23 @@
 """Remove mis-annotated or malformed sequences from a reference database.
 
+algorithm
+=========
+
 Inputs are a database of reference sequences in fasta format, sequence
 annotation, and a taxonomy file.
 
 Sequences are first grouped at a specified taxonomic rank (the default
-is species). For each group, all pairwise distances are calculated
-using a choice of alignment strategies. If ``--aligner=cmalign``, a
+is species). For each group of sequences, all pairwise distances are
+calculated using a choice of strategies. If ``--aligner=cmalign``, a
 multiple alignment is created using a 16S rRNA alignment profile. A
 multiple alignment of non-16S sequences can be created using
 ``--aligner=muscle``, but note that alignment of large numbers of
 sequences may be slow. For both multiple alignment strategies,
 pairwise distances are calculated using ``FastTree
 -makematrix``. Alternatively, ``--aligner=vsearch`` will calculate
-pairwise distances using global pairwise alignments.
+pairwise distances using global pairwise alignments. This tends to be
+faster for small groups of sequences, and seems acceptable for up to
+1000 or so records per group.
 
 Given a pairwise distance matrix, two strategies are available for
 outlier detection:
@@ -24,7 +29,7 @@ outlier detection:
   clustering at a specified threshold T. All clusters of size 1 are
   discarded. In addition, medoids of each remaining cluster are
   identified, and all members of any cluster whose medoid has a
-  distance of 1.5 * T from the medoid of the largest cluster is also
+  distance > 1.5 * T from the medoid of the largest cluster is also
   discarded.
 
 There are two options for defining the threshold T:
@@ -35,8 +40,9 @@ There are two options for defining the threshold T:
   defined using ``--{min,max}-distance``.
 * Alternatively, a fixed value may be defined using ``--distance-cutoff``
 
-At the species level, T will typically be 0.01 to 0.02; 0.015 is a
-reasonable to use as a fixed value.
+For full-length 16S rRNA sequences grouped at the species level, T
+will typically be 0.01 to 0.02; 0.015 is a reasonable to use as a
+fixed value.
 
 A filtered subset of the sequences are provided as output. The file
 specified by ``--filtered-seqinfo`` contains the filtered subset of
@@ -48,11 +54,24 @@ the following additional fields:
 * {rank} - the tax_id at the taxonomic rank used for grouping
 * x, y - coordinates calculated by multidimensional scaling of the
   pairwise distance matrix.
+* cluster - an integer identifying a cluster of reads when
+  ``--strategy=cluster`` is used, or the group centroid using
+  ``--strategy=radius``
 
 This can all take a while if there are many sequences. If a pool of
 candidate sequences needs to be updated, use ``--previous-details`` to
 provide the output of ``--detailed-seqinfo`` from a previous run to
 avoid re-analyzing tax_ids represented by the same set of sequences.
+
+runtime parameters
+==================
+
+Parallel execution is supported at two levels: ``--jobs`` defines the
+number of sequence groups that are processed in parallel, and
+``--threads-per-job`` determines the number of cpus or threads
+allocated to each job (eg via ``vsearch --threads`` or ``cmalign
+--cpu``). No effort is made to avoid exceeding available resources, so
+the user should consider the product of these two parameters.
 
 """
 
@@ -65,9 +84,11 @@ import sys
 import shutil
 import logging
 import csv
+import traceback
 
 from Bio import SeqIO
 from concurrent import futures
+import peasel
 
 from taxtastic.taxtable import TaxNode as _TaxNode
 from .. import config, wrap, util, outliers
@@ -87,15 +108,16 @@ BLAST6NAMES = ['query', 'target', 'pct_id', 'align_len', 'mismatches', 'gaps',
 # TODO: remove this and fix in taxtastic
 class TaxNode(_TaxNode):
 
-    def populate_from_seqinfo(self, seqinfo):
+    def populate_from_seqinfo(self, seqinfo, seqnames):
         """Populate sequence_ids below this node from a seqinfo file object."""
         for row in csv.DictReader(seqinfo):
-            node = self.index.get(row['tax_id'])
-            if node:
-                node.sequence_ids.add(row['seqname'])
-            else:
-                log.warning('tax_id {tax_id} (sequence {seqname}) '
-                            'was not found in the taxonomy'.format(**row))
+            if row['seqname'] in seqnames:
+                node = self.index.get(row['tax_id'])
+                if node:
+                    node.sequence_ids.add(row['seqname'])
+                else:
+                    log.warning('tax_id {tax_id} (sequence {seqname}) '
+                                'was not found in the taxonomy'.format(**row))
 
 
 def build_parser(p):
@@ -129,9 +151,15 @@ def build_parser(p):
         '--filter-rank', default=DEFAULT_RANK, help='[%(default)s]')
     filter_group.add_argument(
         '--strategy', default='radius', choices=['radius', 'cluster'],
-        help="""Strategy for outlier detection.""")
+        help="""Strategy for outlier detection. """)
     filter_group.add_argument(
-        '--distance-percentile', type=float, default=90.0,
+        '--cluster-type', default='single', choices=['single', 'RobustSingleLinkage'],
+        help="""Identifies the clustering algorithm for
+        --strategy=cluster. 'single' for
+        'scipy.cluster.hierarchy.single' or 'RobustSingleLinkage' for
+        'hdbscan.RobustSingleLinkage'""")
+    filter_group.add_argument(
+        '--distance-percentile', type=float, default=50.0,
         help="""Define distance cutoff as a percentile of the
         distribution of distances from medoid to others [default:
         %(default)s]""")
@@ -140,7 +168,7 @@ def build_parser(p):
         help="""Minimum distance when calculating as a percentile
         [default: %(default)s]""")
     filter_group.add_argument(
-        '--max-distance', type=float, default=0.10,
+        '--max-distance', type=float, default=0.05,
         help="""Maximum distance when calculating as a percentile
         [default: %(default)s]""")
     filter_group.add_argument(
@@ -170,9 +198,11 @@ def build_parser(p):
         help="""Action to perform when a taxon has <
             '--min-seqs-to-filter' representatives. [default: %(default)s]""")
 
-    p.add_argument('--threads', type=int, default=config.DEFAULT_THREADS,
-                   help="""number of taxa to process concurrently (one
-                   process per multiple alignment) [default %(default)s]""")
+    p.add_argument('-j', '--jobs', type=int, default=config.DEFAULT_THREADS,
+                   help="""number of taxa to process concurrently [default %(default)s]""")
+    p.add_argument('-t', '--threads-per-job', type=int, default=4,
+                   help="""number of threads per job (eg, value to pass 'cmalign --cpu')
+                   [default %(default)s]""")
 
 
 def sequences_above_rank(taxonomy, rank=DEFAULT_RANK):
@@ -315,31 +345,37 @@ def filter_sequences(tax_id,
                      distmat=None,
                      taxa=None,
                      strategy='radius',
+                     cluster_type='single',
                      cutoff=None,
                      percentile=None,
                      min_radius=0.0,
                      max_radius=None,
-                     cluster_type='single',
                      aligner='cmalign',
                      executable=None,
-                     maxiters=wrap.MUSCLE_MAXITERS, iddef=wrap.VSEARCH_IDDEF):
+                     maxiters=wrap.MUSCLE_MAXITERS,
+                     iddef=wrap.VSEARCH_IDDEF,
+                     threads=None):
     """
     Return a list of sequence names identifying outliers.
     """
 
-    assert aligner in {'cmalign', 'muscle', 'vsearch'}, 'invalid aligner'
-    assert strategy in {'radius', 'cluster'}, 'invalid strategy'
+    assert aligner in {'cmalign', 'muscle', 'vsearch'}, 'invalid aligner: ' + aligner
+    assert strategy in {'radius', 'cluster'}, 'invalid strategy: ' + strategy
+    assert cluster_type in {'single', 'RobustSingleLinkage'}, \
+        'invalid cluster_type ' + cluster_type
 
     prefix = '{}_'.format(tax_id)
 
     if distmat is None:
         if aligner == 'cmalign':
-            taxa, distmat = distmat_cmalign(sequence_file, prefix)
+            taxa, distmat = distmat_cmalign(
+                sequence_file, prefix, cpu=threads or wrap.CMALIGN_THREADS)
         elif aligner == 'muscle':
             taxa, distmat = distmat_muscle(sequence_file, prefix, maxiters)
         elif aligner == 'vsearch':
             taxa, distmat = distmat_pairwise(
-                sequence_file, prefix, aligner, executable, iddef)
+                sequence_file, prefix, aligner, executable, iddef,
+                threads=threads or wrap.VSEARCH_THREADS)
     else:
         assert taxa is not None
 
@@ -357,9 +393,10 @@ def filter_sequences(tax_id,
     log.info('strategy: {}'.format(strategy))
     if strategy == 'radius':
         medoid, dists, is_out = outliers.outliers(distmat, cutoff)
+        clusters = numpy.repeat(medoid, len(taxa))
     elif strategy == 'cluster':
-        medoid, dists, is_out = outliers.outliers_by_cluster(
-            distmat, t=cutoff, D=cutoff * 1.5,
+        medoid, dists, is_out, clusters = outliers.outliers_by_cluster(
+            distmat, t=cutoff, D=1.5,
             min_size=2, cluster_type=cluster_type)
 
     assert len(is_out) == len(taxa)
@@ -368,7 +405,8 @@ def filter_sequences(tax_id,
         'seqname': taxa,
         'centroid': numpy.repeat(taxa[medoid], len(taxa)),
         'dist': dists,
-        'is_out': is_out})
+        'is_out': is_out,
+        'cluster': clusters})
 
     mds = outliers.mds(distmat, taxa)
     result = pd.merge(result, mds, how='left', on='seqname')
@@ -395,13 +433,14 @@ def filter_worker(tax_id,
                   sequence_file,
                   seqs,
                   strategy,
+                  cluster_type,
                   distance_cutoff,
                   percentile,
                   min_radius,
                   max_radius,
-                  cluster_type,
                   aligner,
-                  executable):
+                  executable,
+                  threads):
     """
     Worker task for running filtering tasks.
 
@@ -432,12 +471,14 @@ def filter_worker(tax_id,
             tax_id,
             sequence_file=tf.name,
             strategy=strategy,
+            cluster_type=cluster_type,
             cutoff=distance_cutoff,
             percentile=percentile,
             min_radius=min_radius,
             max_radius=max_radius,
             aligner=aligner,
-            executable=executable)
+            executable=executable,
+            threads=threads)
 
         return filtered
 
@@ -449,6 +490,9 @@ def action(a):
     except OSError:
         pass
 
+    # itemize sequences provided in the input file
+    seqnames = {seq.name for seq in peasel.read_seq_file(a.sequence_file)}
+
     # Load taxonomy
     with a.taxonomy as fp:
         taxonomy = TaxNode.from_taxtable(fp)
@@ -456,7 +500,7 @@ def action(a):
 
     # Load sequences into taxonomy
     with open(a.seqinfo_file) as fp:
-        taxonomy.populate_from_seqinfo(fp)
+        taxonomy.populate_from_seqinfo(fp, seqnames)
         n_added = sum(1 for i in taxonomy.subtree_sequence_ids())
         if n_added == 0:
             log.error('No sequences were added. Are all '
@@ -497,13 +541,8 @@ def action(a):
     # For each filter-rank, filter
     nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
-    if executable == 'cmalign':
-        threads = int(math.ceil(a.threads / float(wrap.CMALIGN_THREADS)))
-    else:
-        threads = a.threads
-
-    # Filter each tax_id, running ``--threads`` tasks in parallel
-    with futures.ThreadPoolExecutor(threads) as executor:
+    # Filter each tax_id, running ``--jobs`` tasks in parallel
+    with futures.ThreadPoolExecutor(a.jobs) as executor:
         # dispatch a pool of tasks
         futs = {}
         for i, node in enumerate(nodes):
@@ -541,9 +580,10 @@ def action(a):
                     percentile=a.distance_percentile,
                     min_radius=a.min_distance,
                     max_radius=a.max_distance,
-                    cluster_type='single',
+                    cluster_type=a.cluster_type,
                     aligner=a.aligner,
-                    executable=executable)
+                    executable=executable,
+                    threads=a.threads_per_job)
 
             futs[f] = {'n_seqs': len(seqs), 'node': node}
 
@@ -559,6 +599,7 @@ def action(a):
                     log.exception(
                         "Error in child process: %s", f.exception())
                     executor.shutdown(False)
+                    traceback.print_tb(f._traceback)
                     raise f.exception()
 
                 info = futs.pop(f)
@@ -597,14 +638,14 @@ def action(a):
     # Filter seqinfo for sequences that passed.
     seqinfo = pd.read_csv(
         a.seqinfo_file, dtype={'seqname': str, 'tax_id': str})
+    seqinfo = seqinfo.loc[seqinfo['seqname'].isin(seqnames)]
     seqinfo.set_index('seqname', inplace=True)
 
     merged = seqinfo.join(all_outcomes, lsuffix='.left')
 
     # csv output
     if a.filtered_seqinfo:
-        merged[
-            ~merged.is_out].to_csv(
+        merged[merged.is_out == False].to_csv(
             a.filtered_seqinfo,
             columns=seqinfo.columns)
 

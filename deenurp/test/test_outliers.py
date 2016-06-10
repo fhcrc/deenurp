@@ -112,7 +112,7 @@ class TestFindOutliers(unittest.TestCase):
         self.assertEqual(len(out), 7)
 
     def test_outliers_02(self):
-        _, _, is_outlier = outliers.outliers_by_cluster(self.mat, t=0.015, D=0.015)
+        _, _, is_outlier, _ = outliers.outliers_by_cluster(self.mat, t=0.015, D=0.015)
         out = {t for t, o in zip(self.taxa, is_outlier) if o}
         self.assertEqual(len(out), 4)
 

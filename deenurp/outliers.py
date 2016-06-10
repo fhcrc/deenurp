@@ -13,6 +13,8 @@ import pandas as pd
 import scipy
 import scipy.cluster
 
+import hdbscan
+
 log = logging
 
 
@@ -109,40 +111,66 @@ def outliers(distmat, radius):
     return medoid, dists, to_prune
 
 
-def outliers_by_cluster(distmat, t, D, min_size=2, cluster_type='single'):
-    """Detect outliers by 1) performing hierarchical clustering with
-    distance threshold ``t`` and discarding clusters with fewer than
+def outliers_by_cluster(distmat, t, D, min_size=1, cluster_type='single', **kwargs):
+    """Detect outliers by 1) performing hierarchical clustering based on
+    distances in ``distmat`` (a square numpy matrix) with distance
+    threshold ``t`` and discarding clusters with fewer than
     ``min_size`` members; then 2) discarding clusters whose medoids
-    have a distance greater than ``D`` from the medoid of the largest
-    cluster. ``cluster_type`` is the name of a method of
-    ``scipy.cluster.hierarchy`` and identifies the clsutering
-    algorithm.
+    have a distance greater than ``t * D`` from the medoid of the
+    largest cluster. ``cluster_type`` is a string naming a submodule
+    of either ``scipy.cluster.hierarchy`` or ``hdbscan`` (ie,
+    'HDBSCAN' or 'RobustSingleLinkage') and identifies the clustering
+    algorithm. Additional parameters are passed to the clustering
+    algorithm when using one of the hdbscan methods only.
 
-    * medoid - the index of the centermost element of the largest cluster
+    Return values:
+
+    * medoid - the index of the centermost element
     * dists - a vector of distances to the medoid of the largest cluster
     * to_prune - a boolean vector corresponding to the margin of `distmat`
       where True identifies outliers.
+    * clusters - an index into `distmat` representing each cluster
+
     """
 
-    clusters, title = scipy_cluster(distmat, cluster_type, t=t)
-    log.debug(title)
+    if cluster_type == 'HDBSCAN':
+        clusters, title = hdbscan_cluster(distmat, cluster_type, **kwargs)
+    elif cluster_type == 'RobustSingleLinkage':
+        clusters, title = hdbscan_cluster(distmat, cluster_type, cut=t, **kwargs)
+    else:
+        clusters, title = scipy_cluster(distmat, cluster_type, t=t)
 
-    medoids = find_cluster_medoids(distmat, clusters)
+    log.info(title)
 
-    # `keep` is a collection of cluster numbers to retain (these are
-    # cluster labels, not indices)
-    keep = choose_clusters(medoids, min_size, D)
-    to_prune = ~ pd.Series(clusters).isin(keep)
+    if all(clusters == -1):
+        # if no clusters are found, we throw up our hands and accept
+        # all of the sequences
+        log.warning('no clusters were found')
+
+        medoids = pd.DataFrame.from_items([
+            ('cluster', [-1]),
+            ('count', [len(clusters)]),
+            ('medoid', [find_medoid(distmat)]),
+            ('dist', [None])
+        ])
+        to_prune = pd.Series([False for x in clusters])
+    else:
+        medoids = find_cluster_medoids(distmat, clusters)
+
+        # `keep` is a collection of cluster numbers to retain (these are
+        # cluster labels, not indices)
+        keep = choose_clusters(medoids, min_size, t * D)
+        to_prune = ~ pd.Series(clusters).isin(keep)
 
     # medoid of the largest cluster (an index into distmat)
-    medoid = medoids['medoid'][0]
+    medoid = int(medoids['medoid'][0])
 
     # distances to this medoid (note that these distances are not used
     # directly as a criterion for filtering - they just provide a
     # sense of the relative position of each sequence)
     dists = distmat[medoid, :]
 
-    return medoid, dists, to_prune
+    return medoid, dists, to_prune, clusters
 
 
 def scipy_cluster(X, module, t, **kwargs):
@@ -169,6 +197,21 @@ def scipy_cluster(X, module, t, **kwargs):
     return clusters, title
 
 
+def hdbscan_cluster(X, module, **kwargs):
+
+    try:
+        fun = getattr(hdbscan, module)
+    except AttributeError:
+        raise ValueError("'module' must be 'HDBSCAN' or 'RobustSingleLinkage'")
+
+    clusterer = fun(metric='precomputed', **kwargs)
+
+    title = ' '.join(str(clusterer).split())
+    clusters = clusterer.fit_predict(X)
+
+    return clusters, title
+
+
 def find_cluster_medoids(X, clusters):
     """Inputs are ``X``, a square distance matrix, and ``clusters``, a
     1-dimensional array assigning each element in ``X`` to a
@@ -187,17 +230,27 @@ def find_cluster_medoids(X, clusters):
     assert clusters.shape[0] == n, '`clusters` must be the size of the margin of `X`'
 
     uclusters, counts = np.unique(clusters, return_counts=True)
-    tallies = sorted(zip(counts, uclusters), reverse=True)
-    counts, uclusters = zip(*tallies)  # reorders uclusters and counts
+
+    # reorders uclusters and counts by decreasing size, placing tally
+    # of unclustered elements last
+    tallies = sorted(
+        zip([0 if c == -1 else 1 for c in uclusters], counts, uclusters),
+        reverse=True)
+
+    __, counts, uclusters = zip(*tallies)
 
     medoids = [(None if cluster == -1 else find_medoid(X, clusters == cluster))
-               for _, cluster in tallies]
+               for _, _, cluster in tallies]
 
+    # measure distances from the medoid of the first (largest) cluster
     dists = [None if medoid is None else X[medoids[0], medoid] for medoid in medoids]
 
     return pd.DataFrame.from_items([
-        ('cluster', uclusters), ('count', counts), ('medoid', medoids), ('dist', dists)
-    ]).sort_values(by='count', ascending=False)
+        ('cluster', uclusters),
+        ('count', counts),
+        ('medoid', medoids),
+        ('dist', dists)
+    ])
 
 
 def choose_clusters(df, min_size, max_dist):
@@ -218,6 +271,8 @@ def choose_clusters(df, min_size, max_dist):
     'cluster' column).
 
     """
+
+    log.info('\n' + str(df))
 
     # the parens are necessary to enforce precedence
     keep = (df['cluster'] != -1) & (df['count'] >= min_size) & (df['dist'] <= max_dist)
@@ -244,7 +299,7 @@ def scaled_radius(X, percentile, min_radius=0.0, max_radius=None):
     return radius
 
 
-def mds(X, taxa):
+def mds(X, taxa, n_jobs=1):
     """Perform multidimensional scaling using ``sklearn.manifold`` given
     square distance matrix ``X``. Return a DataFrame with columns
     'seqname', 'x', 'y' in which 'seqname' contains the names provided
@@ -256,7 +311,10 @@ def mds(X, taxa):
     assert n == m, 'X must be a square matrix'
 
     from sklearn import manifold
-    mds = manifold.MDS(dissimilarity='precomputed', random_state=12345)
+    mds = manifold.MDS(
+        dissimilarity='precomputed',
+        random_state=12345,
+        n_jobs=n_jobs)
 
     if np.all(X == 0):
         df = pd.DataFrame.from_items([
@@ -270,4 +328,5 @@ def mds(X, taxa):
         df['seqname'] = pd.Series(taxa, index=df.index)
         df = df[['seqname', 'x', 'y']]  # reorder columns
 
+    assert X.shape[0] == df.shape[0]
     return df
