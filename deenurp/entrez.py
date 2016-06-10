@@ -88,7 +88,7 @@ def esearch(term, **args):
             log.error(err)
 
 
-def efetch(ids, retry=0, **args):
+def efetch(ids, retry=0, max_retry=10, **args):
     """
     Search GenBank given a list of accessions or GI's.
     ncbi.efetch can work unexpectedly when querying a large number of tax ids.
@@ -104,11 +104,15 @@ def efetch(ids, retry=0, **args):
         """
 
         seconds = float(retry) / 1000
-        msg = '{}, retrying in {} seconds...'.format(exception, seconds)
+        msg = '{}, retrying in {} seconds... {} max retry(ies)'.format(
+            exception, seconds, max_retry)
         log.error(msg)
         return True
 
-    @retrying.retry(retry_on_exception=print_retry_message, wait_fixed=retry)
+    @retrying.retry(
+        retry_on_exception=print_retry_message,
+        wait_fixed=retry,
+        stop_max_attempt_number=max_retry)
     def get_records(ids=[]):
         log.info(entrez_pprint('efetch', '-id', liststr(ids), **args))
         records = parse(Entrez.efetch(id=ids, **args), args['rettype'])

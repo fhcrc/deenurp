@@ -66,21 +66,20 @@ def read_seq_info(seq_info):
 
 
 def action(args):
-    stdouts = {sys.stdout: '/dev/stdout', sys.stderr: '/dev/stderr'}
-    logfile = stdouts.get(args.log, args.log.name)
-
     columns = ['query', 'target', 'qstrand', 'id', 'tilo', 'tihi']
     dtype = dict(zip(columns, [str, str, str, float, int, int]))
 
     prog = ['vsearch', '--usearch_global', args.qseqs,
             '--db', args.tseqs,
             '--userout', '/dev/stdout',
-            '--log', logfile,
             '--strand', 'both',
             '--id', str(args.id),
             '--userfields', '+'.join(columns),
             '--top_hits_only',
             '--quiet']
+
+    if args.log is not None and args.log is not sys.stdout:
+        prog.extend(['--log', args.log])
 
     if args.threads:
         prog.extend(['--threads', str(args.threads)])
