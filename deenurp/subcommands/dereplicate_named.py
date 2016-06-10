@@ -49,7 +49,7 @@ def cluster(seqfile, seqnames, identity=1.0, prefix='cluster-', threads=None):
                        uc.name,
                        pct_id=identity,
                        pre_sorted=False,
-                       quiet=False,
+                       quiet=True,
                        threads=threads)
         df = uclust.parse_uclust_as_df(uc)
         df = df[df.type != 'C']
