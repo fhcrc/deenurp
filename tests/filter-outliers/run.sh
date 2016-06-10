@@ -68,8 +68,7 @@ for aligner in cmalign muscle vsearch; do
     	 --aligner $aligner \
     	 --strategy cluster \
 	 --cluster-type RobustSingleLinkage \
-    	 --distance-percentile 90 \
-	 -j 1
+    	 --distance-percentile 90
 
 
 done
