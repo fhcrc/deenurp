@@ -2,13 +2,16 @@
  Changes for deenurp
 =====================
 
-0.1.8
-============
-
-* ``deenurp ncbi_extract_genbank`` will die after 10 query retries
+0.1.8-dev
+=========
 * add subcommand 'dereplicate_named'
 * add new clustering method to filter_outliers (--cluster-type RobustSingleLinkage)
 * update defaults for filter_outliers
+
+0.1.8
+======
+
+* ``deenurp ncbi_extract_genbank`` will die after 10 query retries
 
 0.1.7
 =====
