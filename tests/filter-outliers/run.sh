@@ -57,4 +57,19 @@ for aligner in cmalign muscle vsearch; do
       <(grep '>' $out/filtered.details.csv | sort) \
       <(grep '>' $out/filtered2.details.csv | sort)
 
+    out=output/$aligner/cluster-rsl
+    mkdir -p $out
+
+    time $DEENURP filter_outliers \
+    	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
+    	 $out/filtered.fasta \
+    	 --filtered-seqinfo $out/filtered.seqinfo.csv \
+    	 --detailed-seqinfo $out/filtered.details.csv \
+    	 --aligner $aligner \
+    	 --strategy cluster \
+	 --cluster-type RobustSingleLinkage \
+    	 --distance-percentile 90 \
+	 -j 1
+
+
 done
