@@ -84,6 +84,7 @@ import sys
 import shutil
 import logging
 import csv
+import traceback
 
 from Bio import SeqIO
 from concurrent import futures
@@ -150,9 +151,15 @@ def build_parser(p):
         '--filter-rank', default=DEFAULT_RANK, help='[%(default)s]')
     filter_group.add_argument(
         '--strategy', default='radius', choices=['radius', 'cluster'],
-        help="""Strategy for outlier detection.""")
+        help="""Strategy for outlier detection. """)
     filter_group.add_argument(
-        '--distance-percentile', type=float, default=90.0,
+        '--cluster-type', default='single', choices=['single', 'RobustSingleLinkage'],
+        help="""Identifies the clustering algorithm for
+        --strategy=cluster. 'single' for
+        'scipy.cluster.hierarchy.single' or 'RobustSingleLinkage' for
+        'hdbscan.RobustSingleLinkage'""")
+    filter_group.add_argument(
+        '--distance-percentile', type=float, default=50.0,
         help="""Define distance cutoff as a percentile of the
         distribution of distances from medoid to others [default:
         %(default)s]""")
@@ -161,7 +168,7 @@ def build_parser(p):
         help="""Minimum distance when calculating as a percentile
         [default: %(default)s]""")
     filter_group.add_argument(
-        '--max-distance', type=float, default=0.10,
+        '--max-distance', type=float, default=0.05,
         help="""Maximum distance when calculating as a percentile
         [default: %(default)s]""")
     filter_group.add_argument(
@@ -338,11 +345,11 @@ def filter_sequences(tax_id,
                      distmat=None,
                      taxa=None,
                      strategy='radius',
+                     cluster_type='single',
                      cutoff=None,
                      percentile=None,
                      min_radius=0.0,
                      max_radius=None,
-                     cluster_type='single',
                      aligner='cmalign',
                      executable=None,
                      maxiters=wrap.MUSCLE_MAXITERS,
@@ -352,8 +359,10 @@ def filter_sequences(tax_id,
     Return a list of sequence names identifying outliers.
     """
 
-    assert aligner in {'cmalign', 'muscle', 'vsearch'}, 'invalid aligner'
-    assert strategy in {'radius', 'cluster'}, 'invalid strategy'
+    assert aligner in {'cmalign', 'muscle', 'vsearch'}, 'invalid aligner: ' + aligner
+    assert strategy in {'radius', 'cluster'}, 'invalid strategy: ' + strategy
+    assert cluster_type in {'single', 'RobustSingleLinkage'}, \
+        'invalid cluster_type ' + cluster_type
 
     prefix = '{}_'.format(tax_id)
 
@@ -387,7 +396,7 @@ def filter_sequences(tax_id,
         clusters = numpy.repeat(medoid, len(taxa))
     elif strategy == 'cluster':
         medoid, dists, is_out, clusters = outliers.outliers_by_cluster(
-            distmat, t=cutoff, D=cutoff * 1.5,
+            distmat, t=cutoff, D=1.5,
             min_size=2, cluster_type=cluster_type)
 
     assert len(is_out) == len(taxa)
@@ -424,11 +433,11 @@ def filter_worker(tax_id,
                   sequence_file,
                   seqs,
                   strategy,
+                  cluster_type,
                   distance_cutoff,
                   percentile,
                   min_radius,
                   max_radius,
-                  cluster_type,
                   aligner,
                   executable,
                   threads):
@@ -462,6 +471,7 @@ def filter_worker(tax_id,
             tax_id,
             sequence_file=tf.name,
             strategy=strategy,
+            cluster_type=cluster_type,
             cutoff=distance_cutoff,
             percentile=percentile,
             min_radius=min_radius,
@@ -570,7 +580,7 @@ def action(a):
                     percentile=a.distance_percentile,
                     min_radius=a.min_distance,
                     max_radius=a.max_distance,
-                    cluster_type='single',
+                    cluster_type=a.cluster_type,
                     aligner=a.aligner,
                     executable=executable,
                     threads=a.threads_per_job)
@@ -589,6 +599,7 @@ def action(a):
                     log.exception(
                         "Error in child process: %s", f.exception())
                     executor.shutdown(False)
+                    traceback.print_tb(f._traceback)
                     raise f.exception()
 
                 info = futs.pop(f)
