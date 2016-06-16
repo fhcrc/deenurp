@@ -135,7 +135,8 @@ def build_parser(p):
 
     output_group = p.add_argument_group('output options')
     output_group.add_argument(
-        'output_fp', help="""Destination for sequences""",
+        '--output-seqs', help="""REQUIRED destination for sequences""",
+        required=True,
         type=argparse.FileType('w'), metavar='FILE')
     output_group.add_argument(
         '--filtered-seqinfo', type=argparse.FileType('w'), metavar='FILE',
@@ -516,12 +517,7 @@ def action(a):
         dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str}
         # columns in output of `filter_worker`
         filter_worker_cols = [
-            'centroid',
-            'dist',
-            'is_out',
-            'seqname',
-            'x',
-            'y']
+            'centroid', 'dist', 'is_out', 'seqname', 'x', 'y']
         previous_details = pd.read_csv(
             a.previous_details, dtype=dtype).groupby(a.filter_rank)
     else:
@@ -630,7 +626,7 @@ def action(a):
 
     kept_ids = set(all_outcomes.index[~all_outcomes.is_out])
 
-    with a.output_fp as fp:
+    with a.output_seqs as fp:
         # Extract all of the sequences that passed.
         log.info('Extracting %d sequences', len(kept_ids))
         wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
