@@ -79,7 +79,7 @@ def action(args):
             '--quiet']
 
     if args.log is not None and args.log is not sys.stdout:
-        prog.extend(['--log', args.log])
+        prog.extend(['--log', args.log.name])
 
     if args.threads:
         prog.extend(['--threads', str(args.threads)])
