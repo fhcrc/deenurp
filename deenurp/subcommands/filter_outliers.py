@@ -648,3 +648,6 @@ def action(a):
     if a.detailed_seqinfo:
         with open(a.detailed_seqinfo, 'w') as detailed_seqinfo:
             merged.to_csv(detailed_seqinfo)
+
+    # finally - clean up .ssi file
+    os.remove(a.sequence_file + '.ssi')

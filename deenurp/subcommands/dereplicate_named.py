@@ -70,6 +70,11 @@ def cluster(seqfile, seqnames, identity=1.0, prefix='cluster-', threads=None):
 
 
 def action(args):
+    # remove .ssi index for sequence file if it exists
+    try:
+        os.remove(args.seqs + '.ssi')
+    except OSError:
+        pass
 
     dtype = {'gi': str, 'tax_id': str, 'species': str}
     seq_info = pd.read_csv(args.seq_info, dtype=dtype)
@@ -110,5 +115,5 @@ def action(args):
     wrap.esl_sfetch(
         args.seqs, all_clusters['seed'].unique(), args.seqs_out)
 
-    # finally - remove .ssi file
+    # finally - clean up .ssi file
     os.remove(args.seqs + '.ssi')
