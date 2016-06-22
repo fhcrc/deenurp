@@ -3,6 +3,7 @@
 """
 
 import logging
+import os
 import sys
 
 import pandas as pd
@@ -106,6 +107,8 @@ def action(args):
         seq_info = seq_info[seq_info['seqname'].isin(all_clusters['seed'])]
         seq_info.to_csv(args.seq_info_out, index=False)
 
-    if args.seqs_out:
-        wrap.esl_sfetch(
-            args.seqs, all_clusters['seed'].unique(), args.seqs_out)
+    wrap.esl_sfetch(
+        args.seqs, all_clusters['seed'].unique(), args.seqs_out)
+
+    # finally - remove .ssi file
+    os.remove(args.seqs + '.ssi')
