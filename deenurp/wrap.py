@@ -28,7 +28,7 @@ CMALIGN_THREADS = 4
 MUSCLE_MAXITERS = 2
 
 VSEARCH = 'vsearch'
-VSEARCH_VERSION = '1.10.2'
+VSEARCH_VERSION = '2.0.3'
 VSEARCH_IDDEF = 2
 VSEARCH_THREADS = 2
 
@@ -269,9 +269,10 @@ def _require_vsearch_version(vsearch=VSEARCH, version=VSEARCH_VERSION):
     """
 
     cmd = [vsearch, '--version']
-    o = subprocess.check_output(cmd)
-
-    vsearch = re.search(r'^vsearch v(?P<vstr>\d+\.\d+\.[^_]+)', o)
+    p = subprocess.Popen(
+        cmd, stderr=subprocess.PIPE)
+    __, stderr = p.communicate()
+    vsearch = re.search(r'^vsearch v(?P<vstr>\d+\.\d+\.[^_]+)', stderr)
     ver = vsearch.groupdict()['vstr']
 
     if LooseVersion(ver) < LooseVersion(version):
