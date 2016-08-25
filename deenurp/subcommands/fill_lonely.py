@@ -29,7 +29,7 @@ def is_lonely(node, parent_rank=PARENT_RANK):
     try:
         parent = node.at_rank(parent_rank)
         return sum(True for i in parent if i.rank == node.rank) == 1
-    except KeyError:
+    except ValueError:
         return False
 
 
