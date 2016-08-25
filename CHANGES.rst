@@ -2,11 +2,13 @@
  Changes for deenurp
 =====================
 
-0.1.8-dev
+0.1.9-dev
 =========
 * add subcommand 'dereplicate_named'
 * add new clustering method to filter_outliers (--cluster-type RobustSingleLinkage)
 * update defaults for filter_outliers
+* use vsearch 2.0.3
+* fix error in fill_lonely raised by node with no parent
 
 0.1.8
 ======
