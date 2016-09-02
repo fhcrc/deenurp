@@ -2,9 +2,7 @@
  DeeNuRP
 =========
 
-De-novo Reference Package Pipeline
-
-Under development.
+16S rRNA gene sequence curation and phylogenetic reference set creation
 
 Installation
 ============
@@ -35,8 +33,8 @@ First, install binary dependencies:
         + Run ``pip install PACKAGE`` for every PACKAGE listed in requirements.txt, e.g.
           ``cat requirements.txt | xargs -n 1 pip install``
 
-* vsearch
-* Infernal version 1.1, (http://infernal.janelia.org/)
+* vsearch (https://github.com/torognes/vsearch)
+* Infernal version 1.1 (http://infernal.janelia.org/)
 * pplacer suite (http://matsen.fhcrc.org/pplacer)
 * FastTree 2 (http://www.microbesonline.org/fasttree/#Install)
 
@@ -47,9 +45,6 @@ Optional (for ``filter-outliers`` and ``pairwise-distances``):
 Finally, install::
 
     python setup.py install
-
-UCLUST, pplacer, FastTree, Infernal, and R are all distributed with the `QIIME
-Virtual Machine <http://www.qiime.org>`_, which may be a great way to get started.
 
 De-novo reference set creation
 ==============================
