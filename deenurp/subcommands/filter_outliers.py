@@ -76,7 +76,6 @@ the user should consider the product of these two parameters.
 """
 
 import argparse
-import math
 import numpy
 import os
 import pandas as pd
@@ -591,12 +590,13 @@ def action(a):
             sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(
                 complete, complete + len(pending)))
             for f in done:
-                if f.exception():
+                exception = f.exception()
+                if exception:
                     log.exception(
-                        "Error in child process: %s", f.exception())
-                    executor.shutdown(False)
+                        "Error in child process: %s", exception)
+                    executor.shutdown(wait=False)
                     traceback.print_tb(f._traceback)
-                    raise f.exception()
+                    raise exception
 
                 info = futs.pop(f)
                 filtered = f.result()  # here's the DataFrame again...
