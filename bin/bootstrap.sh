@@ -58,7 +58,7 @@ PPLACER_BUILD=1.1.alpha17
 INFERNAL_VERSION=1.1.1
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
-VSEARCH_VERSION=1.10.2
+VSEARCH_VERSION=2.0.3
 
 check_version(){
     # usage: check_version module version-string
@@ -211,7 +211,7 @@ while read pkg; do
     pip install "$pkg" --no-deps --upgrade
 done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
 
-# pip install -e "$DEENURP"
+pip install -e "$DEENURP"
 
 # correct any more shebang lines
 virtualenv --relocatable $venv
