@@ -512,7 +512,9 @@ def action(a):
                                   'muscle': 'muscle',
                                   'vsearch': wrap.VSEARCH}[a.aligner]
 
-    if a.previous_details and os.path.isfile(a.previous_details):
+    if (a.previous_details and
+            os.path.isfile(a.previous_details) and
+            os.stat(a.previous_details).st_size):
         dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str}
         # columns in output of `filter_worker`
         filter_worker_cols = [
