@@ -367,6 +367,7 @@ def filter_sequences(tax_id,
     prefix = '{}_'.format(tax_id)
 
     if distmat is None:
+        log.debug('running {} on {}'.format(aligner, tax_id))
         if aligner == 'cmalign':
             taxa, distmat = distmat_cmalign(
                 sequence_file, prefix, cpu=threads or wrap.CMALIGN_THREADS)
