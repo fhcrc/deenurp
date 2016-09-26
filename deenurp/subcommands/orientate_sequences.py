@@ -100,7 +100,7 @@ def action(args):
 
     vsearch = pandas.read_csv(
         StringIO(results), dtype=dtype, names=columns,
-        header=None, sep='\t', index_col='query')
+        header=None, sep='\t').set_index('query')
     qstrands = vsearch['qstrand'].to_dict()
 
     records = util.Counter(SeqIO.parse(args.qseqs, format='fasta'))
