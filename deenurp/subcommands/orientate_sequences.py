@@ -76,6 +76,8 @@ def action(args):
             '--id', str(args.id),
             '--userfields', '+'.join(columns),
             '--top_hits_only',
+            '--maxaccepts 1 '  # default is 1
+            '--maxrejects 5 '  # default is 32
             '--quiet']
 
     if args.log is not None and args.log is not sys.stdout:

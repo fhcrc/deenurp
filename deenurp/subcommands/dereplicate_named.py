@@ -83,7 +83,11 @@ def action(args):
         include = args.include.read().split()
         seq_info = seq_info.loc[seq_info[args.group_on].isin(include)]
 
-    # TODO: join with taxonomy if provided
+    # join with taxonomy if provided
+    if args.taxonomy:
+        tax = pd.read_csv(args.taxonomy, dtype=str,).set_index('tax_id')
+        seq_info = seq_info.join(tax, on='tax_id')
+
     grouped = seq_info.groupby(args.group_on, sort=False)
 
     frames = []
