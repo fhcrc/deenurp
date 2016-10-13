@@ -48,6 +48,8 @@ def build_parser(parser):
                       help='seqnames that did not match tseqs at id threshold')
     outs.add_argument('--out_notmatched_info',
                       help='seq_info file of notmatched seqs')
+    outs.add_argument('--out_notmatched_taxids',
+                      help='txt file of notmatched seqnames')
     outs.add_argument('--out_seq_info',
                       help='seq_info file with notmatched seqs removed')
 
@@ -105,15 +107,31 @@ def action(args):
         header=None, sep='\t').set_index('query')
     qstrands = vsearch['qstrand'].to_dict()
 
-    records = util.Counter(SeqIO.parse(args.qseqs, format='fasta'))
-    records = (record for record in records if record.name in vsearch.index)
+    def is_matched(r):
+        matched = False
+        if r.name in vsearch.index:
+            matched = True
+        return r, matched
 
+    records = util.Counter(SeqIO.parse(args.qseqs, format='fasta'))
+    records = (is_matched(record) for record in records)
+
+    notmatched_taxids = set()
     with open(args.out, 'w') as out:
-        for record in records:
-            if qstrands[record.name] == '-':
-                log.info('reversing sequence {}'.format(record.name))
-                record.seq = record.seq.reverse_complement()
-            SeqIO.write([record], out, 'fasta')
+        for record, matched_bool in records:
+            if matched_bool:
+                if qstrands[record.name] == '-':
+                    log.info('reversing sequence {}'.format(record.name))
+                    record.seq = record.seq.reverse_complement()
+                SeqIO.write([record], out, 'fasta')
+            else:
+                notmatched_taxids.add(record.name)
+
+    # out files
+    if args.out_notmatched_taxids:
+        with open(args.out_notmatched_taxids, 'w') as out:
+            for t in notmatched_taxids:
+                out.write(t + '\n')
 
     if args.out_csv:
         out_columns = ['qstrand', 'target', 'id', 'tilo', 'tihi']
