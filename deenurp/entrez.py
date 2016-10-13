@@ -131,6 +131,20 @@ def efetch(ids, retry=0, max_retry=10, **args):
     return records
 
 
+def _filter_bad_records(records, ids, **args):
+    passed = []
+    for i, r in enumerate(records):
+        print(r)
+        try:
+            r.decode('utf-8')
+        except UnicodeError:
+            log.error(entrez_pprint('efetch', '-id', ids[i], **args))
+            continue
+        passed.append(r)
+    print(passed)
+    return passed
+
+
 def filter_features(records, features, strand):
     """
     http://www.ncbi.nlm.nih.gov/projects/Sequin/table.html
