@@ -343,7 +343,7 @@ def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):
         try:
             peasel.create_ssi(sequence_file)
         except IOError:
-            logging.info("An index already exists for %s", sequence_file)
+            logging.debug("An index already exists for %s", sequence_file)
 
         index = peasel.open_ssi(sequence_file)
         sequences = (index[i] for i in name_iter)
