@@ -78,7 +78,6 @@ def esearch(term, **args):
             if idlist:
                 for i in idlist:
                     yield i
-
                 retstart += args['retmax']
             else:
                 return
@@ -227,8 +226,9 @@ def ffetch(features, ids, **args):
     del args['strand']
     records = []
     for accession, seq_start, seq_stop, strand in ft:
-        fetched = efetch([accession], seq_start=seq_start,
-                         seq_stop=seq_stop, strand=strand, **args)
+        args.update(
+            {'seq_start': seq_start, 'seq_stop': seq_stop, 'strand': strand})
+        fetched = efetch([accession], **args)
         records.append((fetched[0], seq_start, seq_stop))
 
         # remove ids with features
