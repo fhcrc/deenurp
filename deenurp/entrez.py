@@ -2,6 +2,7 @@
 Entrez wrapper to search and fetch unlimited accessions
 """
 
+import argparse
 import logging
 import re
 import retrying
@@ -133,14 +134,13 @@ def efetch(ids, retry=0, max_retry=10, **args):
 def _filter_bad_records(records, ids, **args):
     passed = []
     for i, r in enumerate(records):
-        print(r)
         try:
             r.decode('utf-8')
         except UnicodeError:
             log.error(entrez_pprint('efetch', '-id', ids[i], **args))
             continue
         passed.append(r)
-    print(passed)
+
     return passed
 
 
@@ -166,6 +166,11 @@ def filter_features(records, features, strand):
 
     # parse features for columns 3-5
     features = [f.split(':') for f in features]
+    for f in features:
+        # make sure features are valid
+        if len(f) != 3:
+            msg = str(f) + ' is not a valid feature argument'
+            raise argparse.ArgumentTypeError(msg)
     features = zip(*features)
     features = [[x if x else '.' for x in f] for f in features]
     features = ['|'.join(f) for f in features]
