@@ -2,6 +2,7 @@
 Entrez wrapper to search and fetch unlimited accessions
 """
 
+import argparse
 import logging
 import re
 import retrying
@@ -78,7 +79,6 @@ def esearch(term, **args):
             if idlist:
                 for i in idlist:
                     yield i
-
                 retstart += args['retmax']
             else:
                 return
@@ -131,6 +131,19 @@ def efetch(ids, retry=0, max_retry=10, **args):
     return records
 
 
+def _filter_bad_records(records, ids, **args):
+    passed = []
+    for i, r in enumerate(records):
+        try:
+            r.decode('utf-8')
+        except UnicodeError:
+            log.error(entrez_pprint('efetch', '-id', ids[i], **args))
+            continue
+        passed.append(r)
+
+    return passed
+
+
 def filter_features(records, features, strand):
     """
     http://www.ncbi.nlm.nih.gov/projects/Sequin/table.html
@@ -153,6 +166,11 @@ def filter_features(records, features, strand):
 
     # parse features for columns 3-5
     features = [f.split(':') for f in features]
+    for f in features:
+        # make sure features are valid
+        if len(f) != 3:
+            msg = str(f) + ' is not a valid feature argument'
+            raise argparse.ArgumentTypeError(msg)
     features = zip(*features)
     features = [[x if x else '.' for x in f] for f in features]
     features = ['|'.join(f) for f in features]
@@ -213,8 +231,9 @@ def ffetch(features, ids, **args):
     del args['strand']
     records = []
     for accession, seq_start, seq_stop, strand in ft:
-        fetched = efetch([accession], seq_start=seq_start,
-                         seq_stop=seq_stop, strand=strand, **args)
+        args.update(
+            {'seq_start': seq_start, 'seq_stop': seq_stop, 'strand': strand})
+        fetched = efetch([accession], **args)
         records.append((fetched[0], seq_start, seq_stop))
 
         # remove ids with features

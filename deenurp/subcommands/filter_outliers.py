@@ -76,7 +76,6 @@ the user should consider the product of these two parameters.
 """
 
 import argparse
-import math
 import numpy
 import os
 import pandas as pd
@@ -135,7 +134,8 @@ def build_parser(p):
 
     output_group = p.add_argument_group('output options')
     output_group.add_argument(
-        'output_fp', help="""Destination for sequences""",
+        '--output-seqs', help="""REQUIRED destination for sequences""",
+        required=True,
         type=argparse.FileType('w'), metavar='FILE')
     output_group.add_argument(
         '--filtered-seqinfo', type=argparse.FileType('w'), metavar='FILE',
@@ -367,6 +367,7 @@ def filter_sequences(tax_id,
     prefix = '{}_'.format(tax_id)
 
     if distmat is None:
+        log.debug('running {} on {}'.format(aligner, tax_id))
         if aligner == 'cmalign':
             taxa, distmat = distmat_cmalign(
                 sequence_file, prefix, cpu=threads or wrap.CMALIGN_THREADS)
@@ -512,16 +513,13 @@ def action(a):
                                   'muscle': 'muscle',
                                   'vsearch': wrap.VSEARCH}[a.aligner]
 
-    if a.previous_details and os.path.isfile(a.previous_details):
+    if (a.previous_details and
+            os.path.isfile(a.previous_details) and
+            os.stat(a.previous_details).st_size):
         dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str}
         # columns in output of `filter_worker`
         filter_worker_cols = [
-            'centroid',
-            'dist',
-            'is_out',
-            'seqname',
-            'x',
-            'y']
+            'centroid', 'dist', 'is_out', 'seqname', 'x', 'y']
         previous_details = pd.read_csv(
             a.previous_details, dtype=dtype).groupby(a.filter_rank)
     else:
@@ -595,12 +593,13 @@ def action(a):
             sys.stderr.write('{0:8d}/{1:8d} taxa completed\r'.format(
                 complete, complete + len(pending)))
             for f in done:
-                if f.exception():
+                exception = f.exception()
+                if exception:
                     log.exception(
-                        "Error in child process: %s", f.exception())
-                    executor.shutdown(False)
+                        "Error in child process: %s", exception)
+                    executor.shutdown(wait=False)
                     traceback.print_tb(f._traceback)
-                    raise f.exception()
+                    raise exception
 
                 info = futs.pop(f)
                 filtered = f.result()  # here's the DataFrame again...
@@ -630,7 +629,7 @@ def action(a):
 
     kept_ids = set(all_outcomes.index[~all_outcomes.is_out])
 
-    with a.output_fp as fp:
+    with a.output_seqs as fp:
         # Extract all of the sequences that passed.
         log.info('Extracting %d sequences', len(kept_ids))
         wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
@@ -652,3 +651,6 @@ def action(a):
     if a.detailed_seqinfo:
         with open(a.detailed_seqinfo, 'w') as detailed_seqinfo:
             merged.to_csv(detailed_seqinfo)
+
+    # finally - clean up .ssi file
+    os.remove(a.sequence_file + '.ssi')

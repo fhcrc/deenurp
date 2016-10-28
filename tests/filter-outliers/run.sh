@@ -17,7 +17,7 @@ for aligner in cmalign muscle vsearch; do
 
     time $DEENURP filter_outliers \
     	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
-    	 $out/filtered.fasta \
+    	 --output-seqs $out/filtered.fasta \
     	 --filtered-seqinfo $out/filtered.seqinfo.csv \
     	 --detailed-seqinfo $out/filtered.details.csv \
     	 --aligner $aligner \
@@ -28,7 +28,7 @@ for aligner in cmalign muscle vsearch; do
 
     time $DEENURP filter_outliers \
     	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
-    	 $out/filtered.fasta \
+    	 --output-seqs $out/filtered.fasta \
     	 --filtered-seqinfo $out/filtered.seqinfo.csv \
     	 --detailed-seqinfo $out/filtered.details.csv \
     	 --aligner $aligner \
@@ -37,7 +37,7 @@ for aligner in cmalign muscle vsearch; do
 
     time $DEENURP filter_outliers \
       $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
-      $out/filtered2.fasta \
+      --output-seqs $out/filtered2.fasta \
       --previous-details $out/filtered.details.csv \
       --filtered-seqinfo $out/filtered2.seqinfo.csv \
       --detailed-seqinfo $out/filtered2.details.csv \
@@ -62,7 +62,7 @@ for aligner in cmalign muscle vsearch; do
 
     time $DEENURP filter_outliers \
     	 $BASE.fasta $BASE.seqinfo.csv $BASE.taxonomy.csv \
-    	 $out/filtered.fasta \
+    	 --output-seqs $out/filtered.fasta \
     	 --filtered-seqinfo $out/filtered.seqinfo.csv \
     	 --detailed-seqinfo $out/filtered.details.csv \
     	 --aligner $aligner \

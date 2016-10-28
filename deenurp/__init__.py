@@ -99,7 +99,7 @@ def parse_args(parser):
     parser.add_argument('-l', '--log',
                         metavar='FILE',
                         default=sys.stdout,
-                        type=util.file_opener('a'),  # append
+                        type=util.file_opener('a', buffering=0),  # append
                         help='Send logging to a file')
 
     parser.add_argument('-v', '--verbose',

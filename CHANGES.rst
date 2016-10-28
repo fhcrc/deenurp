@@ -2,12 +2,19 @@
  Changes for deenurp
 =====================
 
-next release
-============
-
+0.1.9-dev
+=========
 * add subcommand 'dereplicate_named'
 * add new clustering method to filter_outliers (--cluster-type RobustSingleLinkage)
 * update defaults for filter_outliers
+* use vsearch 2.0.3
+* fix error in fill_lonely raised by node with no parent
+* added `deenurp orientate_sequences --out_notmatched_taxids`
+
+0.1.8
+======
+
+* ``deenurp ncbi_extract_genbank`` will die after 10 query retries
 
 0.1.7
 =====
