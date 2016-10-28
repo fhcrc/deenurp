@@ -23,7 +23,6 @@ import importlib
 import logging
 import os
 import pkgutil
-import subcommands
 import sys
 import util
 import version
@@ -123,6 +122,7 @@ def parse_subcommands(parser, argv):
     """
     Setup all sub-commands
     """
+    import subcommands
 
     subparsers = parser.add_subparsers(dest='subparser_name')
 
