@@ -78,6 +78,7 @@ def action(args):
 
     dtype = {'gi': str, 'tax_id': str, 'species': str}
     seq_info = pd.read_csv(args.seq_info, dtype=dtype)
+    info_cols = seq_info.columns
 
     if args.include:
         include = args.include.read().split()
@@ -114,7 +115,7 @@ def action(args):
 
     if args.seq_info_out:
         seq_info = seq_info[seq_info['seqname'].isin(all_clusters['seed'])]
-        seq_info.to_csv(args.seq_info_out, index=False)
+        seq_info.to_csv(args.seq_info_out, columns=info_cols, index=False)
 
     wrap.esl_sfetch(
         args.seqs, all_clusters['seed'].unique(), args.seqs_out)
