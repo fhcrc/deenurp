@@ -59,7 +59,7 @@ def build_parser(parser):
 def read_seq_info(seq_info):
     info_dtypes = {'seqname': str, 'tax_id': str, 'tax_name': str,
                    'parent_id': str, 'rank': str, 'new_node': bool,
-                   'accession': str, 'ambig_count': int}
+                   'accession': str, 'ambig_count': int, 'gi': str}
     seq_info_df = pandas.read_csv(
         seq_info, dtype=info_dtypes,
         true_values=['yes'], false_values=['no'],
