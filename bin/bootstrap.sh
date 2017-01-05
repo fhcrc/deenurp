@@ -212,6 +212,3 @@ while read pkg; do
 done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
 
 pip install -e "$DEENURP"
-
-# correct any more shebang lines
-virtualenv --relocatable $venv
