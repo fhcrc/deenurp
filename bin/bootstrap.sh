@@ -113,7 +113,7 @@ else
 	wget -nc https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP && \
 	unzip -o $PPLACER_ZIP && \
 	cp $PPLACER_DIR/{pplacer,guppy,rppr} $venv/bin && \
-	pip install -U $PPLACER_DIR/scripts)
+	pip2 install -U $PPLACER_DIR/scripts)
     # confirm that we have installed the requested build
     if ! pplacer_is_installed; then
 	echo -n "Error: you requested pplacer build $PPLACER_BUILD "
@@ -199,8 +199,8 @@ else
 fi
 
 # required to build and cache wheels - doing this greatly speeds up travis CI tests
-pip install -U pip
-pip install -U wheel
+pip2 install -U pip
+pip2 install -U wheel
 
 # Preserve the order of installation. The requirements are sorted so
 # that secondary (and higher-order) dependencies appear first. See
@@ -208,7 +208,7 @@ pip install -U wheel
 # packages from being repeatedly installed, uninstalled, reinstalled,
 # etc.
 while read pkg; do
-    pip install "$pkg" --no-deps --upgrade
+    pip2 install "$pkg" --no-deps --upgrade
 done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
 
-pip install -e "$DEENURP"
+pip2 install -e "$DEENURP"
