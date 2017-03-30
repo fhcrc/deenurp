@@ -148,7 +148,12 @@ def select_sequences_for_whitelist_cluster(
         wrap.fasttree(aligned, tf, gtr=True)
         tf.close()
         prune = wrap.rppr_min_adcl_tree(tf.name, keep_leaves)
-    return ref_ids - frozenset(prune)
+
+    result = ref_ids - frozenset(prune)
+    assert len(result) == keep_leaves
+
+    refs = [i for i in ref_seqs if i.id in result]
+    return refs
 
 
 def fetch_cluster_members(cluster_info_file, group_field):
