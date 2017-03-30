@@ -238,6 +238,10 @@ def choose_references(
     min_cluster_prop - Minimum proportion of total mass in a cluster to
                        require before including references
     """
+
+    if include_sequences:
+        raise NotImplementedError('"include_sequences" is not implemented')
+
     params = search.load_params(deenurp_db)
     fasta_file = params['fasta_file']
     ref_fasta = params['ref_fasta']

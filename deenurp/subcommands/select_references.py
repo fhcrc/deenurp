@@ -65,43 +65,43 @@ def build_parser(p):
 
     selection_options = p.add_argument_group('Selection Options')
     selection_options.add_argument(
-        '--refs-per-cluster',
+        '--refs-per-cluster', metavar='INT',
         type=int,
         default=5,
         help="""Maximum references per cluster [default: %(default)d]""")
     selection_options.add_argument(
-        '--min-mass-prop',
+        '--min-mass-prop', metavar='FLOAT',
         help="""Minimum proportion of total mass in
         a cluster to require before including references [default:
         %(default)f]""",
         type=float,
         default=select.MIN_CLUSTER_PROP)
     selection_options.add_argument(
-        '--include-clusters',
+        '--include-clusters', metavar='FILE',
         type=argparse.FileType('r'),
         help="""Select sequences for cluster IDs in %(metavar)s,
         regardless of whether they had hits among the query
         sequences""")
     selection_options.add_argument(
-        '--exclude-clusters',
+        '--exclude-clusters', metavar='FILE',
         type=argparse.FileType('r'),
-        help=('List of cluster identifiers not to include in the results'))
+        help=('List of cluster identifiers to exclude from the results'))
+    # selection_options.add_argument(
+    #     '--include-sequences',
+    #     type=argparse.FileType('r'),
+    #     help=('List of sequences to include in the results [NOT IMPLEMENTED]'))
     selection_options.add_argument(
-        '--include-sequences',
+        '--exclude-sequences', metavar='FILE',
         type=argparse.FileType('r'),
-        help=('List of sequences to include in the results [NOT IMPLEMENTED]'))
-    selection_options.add_argument(
-        '--exclude-sequences',
-        type=argparse.FileType('r'),
-        help=('List of sequences not to include in the results'))
+        help=('List of sequence ids to exclude from the results'))
 
     info_options = p.add_argument_group('Sequence info options')
     info_options.add_argument(
-        '--seqinfo-out',
+        '--seqinfo-out', metavar='FILE',
         type=argparse.FileType('w'),
         help="""File to write merged metadata""")
     info_options.add_argument(
-        '--output-meta',
+        '--output-meta', metavar='FILE',
         help="""File to write selection metadata""",
         type=argparse.FileType('w'))
 
@@ -125,22 +125,22 @@ def action(args):
     include_clusters = None
     if args.include_clusters:
         with args.include_clusters as fp:
-            include_clusters = set(i.strip() for i in fp)
+            include_clusters = set(fp.read().split())
 
     exclude_clusters = None
     if args.exclude_clusters:
         with args.exclude_clusters as fp:
-            exclude_clusters = set(i.strip() for i in fp)
+            exclude_clusters = set(fp.read().split())
 
-    include_sequences = None
-    if args.include_sequences:
-        with args.include_sequences as fp:
-            include_sequences = set(i.strip() for i in fp)
+    # include_sequences = None
+    # if args.include_sequences:
+    #     with args.include_sequences as fp:
+    #         include_sequences = set(fp.read().split())
 
     exclude_sequences = None
     if args.exclude_sequences:
         with args.exclude_sequences as fp:
-            exclude_sequences = set(i.strip() for i in fp)
+            exclude_sequences = set(fp.read().split())
 
     with util.tempcopy(args.search_db) as search_path:
         search_db = sqlite3.connect(search_path)
@@ -152,7 +152,7 @@ def action(args):
                 min_cluster_prop=args.min_mass_prop,
                 include_clusters=include_clusters,
                 exclude_clusters=exclude_clusters,
-                include_sequences=include_sequences,
+                # include_sequences=include_sequences,
                 exclude_sequences=exclude_sequences)
 
             with args.output as fp:
