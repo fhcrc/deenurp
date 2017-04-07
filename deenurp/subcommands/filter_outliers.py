@@ -636,7 +636,7 @@ def action(a):
 
     # Filter seqinfo for sequences that passed.
     seqinfo = pd.read_csv(
-            a.seqinfo_file, dtype={'seqname': str, 'tax_id': str, 'gi': str})
+        a.seqinfo_file, dtype={'seqname': str, 'tax_id': str, 'gi': str})
     seqinfo = seqinfo.loc[seqinfo['seqname'].isin(seqnames)]
     seqinfo.set_index('seqname', inplace=True)
 
@@ -644,7 +644,7 @@ def action(a):
 
     # csv output
     if a.filtered_seqinfo:
-        merged[merged.is_out == False].to_csv(
+        merged[~merged.is_out].to_csv(
             a.filtered_seqinfo,
             columns=seqinfo.columns)
 
