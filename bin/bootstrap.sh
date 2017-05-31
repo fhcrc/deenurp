@@ -44,7 +44,7 @@ else
 fi
 
 if [[ -z $PYTHON ]]; then
-    PYTHON=$(which python)
+    PYTHON=$(which python2)
 fi
 
 # Defines the default source directory for deenurp as the parent of
@@ -53,7 +53,7 @@ if [[ -z $DEENURP ]]; then
     DEENURP=$(cd $(dirname $BASH_SOURCE) && cd .. && pwd)
 fi
 
-VENV_VERSION=15.0.0
+VENV_VERSION=15.0.1
 PPLACER_BUILD=1.1.alpha17
 INFERNAL_VERSION=1.1.1
 RAXML_VERSION=8.0.5
@@ -197,10 +197,6 @@ else
 	    cd muscle${MUSCLE_VERSION}/src && \
 	    ./mk && cp muscle $venv/bin)
 fi
-
-# required to build and cache wheels - doing this greatly speeds up travis CI tests
-pip2 install -U pip
-pip2 install -U wheel
 
 # Preserve the order of installation. The requirements are sorted so
 # that secondary (and higher-order) dependencies appear first. See

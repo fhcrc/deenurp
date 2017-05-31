@@ -516,7 +516,7 @@ def action(a):
     if (a.previous_details and
             os.path.isfile(a.previous_details) and
             os.stat(a.previous_details).st_size):
-        dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str, 'gi':str}
+        dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str, 'gi': str}
         # columns in output of `filter_worker`
         filter_worker_cols = [
             'centroid', 'dist', 'is_out', 'seqname', 'x', 'y']
@@ -538,6 +538,13 @@ def action(a):
 
     # For each filter-rank, filter
     nodes = [i for i in taxonomy if i.rank == a.filter_rank]
+
+    names_at_rank = [s for n in nodes for s in n.sequence_ids]
+
+    # make sure all seqs are accounted for
+    for s in seqnames:
+        if s not in names_above_rank and s not in names_at_rank:
+            raise ValueError(s + ' missing tax_id at filter rank')
 
     # Filter each tax_id, running ``--jobs`` tasks in parallel
     with futures.ThreadPoolExecutor(a.jobs) as executor:
