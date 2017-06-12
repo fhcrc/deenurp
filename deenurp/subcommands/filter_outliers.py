@@ -539,7 +539,7 @@ def action(a):
     # For each filter-rank, filter
     nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
-    names_at_rank = [s for n in nodes for s in n.sequence_ids]
+    names_at_rank = [s for n in nodes for s in n.subtree_sequence_ids()]
 
     # make sure all seqs are accounted for
     for s in seqnames:
