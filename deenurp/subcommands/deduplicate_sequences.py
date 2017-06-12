@@ -44,8 +44,7 @@ def build_parser(p):
 
 
 def action(args):
-    dtype = {'gi': str, 'tax_id': str, 'species': str}
-    seq_info = pandas.read_csv(args.seq_info, dtype=dtype, index_col='seqname')
+    seq_info = pandas.read_csv(args.seq_info, dtype=str, index_col='seqname')
 
     log.info('reading sequences')
     with util.file_opener()(args.sequences) as sequences_in:
