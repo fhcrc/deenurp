@@ -52,6 +52,7 @@ def mocked_cluster_output(seqnames):
 
 
 def cluster(seqfile, seqnames, identity=1.0, prefix='cluster-', threads=None):
+    prefix = prefix.replace('/', '\\')  # / confuses the filesystem
     with util.ntf(prefix=prefix, suffix='.fasta') as fa, \
             util.ntf(prefix=prefix, suffix='.uc') as uc:
         wrap.esl_sfetch(seqfile, seqnames, fa)
@@ -98,11 +99,21 @@ def action(args):
             clusters = mocked_cluster_output(grp['seqname'])
         else:
             # TODO: is longer necessarily better?
-            grp = grp.sort_values(
-                by=['is_type', 'ambig_count', 'length'],
-                ascending=[False, True, False])
-            clusters = cluster(args.seqs, grp['seqname'], identity=args.id,
-                               prefix='{}-'.format(key), threads=args.threads)
+            by = []
+            ascending = []
+            for c, o in [['is_type', False],
+                         ['ambig_count', True],
+                         ['length', False]]:
+                if c in grp.columns:
+                    by.append(c)
+                    ascending.append(o)
+            if by:
+                grp = grp.sort_values(
+                    by=by,
+                    ascending=ascending)
+                clusters = cluster(
+                    args.seqs, grp['seqname'], identity=args.id,
+                    prefix='{}-'.format(key), threads=args.threads)
 
         clusters['group'] = key
         frames.append(clusters)
