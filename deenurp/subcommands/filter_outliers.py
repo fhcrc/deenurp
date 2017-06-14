@@ -519,7 +519,7 @@ def action(a):
         dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str, 'gi': str}
         # columns in output of `filter_worker`
         filter_worker_cols = [
-            'centroid', 'dist', 'is_out', 'seqname', 'x', 'y']
+            'centroid', 'cluster', 'dist', 'is_out', 'seqname', 'x', 'y']
         previous_details = pd.read_csv(
             a.previous_details, dtype=dtype).groupby(a.filter_rank)
     else:
