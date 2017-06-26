@@ -24,5 +24,5 @@ scipy==0.18.0
 scikit-learn==0.17.1
 hdbscan==0.8
 git+https://github.com/biocore/tax2tree.git@63b220f115633ceb028ad7c96b04f9f494cf6ef7
-git+https://github.com/fhcrc/taxtastic.git@v0.5.7
+git+https://github.com/fhcrc/taxtastic.git@v0.6.4
 wsgiref==0.1.2
