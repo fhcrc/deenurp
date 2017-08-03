@@ -10,6 +10,8 @@
 * use vsearch 2.0.3
 * fix error in fill_lonely raised by node with no parent
 * added `deenurp orientate_sequences --out_notmatched_taxids`
+* address edge case in select_references which too few refs
+  representing a species remain after clustering at CLUSTER_THRESHOLD
 
 0.1.8
 ======

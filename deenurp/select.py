@@ -90,8 +90,16 @@ def select_sequences_for_cluster(
     logging.info('Cluster %s: Max sample abundance: %.3f%% of %s, %d hits',
                  cluster_name, max_weight * 100, max_sample, len(query_seqs))
 
-    # shrink ref_seqs by clustering first at 99.8% (CLUSTER_THRESHOLD)
-    ref_seqs = _cluster(ref_seqs, threshold=CLUSTER_THRESHOLD)
+    # cluster to minimize redundancy among refs
+    clustered = _cluster(ref_seqs, threshold=CLUSTER_THRESHOLD)
+
+    # address the edge case in which only a single reference remains
+    # after clustering at the above threshold:
+    if len(clustered) < 3:
+        clustered = _cluster(ref_seqs, threshold=1.0)
+
+    ref_seqs = clustered
+
     mean_weight = sum(norm_sw.values()) / len(norm_sw)
     for ref in ref_seqs:
         ref.annotations.update({'cluster_name': cluster_name,
