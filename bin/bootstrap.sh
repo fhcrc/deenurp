@@ -76,7 +76,8 @@ if [[ ! -f "${venv:?}/bin/activate" ]]; then
     # if the system virtualenv is up to date, use it
     if check_version virtualenv $VENV_VERSION; then
 	echo "using $(which virtualenv) (version $(virtualenv --version))"
-    	virtualenv --always-copy --python /usr/local/bin/python2.7 "$venv"
+    	# virtualenv --always-copy --python /usr/local/bin/python2.7 "$venv"
+	virtualenv "$venv"
     else
 	echo "downloading virtualenv version $VENV_VERSION"
 	if [[ ! -f src/virtualenv-${VENV_VERSION}/virtualenv.py ]]; then
@@ -85,7 +86,8 @@ if [[ ! -f "${venv:?}/bin/activate" ]]; then
 		wget -nc ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
 		tar -xf virtualenv-${VENV_VERSION}.tar.gz)
 	fi
-	"$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py --always-copy --python /usr/local/bin/python2.7 "$venv"
+	# "$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py --always-copy --python /usr/local/bin/python2.7 "$venv"
+	"$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py "$venv"
     fi
 else
     echo "virtualenv $venv already exists"
