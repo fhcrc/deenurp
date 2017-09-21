@@ -14,7 +14,7 @@ The Easy Way
   (on Ubuntu: ``sudo apt-get install gfortran libopenblas-dev liblapack-dev``)
 * Install Python 2.7
 * run `bin/bootstrap.sh`
-* run `source deenurp-env/bin/activate`
+* run `source bin-env/bin/activate`
 
 the `deenurp` executable should now be on your `$PATH`
 
