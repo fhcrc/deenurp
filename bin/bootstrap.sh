@@ -106,6 +106,10 @@ venv=$VIRTUAL_ENV
 # install-time dependencies are met (`pip install -r requirements.txt`
 # fails due to a install-time dependency that cogent has for numpy)
 pip2 install -U pip
+
+# install pysqlite and updated sqlite3 libraries
+curl https://raw.githubusercontent.com/fhcrc/taxtastic/master/dev/install_pysqlite.sh | bash
+
 while read pkg; do
     pip2 install "$pkg" --no-deps --upgrade
 done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
