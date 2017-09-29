@@ -4,6 +4,7 @@
 
 0.1.9-dev
 =========
+
 * add subcommand 'dereplicate_named'
 * add new clustering method to filter_outliers (--cluster-type RobustSingleLinkage)
 * update defaults for filter_outliers
@@ -12,6 +13,10 @@
 * added `deenurp orientate_sequences --out_notmatched_taxids`
 * address edge case in select_references which too few refs
   representing a species remain after clustering at CLUSTER_THRESHOLD
+* remove subcommand `tax2tree` (along with dependencies on t2t and cogent)
+* remove subcommand `rdp_extract_genbank`
+* add Dockerfile (thanks, Sam Minot!)
+* update many dependencies
 
 0.1.8
 ======

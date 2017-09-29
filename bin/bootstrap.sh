@@ -54,7 +54,7 @@ if [[ -z $DEENURP ]]; then
 fi
 
 VENV_VERSION=15.0.1
-PPLACER_BUILD=1.1.alpha17
+PPLACER_BUILD=1.1.alpha19
 INFERNAL_VERSION=1.1.1
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
@@ -83,7 +83,7 @@ if [[ ! -f "${venv:?}/bin/activate" ]]; then
 	if [[ ! -f src/virtualenv-${VENV_VERSION}/virtualenv.py ]]; then
 	    mkdir -p src
 	    (cd src && \
-		wget -nc ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
+		wget --quiet -nc ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
 		tar -xf virtualenv-${VENV_VERSION}.tar.gz)
 	fi
 	# "$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py --always-copy --python /usr/local/bin/python2.7 "$venv"
@@ -97,6 +97,20 @@ source $venv/bin/activate
 
 # full path; set by activate
 venv=$VIRTUAL_ENV
+
+# Preserve the order of installation. The requirements are sorted so
+# that secondary (and higher-order) dependencies appear first. See
+# bin/pipdeptree2requirements.py. We use --no-deps to prevent various
+# packages from being repeatedly installed, uninstalled, reinstalled,
+# etc. Also, enfoprcing the order of installation ensures that
+# install-time dependencies are met (`pip install -r requirements.txt`
+# fails due to a install-time dependency that cogent has for numpy)
+pip2 install -U pip
+while read pkg; do
+    pip2 install "$pkg" --no-deps --upgrade
+done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
+
+pip2 install -e "$DEENURP"
 
 # install pplacer and accompanying python scripts
 PPLACER_DIR=pplacer-Linux-v${PPLACER_BUILD}
@@ -112,7 +126,7 @@ if pplacer_is_installed; then
 else
     mkdir -p src && \
 	(cd src && \
-	wget -nc https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP && \
+	wget -nc --quiet https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP && \
 	unzip -o $PPLACER_ZIP && \
 	cp $PPLACER_DIR/{pplacer,guppy,rppr} $venv/bin && \
 	pip2 install -U $PPLACER_DIR/scripts)
@@ -130,7 +144,7 @@ INFERNAL=infernal-${INFERNAL_VERSION}-linux-intel-gcc
 
 if [ ! -f $venv/bin/cmalign ]; then
     (cd src && \
-	wget -nc http://eddylab.org/infernal/${INFERNAL}.tar.gz && \
+	wget -nc --quiet http://eddylab.org/infernal/${INFERNAL}.tar.gz && \
 	for binary in cmalign cmconvert esl-alimerge esl-sfetch; do
 	    tar xvf ${INFERNAL}.tar.gz --no-anchored binaries/$binary
 	done && \
@@ -144,8 +158,8 @@ fi
 # install FastTree and FastTreeMP
 if [ ! -f $venv/bin/FastTree ] | [ ! -f $venv/bin/FastTreeMP ]; then
     (cd $venv/bin && \
-	wget -nc http://www.microbesonline.org/fasttree/FastTree && \
-	wget -nc http://www.microbesonline.org/fasttree/FastTreeMP && \
+	wget -nc --quiet http://www.microbesonline.org/fasttree/FastTree && \
+	wget -nc --quiet http://www.microbesonline.org/fasttree/FastTreeMP && \
 	chmod +x FastTree*)
 else
     echo "FastTree is already installed: $(FastTree -expert 2>&1 | head -1)"
@@ -154,7 +168,7 @@ fi
 # install raxmlHPC-SSE3 and raxmlHPC-PTHREADS-SSE3
 if [ ! -f $venv/bin/raxmlHPC-SSE3 ] | [ ! -f $venv/bin/raxmlHPC-PTHREADS-SSE3 ]; then
     (cd src && \
-	wget -nc https://github.com/stamatak/standard-RAxML/archive/v${RAXML_VERSION}.tar.gz && \
+	wget -nc --quiet https://github.com/stamatak/standard-RAxML/archive/v${RAXML_VERSION}.tar.gz && \
 	tar -xf v${RAXML_VERSION}.tar.gz && \
 	cd standard-RAxML-${RAXML_VERSION} && \
 	rm -f *.o && make -f Makefile.SSE3.gcc && \
@@ -177,7 +191,7 @@ if vsearch_is_installed; then
     $venv/bin/vsearch --version
 else
     (cd src && \
-	    wget -nc https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
+	    wget -nc --quiet https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
 	    tar -xf vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
 	    cp vsearch-${VSEARCH_VERSION}-linux-x86_64/bin/vsearch $venv/bin && \
 	    chmod +x $venv/bin/vsearch
@@ -194,19 +208,9 @@ if muscle_is_installed; then
     $venv/bin/muscle -version
 else
     (cd src && \
-	    wget -nc http://www.drive5.com/muscle/downloads${MUSCLE_VERSION}/muscle${MUSCLE_VERSION}_src.tar.gz && \
+	    wget -nc --quiet http://www.drive5.com/muscle/downloads${MUSCLE_VERSION}/muscle${MUSCLE_VERSION}_src.tar.gz && \
 	    tar -xf muscle${MUSCLE_VERSION}_src.tar.gz && \
 	    cd muscle${MUSCLE_VERSION}/src && \
 	    ./mk && cp muscle $venv/bin)
 fi
 
-# Preserve the order of installation. The requirements are sorted so
-# that secondary (and higher-order) dependencies appear first. See
-# bin/pipdeptree2requirements.py. We use --no-deps to prevent various
-# packages from being repeatedly installed, uninstalled, reinstalled,
-# etc.
-while read pkg; do
-    pip2 install "$pkg" --no-deps --upgrade
-done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
-
-pip2 install -e "$DEENURP"
