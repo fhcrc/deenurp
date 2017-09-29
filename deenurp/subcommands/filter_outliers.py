@@ -516,7 +516,7 @@ def action(a):
     if (a.previous_details and
             os.path.isfile(a.previous_details) and
             os.stat(a.previous_details).st_size):
-        dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str, 'gi': str}
+        dtype = {'seqname': str, 'tax_id': str, a.filter_rank: str}
         # columns in output of `filter_worker`
         filter_worker_cols = [
             'centroid', 'cluster', 'dist', 'is_out', 'seqname', 'x', 'y']
@@ -643,7 +643,7 @@ def action(a):
 
     # Filter seqinfo for sequences that passed.
     seqinfo = pd.read_csv(
-        a.seqinfo_file, dtype={'seqname': str, 'tax_id': str, 'gi': str})
+        a.seqinfo_file, dtype={'seqname': str, 'tax_id': str})
     seqinfo = seqinfo.loc[seqinfo['seqname'].isin(seqnames)]
     seqinfo.set_index('seqname', inplace=True)
 
