@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
     wget
 
 # Add files
+# TODO: virtualenv in /usr/local/share/deenurp
+# symlink /usr/local/share/deenurp/venv/bin/deenurp to /usr/local/bin/deenurp
+
 RUN mkdir /bin/deenurp
 ADD . /bin/deenurp
 
