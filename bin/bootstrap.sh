@@ -176,8 +176,8 @@ if [ ! -f $venv/bin/raxmlHPC-SSE3 ] | [ ! -f $venv/bin/raxmlHPC-PTHREADS-SSE3 ];
 	wget -nc --quiet https://github.com/stamatak/standard-RAxML/archive/v${RAXML_VERSION}.tar.gz && \
 	tar -xf v${RAXML_VERSION}.tar.gz && \
 	cd standard-RAxML-${RAXML_VERSION} && \
-	rm -f *.o && make -f Makefile.SSE3.gcc && \
-	rm -f *.o && make -f Makefile.SSE3.PTHREADS.gcc && \
+	rm -f *.o && make --jobs 4 --file Makefile.SSE3.gcc && \
+	rm -f *.o && make --jobs 4 --file Makefile.SSE3.PTHREADS.gcc && \
 	mv raxmlHPC-SSE3 raxmlHPC-PTHREADS-SSE3 $venv/bin
     )
 else
@@ -195,6 +195,7 @@ if vsearch_is_installed; then
     echo -n "vsearch is already installed: "
     $venv/bin/vsearch --version
 else
+    echo "installing vsearch"
     (cd src && \
 	    wget -nc --quiet https://github.com/torognes/vsearch/releases/download/v${VSEARCH_VERSION}/vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
 	    tar -xf vsearch-${VSEARCH_VERSION}-linux-x86_64.tar.gz && \
@@ -212,6 +213,7 @@ if muscle_is_installed; then
     echo -n "muscle is already installed: "
     $venv/bin/muscle -version
 else
+    echo "installing muscle"
     (cd src && \
 	    wget -nc --quiet http://www.drive5.com/muscle/downloads${MUSCLE_VERSION}/muscle${MUSCLE_VERSION}_src.tar.gz && \
 	    tar -xf muscle${MUSCLE_VERSION}_src.tar.gz && \
