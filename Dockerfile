@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 MAINTAINER sminot@fredhutch.org
 
 # Install prerequisites
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install --assume-yes \
     build-essential \
     gfortran \
     git \
@@ -16,20 +16,17 @@ RUN apt-get update && apt-get install -y \
     wget
 
 # Add files
-# TODO: virtualenv in /usr/local/share/deenurp
-# symlink /usr/local/share/deenurp/venv/bin/deenurp to /usr/local/bin/deenurp
-
-RUN mkdir /bin/deenurp
-ADD . /bin/deenurp
+RUN mkdir /usr/local/share/deenurp/
+ADD bin /usr/local/share/deenurp/bin
+ADD tests /usr/local/share/deenurp/tests
+ADD deenurp /usr/local/share/deenurp/deenurp
+ADD deenurp.py setup.py requirements.txt MANIFEST.in /usr/local/share/deenurp/
 
 # Install deenurp and dependencies
-RUN cd /bin/deenurp/bin/ && \
-    chmod +x bootstrap.sh && \
-    PYTHON=/usr/bin/python2.7 DEENURP=/bin/deenurp /bin/bash bootstrap.sh
-RUN cd /bin/deenurp/bin && /bin/bash -c "source bin-env/bin/activate"
+RUN cd /usr/local/share/deenurp/ && \
+    PYTHON=/usr/bin/python2.7 DEENURP=/usr/local/share/deenurp/ bin/bootstrap.sh
 
-# Add to path
-ENV PATH="/bin/deenurp/bin/bin-env/bin:${PATH}"
+ENV PATH="/usr/local/share/deenurp/deenurp-env/bin:${PATH}"
 
 # Run tests
-RUN cd /bin/deenurp/tests && /bin/bash run.sh
+RUN cd /usr/local/share/deenurp && tests/run.sh
