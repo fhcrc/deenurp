@@ -1,7 +1,6 @@
 """
 Wrappers and context managers around external programs.
 """
-import collections
 import contextlib
 import csv
 import functools
@@ -9,7 +8,6 @@ import logging
 import os
 import os.path
 import subprocess
-import sys
 import re
 from distutils.version import LooseVersion
 from cStringIO import StringIO
@@ -270,7 +268,9 @@ def _require_vsearch_version(vsearch=VSEARCH, version=VSEARCH_VERSION):
 
     cmd = [vsearch, '--version']
     p = subprocess.Popen(
-        cmd, stderr=subprocess.PIPE)
+        cmd,
+        stderr=subprocess.PIPE,
+        stdout=open(os.devnull, 'w'))
     __, stderr = p.communicate()
     vsearch = re.search(r'^vsearch v(?P<vstr>\d+\.\d+\.[^_]+)', stderr)
     ver = vsearch.groupdict()['vstr']
