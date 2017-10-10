@@ -24,9 +24,9 @@ ADD deenurp.py setup.py requirements.txt MANIFEST.in /usr/local/share/deenurp/
 
 # Install deenurp and dependencies
 RUN cd /usr/local/share/deenurp/ && \
-    PYTHON=/usr/bin/python2.7 DEENURP=/usr/local/share/deenurp/ bin/bootstrap.sh
-
-ENV PATH="/usr/local/share/deenurp/deenurp-env/bin:${PATH}"
+  PYTHON=/usr/bin/python2.7 \
+  DEENURP=/usr/local/share/deenurp/ \
+  bin/bootstrap.sh /usr/local/
 
 # Run tests
 RUN cd /usr/local/share/deenurp && tests/run.sh
