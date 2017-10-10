@@ -53,12 +53,12 @@ if [[ -z $DEENURP ]]; then
     DEENURP=$(cd $(dirname $BASH_SOURCE) && cd .. && pwd)
 fi
 
-VENV_VERSION=15.0.1
+VENV_VERSION=15.1.0
 PPLACER_BUILD=1.1.alpha19
 INFERNAL_VERSION=1.1.1
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
-VSEARCH_VERSION=2.0.3
+VSEARCH_VERSION=2.5.0
 
 check_version(){
     # usage: check_version module version-string
@@ -71,22 +71,20 @@ EOF
 
 # create virtualenv if necessary, downloading source if available
 # version is not up to date.
-VENV_URL="https://pypi.python.org/packages/source/v/virtualenv"
+VENV_URL="https://github.com/pypa/virtualenv/archive/${VENV_VERSION}"
 if [[ ! -f "${venv:?}/bin/activate" ]]; then
     # if the system virtualenv is up to date, use it
     if check_version virtualenv $VENV_VERSION; then
-	echo "using $(which virtualenv) (version $(virtualenv --version))"
-    	# virtualenv --always-copy --python /usr/local/bin/python2.7 "$venv"
-	virtualenv "$venv"
+      echo "using $(which virtualenv) (version $(virtualenv --version))"
+	    virtualenv "$venv"
     else
 	echo "downloading virtualenv version $VENV_VERSION"
 	if [[ ! -f src/virtualenv-${VENV_VERSION}/virtualenv.py ]]; then
 	    mkdir -p src
 	    (cd src && \
-		wget --quiet -nc ${VENV_URL}/virtualenv-${VENV_VERSION}.tar.gz && \
-		tar -xf virtualenv-${VENV_VERSION}.tar.gz)
+		wget --quiet -nc ${VENV_URL}.tar.gz && \
+		tar -xf ${VENV_VERSION}.tar.gz)
 	fi
-	# "$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py --always-copy --python /usr/local/bin/python2.7 "$venv"
 	"$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py "$venv"
     fi
 else

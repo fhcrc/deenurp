@@ -28,4 +28,4 @@ jinja2==2.9
 fastalite==0.3
 DendroPy==4.3.0
 PyYAML==3.12
-taxtastic==0.8.1
+taxtastic==0.8.2
