@@ -115,7 +115,7 @@ while read pkg; do
     pip2 install "$pkg" --no-deps --upgrade
 done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
 
-pip2 install -e "$DEENURP"
+pip2 install "$DEENURP"
 
 # install pplacer and accompanying python scripts
 PPLACER_DIR=pplacer-Linux-v${PPLACER_BUILD}
