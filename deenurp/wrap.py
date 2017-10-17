@@ -1,7 +1,7 @@
 """
 Wrappers and context managers around external programs.
 """
-import collections
+
 import contextlib
 import csv
 import functools
@@ -9,7 +9,6 @@ import logging
 import os
 import os.path
 import subprocess
-import sys
 import re
 from distutils.version import LooseVersion
 from cStringIO import StringIO
@@ -212,9 +211,11 @@ def cmalign_scores(text):
     Parse stdout of cmalign into a data.frame
     """
 
+    header_rexp = re.compile(r'^#\s+idx')
+
     lines = []
     for line in text.splitlines():
-        if line.startswith('# idx'):
+        if header_rexp.search(line):
             line = ' ' + line[1:].replace(' (Mb)', '')
             # replace single spaces
             line = re.sub(r'(?<! ) (?! )', '_', line)
