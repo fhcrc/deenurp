@@ -2,6 +2,11 @@
  Changes for deenurp
 =====================
 
+0.2.1
+=====
+
+* bugfix: fix error parsing cmalign scores file
+
 0.2.0
 =====
 
