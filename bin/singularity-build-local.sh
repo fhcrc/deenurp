@@ -2,6 +2,9 @@
 
 # build from a local docker image
 
+echo 'this is nor working for singularity 2.4'
+exit 1
+
 set -e
 
 if [[ -z $1 ]]; then
@@ -25,8 +28,17 @@ if [[ -f $img ]]; then
     exit 1
 fi
 
-singularity create --size 2300 $img
-docker run --name $docker_name $docker_image /bin/true
-docker export $docker_name | sudo singularity import $img
-docker rm $docker_name
-sudo singularity exec --writable $img mkdir -p /fh /app /mnt
+# supposedly how it should be done for singularity 2.4
+# must disable user namespaces with --userns=host to use --privileged
+docker run \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v $outdir:/output \
+--userns=host --privileged -t --rm \
+singularityware/docker2singularity \
+$docker_image
+
+# singularity create --size 2300 $img
+# docker run --name $docker_name $docker_image /bin/true
+# docker export $docker_name | sudo singularity import $img
+# docker rm $docker_name
+# sudo singularity exec --writable $img mkdir -p /fh /app /mnt

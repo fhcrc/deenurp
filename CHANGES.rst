@@ -6,6 +6,7 @@
 =====
 
 * bugfix: fix error parsing cmalign scores file
+* add Singularity build instructions
 
 0.2.0
 =====
@@ -13,7 +14,7 @@
 * add subcommand 'dereplicate_named'
 * add new clustering method to filter_outliers (--cluster-type RobustSingleLinkage)
 * update defaults for filter_outliers
-* use vsearch 2.0.3
+* use vsearch 2.5.0
 * fix error in fill_lonely raised by node with no parent
 * added `deenurp orientate_sequences --out_notmatched_taxids`
 * address edge case in select_references which too few refs
