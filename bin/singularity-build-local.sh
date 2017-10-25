@@ -2,9 +2,6 @@
 
 # build from a local docker image
 
-echo 'this is nor working for singularity 2.4'
-exit 1
-
 set -e
 
 if [[ -z $1 ]]; then
@@ -33,8 +30,8 @@ fi
 docker run \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $outdir:/output \
---userns=host --privileged -t --rm \
-singularityware/docker2singularity \
+--privileged --userns=host -t --rm \
+docker2singularity:2.3 \
 $docker_image
 
 # singularity create --size 2300 $img

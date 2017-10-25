@@ -1,6 +1,6 @@
 /src
 /build
-/deenurp/data/ver
+/deenurp/data/version.txt
 /dist
 *-env
 *.pyc

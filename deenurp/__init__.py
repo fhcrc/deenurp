@@ -25,11 +25,17 @@ import os
 import pkgutil
 import sys
 import util
-import version
 
 log = logging.getLogger(__name__)
 
 _data = os.path.join(os.path.dirname(__file__), 'data')
+
+try:
+    with open(os.path.join(_data, 'version.txt')) as f:
+        __version__ = f.read().strip().lstrip('v').replace(
+            '-', '+', 1).replace('-', '.')
+except Exception as e:
+    __version__ = ''
 
 
 def main(argv=sys.argv[1:]):
@@ -91,7 +97,7 @@ def setup_logging(namespace):
 def parse_version(parser):
     parser.add_argument('-V', '--version',
                         action='version',
-                        version=version.version(),
+                        version=__version__,
                         help='Print the version number and exit')
 
 

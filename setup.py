@@ -1,6 +1,7 @@
 import os
 import sys
-import deenurp
+import subprocess
+from setuptools import setup, find_packages, Command
 
 # Fix for `setup.py test`
 # See http://bugs.python.org/issue15881
@@ -10,12 +11,15 @@ try:
 except ImportError:
     pass
 
-try:
-    from setuptools import setup, find_packages, Command
-except ImportError:
-    from distribute_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup, find_packages, Command
+subprocess.call(
+    ('mkdir -p {data} && '
+     'git describe --tags --dirty > {data}/{file}.tmp '
+     '&& mv {data}/{file}.tmp {data}/{file} '
+     '|| rm -f {data}/{file}.tmp').format(data='deenurp/data', file='version.txt'),
+    shell=True, stderr=open(os.devnull, "w"))
+
+# import must follow 'git describe' command above to update version
+from deenurp import __version__
 
 
 class run_audit(Command):
@@ -53,14 +57,12 @@ class run_audit(Command):
         else:
             print "No problems found in sourcecode."
 
-install_requires = []
 
 setup(name='deenurp',
-      version=deenurp.version.version(),
+      version=__version__,
       package_data={'deenurp': ['data/*', 'test/data/*']},
       entry_points={
           'console_scripts': {'deenurp = deenurp:main'}},
-      install_requires=install_requires,
       cmdclass={'audit': run_audit},
       test_suite='deenurp.test.suite',
       packages=find_packages(exclude=['tests'])
