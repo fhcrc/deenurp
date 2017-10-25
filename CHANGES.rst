@@ -2,6 +2,11 @@
  Changes for deenurp
 =====================
 
+0.2.2
+=====
+
+* fix version number in docker and singularity containers
+
 0.2.1
 =====
 
