@@ -28,5 +28,8 @@ RUN cd /usr/local/share/deenurp/ && \
   DEENURP=/usr/local/share/deenurp/ \
   bin/bootstrap.sh /usr/local/
 
+# create some mount points
+RUN mkdir -p /app /fh /mnt /run/shm
+
 # Run tests
 RUN cd /usr/local/share/deenurp && tests/run.sh
