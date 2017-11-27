@@ -2,6 +2,12 @@
  Changes for deenurp
 =====================
 
+0.2.3
+=====
+
+* add seqmagick to requirements.txt
+* create moinpoints in Docker image
+
 0.2.2
 =====
 
