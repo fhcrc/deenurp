@@ -29,3 +29,4 @@ fastalite==0.3
 DendroPy==4.3.0
 PyYAML==3.12
 taxtastic==0.8.2
+seqmagick==0.6.1
