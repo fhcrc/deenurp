@@ -24,13 +24,20 @@ ADD deenurp.py setup.py requirements.txt MANIFEST.in /usr/local/share/deenurp/
 
 # Install deenurp and dependencies
 RUN cd /usr/local/share/deenurp/ && \
-  PYTHON=/usr/bin/python2.7 \
-  DEENURP=/usr/local/share/deenurp/ \
-  bin/bootstrap.sh /usr/local/
+    PYTHON=/usr/bin/python2.7 \
+    DEENURP=/usr/local/share/deenurp/ \
+    bin/bootstrap.sh /usr/local/
+
+# clean up sources apt packages
+RUN rm -rf /var/lib/apt/lists/* && \
+    rm -rf /root/.cache/pip && \
+    rm -rf /usr/local/share/deenurp/src && \
+    apt-get purge -y --auto-remove unzip
 
 # create some mount points
 RUN mkdir -p /app /fh /mnt /run/shm
 
 # Run tests
-RUN python -m deenurp.test
-# RUN cd /usr/local/share/deenurp && tests/run.sh
+RUN python -m deenurp.test && \
+    cd /usr/local/share/deenurp && \
+    tests/run.sh
