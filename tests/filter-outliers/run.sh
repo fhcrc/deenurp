@@ -8,8 +8,8 @@ rm -f seqs.fasta.ssi
 BASE=../rdp_10_30_named1200bp_subset
 DEENURP=${DEENURP-../../deenurp.py}
 
-# for aligner in vsearch; do
-for aligner in cmalign muscle vsearch; do
+for aligner in cmalign; do
+# for aligner in cmalign muscle vsearch; do
     echo $aligner
 
     out=output/$aligner/radius
