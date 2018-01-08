@@ -1,18 +1,19 @@
-FROM ubuntu:16.04
+FROM python:2.7.14-stretch
+# FROM ubuntu:16.04
 MAINTAINER sminot@fredhutch.org
 
 # Install prerequisites
 # RUN apt-get update && apt-get install --assume-yes \
 RUN apt-get install --assume-yes \
-    build-essential \
+    #  build-essential \
     gfortran \
     git \
     liblapack-dev \
     libopenblas-dev \
     make \
-    python-dev \
-    python-pip \
-    python2.7 \
+    # python-dev \
+    # python-pip \
+    # python2.7 \
     unzip \
     wget
 
