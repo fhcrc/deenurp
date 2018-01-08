@@ -32,4 +32,5 @@ RUN cd /usr/local/share/deenurp/ && \
 RUN mkdir -p /app /fh /mnt /run/shm
 
 # Run tests
-RUN cd /usr/local/share/deenurp && tests/run.sh
+RUN python -m deenurp.test
+# RUN cd /usr/local/share/deenurp && tests/run.sh
