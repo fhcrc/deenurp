@@ -1,16 +1,17 @@
 import os
 import unittest
 
+from deenurp import outliers, wrap
+from deenurp.subcommands.filter_outliers import filter_sequences, distmat_muscle
+from deenurp.util import MissingDependencyError, which
+
 try:
     import numpy as np
     import pandas as pd
-    from deenurp import outliers, wrap
-    from deenurp.subcommands.filter_outliers import filter_sequences, distmat_muscle
-    from deenurp.util import MissingDependencyError
-except ImportError:
-    # prefer errors withon tests over failure at the time the test
+except ImportError, err:
+    # prefer errors within tests over failure at the time the test
     # suites are assembled
-    pass
+    print(err)
 
 """
 Here's how some of the data files used in testing this module came to be:
@@ -51,6 +52,7 @@ class TestReadDists(unittest.TestCase):
                                    [0, 0.003299, 0.003299, 0])
 
 
+@unittest.skipUnless(which('FastTree'), "FastTree not found.")
 class TestFastTreeDists(unittest.TestCase):
 
     def test01(self):
@@ -136,6 +138,9 @@ except MissingDependencyError, e:
 else:
     vsearch_available = True
 
+
+@unittest.skipUnless(which('muscle') and vsearch_available,
+                     "vsearch and muscle not found.")
 class TestFilterSequences(unittest.TestCase):
 
     fa = data_path('test_db_head.fasta')
