@@ -2,7 +2,8 @@ FROM ubuntu:16.04
 MAINTAINER sminot@fredhutch.org
 
 # Install prerequisites
-RUN apt-get update && apt-get install --assume-yes \
+# RUN apt-get update && apt-get install --assume-yes \
+RUN apt-get install --assume-yes \
     build-essential \
     gfortran \
     git \
