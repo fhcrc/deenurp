@@ -2,6 +2,14 @@
  Changes for deenurp
 =====================
 
+0.2.4
+=====
+
+* update infernal to 1.1.2
+* install cmsearch and cmcalibrate
+* update taxtastic to 0.8.5
+* update versions of various other dependencies
+
 0.2.3
 =====
 
