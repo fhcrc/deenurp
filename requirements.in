@@ -1,0 +1,11 @@
+numpy
+cython
+pandas
+scipy
+scikit-learn
+hdbscan
+biopython
+taxtastic
+peasel
+futures
+seqmagick

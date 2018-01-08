@@ -55,10 +55,10 @@ fi
 
 VENV_VERSION=15.1.0
 PPLACER_BUILD=1.1.alpha19
-INFERNAL_VERSION=1.1.1
+INFERNAL_VERSION=1.1.2
 RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
-VSEARCH_VERSION=2.5.0
+VSEARCH_VERSION=2.6.2
 
 check_version(){
     # usage: check_version module version-string
@@ -148,7 +148,7 @@ INFERNAL=infernal-${INFERNAL_VERSION}-linux-intel-gcc
 if [ ! -f $venv/bin/cmalign ]; then
     (cd src && \
 	wget -nc --quiet http://eddylab.org/infernal/${INFERNAL}.tar.gz && \
-	for binary in cmalign cmconvert esl-alimerge esl-sfetch; do
+	for binary in cmalign cmconvert cmcalibrate cmsearch esl-alimerge esl-sfetch; do
 	    tar xvf ${INFERNAL}.tar.gz --no-anchored binaries/$binary
 	done && \
 	    cp ${INFERNAL}/binaries/* $venv/bin && \

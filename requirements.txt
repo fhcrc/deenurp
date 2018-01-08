@@ -2,31 +2,32 @@
 
 # to add new dependencies:
 # - create a virtualenv
-# - install one or more packages
+# - install packages: pip install -r requirements.in
 # - install pipdeptree
 # - run `pipdeptree -f --nowarn | bin/pipdeptree2requirements.py` to generate a new requirements.txt
 # - manually replace any references to github repos
+# - correct any incompatibilities (eg, seqmagick running under python2 requires biopython <= 1.66
 
-six==1.10.0
-numpy==1.13.1
-python-dateutil==2.5.2
-pytz==2016.3
-Cython==0.24
-SQLAlchemy==1.1.14
-biopython==1.67
-decorator==4.1.2
-pandas==0.18.1
-futures==3.1.1
-peasel==0.3.1
-retrying==1.3.3
-scipy==0.18.0
-scikit-learn==0.17.1
-hdbscan==0.8.10
-wsgiref==0.1.2
 MarkupSafe==1.0
-jinja2==2.9
-fastalite==0.3
+numpy==1.14.0
+setuptools==38.4.0
+six==1.11.0
 DendroPy==4.3.0
+Jinja2==2.10
 PyYAML==3.12
-taxtastic==0.8.3
-seqmagick==0.6.1
+SQLAlchemy==1.2.0
+biopython==1.66
+decorator==4.1.2
+fastalite==0.3
+psycopg2==2.7.3.2
+python-dateutil==2.6.1
+pytz==2017.3
+scikit-learn==0.19.1
+Cython==0.27.3
+futures==3.2.0
+hdbscan==0.8.11
+pandas==0.22.0
+peasel==0.3.1
+scipy==1.0.0
+seqmagick==0.6.2
+taxtastic==0.8.5
