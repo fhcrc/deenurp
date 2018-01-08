@@ -32,7 +32,15 @@ RUN cd /usr/local/share/deenurp/ && \
 RUN rm -rf /var/lib/apt/lists/* && \
     rm -rf /root/.cache/pip && \
     rm -rf /usr/local/share/deenurp/src && \
-    apt-get purge -y --auto-remove unzip
+    apt-get purge -y --auto-remove \
+      build_essential \
+      unzip \
+      gfortran \
+      git \
+      liblapack-dev \
+      libopenblas-dev \
+      python-dev \
+      make
 
 # create some mount points
 RUN mkdir -p /app /fh /mnt /run/shm
