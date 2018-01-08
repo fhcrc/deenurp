@@ -3,8 +3,7 @@ FROM python:2.7.14-stretch
 MAINTAINER sminot@fredhutch.org
 
 # Install prerequisites
-# RUN apt-get update && apt-get install --assume-yes \
-RUN apt-get install --assume-yes \
+RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     #  build-essential \
     gfortran \
     git \
