@@ -33,7 +33,7 @@ RUN rm -rf /var/lib/apt/lists/* && \
     rm -rf /root/.cache/pip && \
     rm -rf /usr/local/share/deenurp/src && \
     apt-get purge -y --auto-remove \
-      build_essential \
+      build-essential \
       unzip \
       gfortran \
       git \
