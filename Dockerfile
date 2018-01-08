@@ -35,10 +35,7 @@ RUN rm -rf /var/lib/apt/lists/* && \
     apt-get purge -y --auto-remove \
       build-essential \
       unzip \
-      gfortran \
       git \
-      liblapack-dev \
-      libopenblas-dev \
       python-dev \
       make
 
