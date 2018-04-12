@@ -609,11 +609,10 @@ def action(a):
                     raise exception
 
                 info = futs.pop(f)
-                filtered = f.result()  # here's the DataFrame again...
+                filtered = f.result().copy()  # here's the DataFrame again...
 
                 # add a column for tax_d at filter_rank
-                filtered.loc[:, a.filter_rank] = pd.Series(
-                    info['node'].tax_id, index=filtered.index)
+                filtered.loc[:, a.filter_rank] = info['node'].tax_id
                 outcomes.append(filtered)
 
                 kept = frozenset(filtered.seqname[~filtered.is_out])

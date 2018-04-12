@@ -2,6 +2,11 @@
  Changes for deenurp
 =====================
 
+0.2.4-dev
+=========
+
+* fixed some Python Pandas warnings (GH: 50)
+
 0.2.4
 =====
 
