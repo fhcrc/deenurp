@@ -8,6 +8,7 @@ import itertools
 import logging
 import operator
 import tempfile
+import hashlib
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -65,6 +66,7 @@ def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
     assert sequences
     with as_fasta(sequences) as fasta_name, \
             tempfile.NamedTemporaryFile(prefix='uc-') as ntf:
+
         uclust.cluster(fasta_name, ntf.name, pct_id=threshold, quiet=True)
         ntf.seek(0)
         r = list(uclust.cluster_seeds(fasta_name, ntf))
@@ -109,6 +111,11 @@ def select_sequences_for_cluster(
     if len(ref_seqs) <= keep_leaves:
         return ref_seqs
     # else: find some more reps
+
+    # the operation below assumes unique identifiers for the set of
+    # ref and query seqs, so ensure that this is the case
+    for seq in query_seqs:
+        seq.id = seq.id + hashlib.md5(seq.id).hexdigest()[:8]
 
     c = itertools.chain(ref_seqs, query_seqs)
 
