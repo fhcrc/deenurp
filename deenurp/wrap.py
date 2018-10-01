@@ -91,6 +91,10 @@ def redupfile_of_seqs(sequences, **kwargs):
 def fasttree(sequences, output_fp, log_path=None, quiet=True,
              gtr=False, gamma=False, threads=FASTTREE_THREADS, prefix=None):
 
+    if len(sequences) < 3:
+        raise ValueError(
+            'at least 3 sequences are required but {} were provided'.format(len(sequences)))
+
     executable = 'FastTreeMP' if threads and threads > 1 else 'FastTree'
     if executable == 'FastTreeMP' and not which('FastTreeMP'):
         executable = 'FastTree'
@@ -112,6 +116,7 @@ def fasttree(sequences, output_fp, log_path=None, quiet=True,
     with ntf() as stderr:
         p = subprocess.Popen(cmd, stdout=output_fp, stdin=subprocess.PIPE,
                              stderr=stderr, env=env)
+
         count = SeqIO.write(sequences, p.stdin, 'fasta')
         assert count
         p.stdin.close()
