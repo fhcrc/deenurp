@@ -6,6 +6,7 @@
 =========
 
 * fixed some Python Pandas warnings (GH: 50)
+* fix error when query and reference sequences have name collision
 
 0.2.4
 =====
