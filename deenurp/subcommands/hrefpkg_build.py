@@ -330,8 +330,8 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
             logging.warn("Skipping %s: only 1 unique sequence string", tax_id)
             return None
 
-        # No sense in building with one sequence
-        if len(sequences) < 2:
+        # No sense in building with two sequence
+        if len(sequences) < 3:
             logging.warn("Skipping: %d sequences.", len(sequences))
             return None
 
