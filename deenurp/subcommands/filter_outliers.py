@@ -150,6 +150,10 @@ def build_parser(p):
     filter_group.add_argument(
         '--filter-rank', default=DEFAULT_RANK, help='[%(default)s]')
     filter_group.add_argument(
+        '--no-filter',
+        help=('file or list of sequence taxids '
+              'to pass through without filtering'))
+    filter_group.add_argument(
         '--strategy', default='radius', choices=['radius', 'cluster'],
         help="""Strategy for outlier detection. """)
     filter_group.add_argument(
@@ -539,12 +543,19 @@ def action(a):
     # For each filter-rank, filter
     nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
-    names_at_rank = [s for n in nodes for s in n.subtree_sequence_ids()]
-
     # make sure all seqs are accounted for
+    names_at_rank = [s for n in nodes for s in n.subtree_sequence_ids()]
     for s in seqnames:
         if s not in names_above_rank and s not in names_at_rank:
             raise ValueError(s + ' missing tax_id at filter rank')
+
+    # --no-filter taxids
+    if not a.no_filter:
+        no_filter = set()
+    elif os.path.isfile(a.no_filter):
+        no_filter = set(i.strip() for i in open(a.no_filter) if i)
+    else:
+        no_filter = set(a.no_filter.split(','))
 
     # Filter each tax_id, running ``--jobs`` tasks in parallel
     with futures.ThreadPoolExecutor(a.jobs) as executor:
@@ -568,6 +579,10 @@ def action(a):
                     len(seqs), node.tax_id, node.name, a.rare_taxon_action))
                 f = executor.submit(mock_filter, seqs=list(seqs),
                                     keep=a.rare_taxon_action == KEEP)
+            elif node.tax_id in no_filter:
+                log.debug('{} --no-filter sequence(s) for {} ({})'.format(
+                    len(seqs), node.tax_id, node.name))
+                f = executor.submit(mock_filter, seqs=list(seqs), keep=True)
             elif prev_seqs is not None and set(prev_seqs['seqname']) == seqs:
                 # use previous results
                 log.info(

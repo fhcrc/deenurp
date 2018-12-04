@@ -5,6 +5,7 @@
 0.2.4-dev
 =========
 
+* new ``deenurp filter_outliers --no-filter`` list of taxids argument [GH-65]
 * fixed some Python Pandas warnings (GH: 50)
 * fix error when query and reference sequences have name collision
 
