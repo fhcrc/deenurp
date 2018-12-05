@@ -1,7 +1,6 @@
 """
 Wrappers and context managers around external programs.
 """
-
 import contextlib
 import csv
 import functools
@@ -38,6 +37,9 @@ data_path = functools.partial(os.path.join, os.path.dirname(__file__), 'data')
 
 """16S bacterial covariance model"""
 CM = data_path('RRNA_16S_BACTERIA.cm')
+
+# see esl_sfetch
+fa_idx = None
 
 
 @contextlib.contextmanager
@@ -343,19 +345,30 @@ def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):
     If ``use_temp`` is True, a temporary index is created and used.
     """
 
-    if use_temp:
-        with peasel.temp_ssi(sequence_file) as index:
-            sequences = (index[i] for i in name_iter)
-            count = peasel.write_fasta(sequences, output_fp)
-    else:
-        try:
-            peasel.create_ssi(sequence_file)
-        except IOError:
-            logging.debug("An index already exists for %s", sequence_file)
+    with open(sequence_file, 'rb') as f:
+        if not fa_idx:  # build fasta index
+            offset = 0
+            name = None
+            for li in f:
+                li = li.decode()
+                if li.startswith('>'):
+                    if name is not None:
+                        fa_idx[name].append(offset)
+                    name = li[1:].split()[0]
+                    print(li)
+                    print(sequence_file)
+                    fa_idx[name] = [offset]
+                else:
+                    offset = f.tell()
+            # finally
+            fa_idx[name].append(offset)
 
-        index = peasel.open_ssi(sequence_file)
-        sequences = (index[i] for i in name_iter)
-        count = peasel.write_fasta(sequences, output_fp)
+        count = 0
+        with open(output_fp, 'w') as out:
+            for n in name_iter:
+                seq = f.seek(fa_idx[0])
+                out.write(f.read(seq[1] - seq[0]))
+                count += 1
 
     return count
 
