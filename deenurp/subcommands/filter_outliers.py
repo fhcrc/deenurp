@@ -87,7 +87,6 @@ import traceback
 
 from Bio import SeqIO
 from concurrent import futures
-import peasel
 
 from taxtastic.taxtable import TaxNode as _TaxNode
 from .. import config, wrap, util, outliers
@@ -157,7 +156,8 @@ def build_parser(p):
         '--strategy', default='radius', choices=['radius', 'cluster'],
         help="""Strategy for outlier detection. """)
     filter_group.add_argument(
-        '--cluster-type', default='single', choices=['single', 'RobustSingleLinkage'],
+        '--cluster-type', default='single',
+        choices=['single', 'RobustSingleLinkage'],
         help="""Identifies the clustering algorithm for
         --strategy=cluster. 'single' for
         'scipy.cluster.hierarchy.single' or 'RobustSingleLinkage' for
@@ -436,6 +436,7 @@ def mock_filter(seqs, keep):
 
 def filter_worker(tax_id,
                   sequence_file,
+                  fa_idx,
                   seqs,
                   strategy,
                   cluster_type,
@@ -469,7 +470,7 @@ def filter_worker(tax_id,
 
     with util.ntf(prefix=prefix, suffix='.fasta') as tf:
         # Extract sequences
-        wrap.esl_sfetch(sequence_file, seqs, tf)
+        wrap.esl_sfetch(sequence_file, seqs, tf, fa_idx)
         tf.flush()
 
         filtered = filter_sequences(
@@ -489,14 +490,9 @@ def filter_worker(tax_id,
 
 
 def action(a):
-    # remove .ssi index for sequence file if it exists
-    try:
-        os.remove(a.sequence_file + '.ssi')
-    except OSError:
-        pass
-
     # itemize sequences provided in the input file
-    seqnames = {seq.name for seq in peasel.read_seq_file(a.sequence_file)}
+    fa_idx = wrap.read_seq_file(a.sequence_file)
+    seqnames = fa_idx.keys()
 
     # Load taxonomy
     with a.taxonomy as fp:
@@ -594,6 +590,7 @@ def action(a):
                     filter_worker,
                     tax_id=node.tax_id,
                     sequence_file=a.sequence_file,
+                    fa_idx=fa_idx,
                     seqs=seqs,
                     strategy=a.strategy,
                     distance_cutoff=a.distance_cutoff,
@@ -653,7 +650,7 @@ def action(a):
     with a.output_seqs as fp:
         # Extract all of the sequences that passed.
         log.info('Extracting %d sequences', len(kept_ids))
-        wrap.esl_sfetch(a.sequence_file, kept_ids, fp)
+        wrap.esl_sfetch(a.sequence_file, kept_ids, fp, fa_idx)
 
     # Filter seqinfo for sequences that passed.
     seqinfo = pd.read_csv(
@@ -672,6 +669,3 @@ def action(a):
     if a.detailed_seqinfo:
         with open(a.detailed_seqinfo, 'w') as detailed_seqinfo:
             merged.to_csv(detailed_seqinfo)
-
-    # finally - clean up .ssi file
-    os.remove(a.sequence_file + '.ssi')
