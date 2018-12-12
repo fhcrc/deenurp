@@ -82,7 +82,7 @@ def action(a):
          util.ntf(prefix='expand_hits-', suffix='.fasta') as hits_fp:
         # Extract sequences
         c = 0
-        for r in SeqIO.parse(a.sequence_file):
+        for r in SeqIO.parse(a.sequence_file, 'fasta'):
             if r.id in seq_group:
                 expand_fp.write('{}\n{}\n'.format(r.description, r.seq))
                 c += 1
@@ -98,7 +98,7 @@ def action(a):
 
         # Extract hits
         c = 0
-        for r in SeqIO.parse(a.unnamed_file):
+        for r in SeqIO.parse(a.unnamed_file, 'fasta'):
             if r.id in hit_group:
                 hits_fp.write('{}\n{}\n'.format(r.description, r.seq))
                 c += 1
@@ -123,7 +123,7 @@ def action(a):
         with open(a.output + '.fasta', 'w') as ofp:
             with open(a.sequence_file) as fp:
                 shutil.copyfileobj(fp, ofp)
-            for r in SeqIO.parse(hits_fp.name):
+            for r in SeqIO.parse(hits_fp.name, 'fasta'):
                 if r.id in frozenset(update_hits) - current_seqs:
                     ofp.write('{}\n{}\n'.format(r.description, r.seq))
 

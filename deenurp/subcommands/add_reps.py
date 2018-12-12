@@ -43,7 +43,7 @@ def action(args):
     # Fetch
     count = 0
     with args.outfile:
-        for r in SeqIO.parse(args.fasta_file):
+        for r in SeqIO.parse(args.fasta_file, 'fasta'):
             if r.id in sequence_ids:
                 args.outfile.write('{}\n{}\n'.format(r.description, r.seq))
                 count += 1
