@@ -338,10 +338,10 @@ def read_seq_file(sequence_file):
     Reads a fasta file and records the binary offsets of each sequence
     """
     fa_idx = {}
-    with open(sequence_file, 'rb') as f:
+    with open(sequence_file, 'rb') as sf:
         offset = 0
         name = None
-        for line in f:
+        for line in sf:
             line_len = len(line)
             if line.startswith(b'>'):
                 if name is not None:
@@ -355,19 +355,17 @@ def read_seq_file(sequence_file):
     return fa_idx
 
 
-def esl_sfetch(sequence_file, name_iter, output_fp, fa_idx, use_temp=False):
+def esl_sfetch(sequence_file, name_iter, output_fp, fa_idx):
     """
     Fetch sequences named in name_iter from sequence_file, indexing if
     necessary, writing to output_fp.
-
-    If ``use_temp`` is True, a temporary index is created and used.
     """
     count = 0
     with open(sequence_file, 'rb') as fi:
-        for na in name_iter:
-            idx = fa_idx[na]
-            fi.seek(idx[0])
-            output_fp.write(fi.read(idx[1] - idx[0]))
+        for name in name_iter:
+            indices = fa_idx[name]
+            fi.seek(indices[0])
+            output_fp.write(fi.read(indices[1] - indices[0]))
             count += 1
     return count
 

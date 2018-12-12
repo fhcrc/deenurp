@@ -69,6 +69,9 @@ def identify_otus_unnamed(seq_file, cluster_similarity):
             yield [i.query_label for i in sequences]
 
 def action(a):
+    # index fasta file
+    fa_idx = wrap.read_seq_file(a.named_sequence_file)
+
     # Load taxtable
     with a.taxtable as fp:
         logging.info('Loading taxonomy')
@@ -98,7 +101,7 @@ def action(a):
 
         # Fetch sequences
         logging.info('Fetching %d %s-level sequences', len(done), a.cluster_rank)
-        wrap.esl_sfetch(a.named_sequence_file, done, a.sequence_out)
+        wrap.esl_sfetch(a.named_sequence_file, done, a.sequence_out, fa_idx)
         a.sequence_out.flush()
 
         # Find sequences *above* cluster_rank
@@ -111,7 +114,7 @@ def action(a):
         # file
         with util.ntf(prefix='to_cluster', suffix='.fasta') as tf, \
                 util.ntf(prefix='unnamed_to_cluster', suffix='.fasta') as unnamed_fp:
-            wrap.esl_sfetch(a.named_sequence_file, above_rank_seqs, tf)
+            wrap.esl_sfetch(a.named_sequence_file, above_rank_seqs, tf, fa_idx)
             if a.unnamed_sequences:
                 with open(a.unnamed_sequences) as fp:
                     shutil.copyfileobj(fp, tf)

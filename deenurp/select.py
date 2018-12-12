@@ -220,11 +220,11 @@ def sequences_hitting_cluster(con, cluster_name):
     return [name for name, in cursor]
 
 
-def esl_sfetch_seqs(sequence_file, sequence_names, **kwargs):
+def esl_sfetch_seqs(sequence_file, sequence_names, fa_idx):
     """
     """
     with tempfile.NamedTemporaryFile(prefix='esl', suffix='.fasta') as tf:
-        esl_sfetch(sequence_file, sequence_names, tf, **kwargs)
+        esl_sfetch(sequence_file, sequence_names, tf, fa_idx)
         tf.seek(0)
         return list(SeqIO.parse(tf, 'fasta'))
 
@@ -244,6 +244,8 @@ def get_total_weight_per_sample(con):
 
 def choose_references(
         deenurp_db,
+        ref_idx,
+        fa_idx,
         refs_per_cluster=5,
         threads=DEFAULT_THREADS,
         min_cluster_prop=MIN_CLUSTER_PROP,
@@ -318,13 +320,13 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
                 len(cluster_seq_names))
 
             cluster_refs = esl_sfetch_seqs(
-                ref_fasta, cluster_members[cluster_name])
+                ref_fasta, cluster_members[cluster_name], ref_idx)
 
             # cluster_hit_seqs returns unicode: convert to string.
             query_seqs = esl_sfetch_seqs(
                 fasta_file,
                 (str(i) for i in cluster_seq_names),
-                use_temp=True)
+                fa_idx)
 
             if max_weight < min_cluster_prop:
                 msg = 'ID: {} max_weight {} < min_mass {}, skipping'
@@ -351,7 +353,7 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
                     continue
                 else:
                     cluster_refs = esl_sfetch_seqs(
-                        ref_fasta, cluster_members[cluster])
+                        ref_fasta, cluster_members[cluster], ref_idx)
                     futs.add(
                         executor.submit(
                             select_sequences_for_whitelist_cluster,

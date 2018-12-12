@@ -71,11 +71,7 @@ def cluster(seqfile, seqnames, identity=1.0, prefix='cluster-', threads=None):
 
 
 def action(args):
-    # remove .ssi index for sequence file if it exists
-    try:
-        os.remove(args.seqs + '.ssi')
-    except OSError:
-        pass
+    fa_idx = wrap.read_seq_file(args.seqs)
 
     dtype = {'gi': str, 'tax_id': str, 'species': str}
     seq_info = pd.read_csv(args.seq_info, dtype=dtype)
@@ -112,8 +108,12 @@ def action(args):
                     by=by,
                     ascending=ascending)
                 clusters = cluster(
-                    args.seqs, grp['seqname'], identity=args.id,
-                    prefix='{}-'.format(key), threads=args.threads)
+                    args.seqs,
+                    grp['seqname'],
+                    fa_idx,
+                    identity=args.id,
+                    prefix='{}-'.format(key),
+                    threads=args.threads)
 
         clusters['group'] = key
         frames.append(clusters)
@@ -129,7 +129,7 @@ def action(args):
         seq_info.to_csv(args.seq_info_out, columns=info_cols, index=False)
 
     wrap.esl_sfetch(
-        args.seqs, all_clusters['seed'].unique(), args.seqs_out)
-
-    # finally - clean up .ssi file
-    os.remove(args.seqs + '.ssi')
+        args.seqs,
+        all_clusters['seed'].unique(),
+        args.seqs_out,
+        fa_idx)

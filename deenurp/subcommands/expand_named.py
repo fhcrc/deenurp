@@ -9,13 +9,14 @@ database.
 import argparse
 import csv
 import logging
-import os
 import shutil
 
 from deenurp import uclust
 from taxtastic.taxtable import TaxNode
 
-from .. import wrap, util
+from .. import util
+from Bio import SeqIO
+
 
 def build_parser(p):
     p.add_argument('sequence_file', help="""Named sequences""")
@@ -31,6 +32,7 @@ def build_parser(p):
             attempted to be recruited. [default: %(default)d]""")
     p.add_argument('--pct-id', help="""Percent ID to search at [default:
             %(default)f]""", default=0.99, type=float)
+
 
 def find_underrepresented(tax_root, min_at_rank=5, rank='species'):
     """
@@ -48,12 +50,14 @@ def find_underrepresented(tax_root, min_at_rank=5, rank='species'):
                     yield i
     return inner(tax_root)
 
+
 def uclust_search(query, db, **kwargs):
     with util.ntf(prefix='uclust') as tf:
         uclust.search(db, query, tf.name, **kwargs)
         lines = (i for i in tf if i.startswith('H'))
         for i in uclust.parse_uclust_out(lines):
             yield i
+
 
 def action(a):
     with a.taxonomy as fp:
@@ -77,7 +81,11 @@ def action(a):
     with util.ntf(prefix='to_expand-', suffix='.fasta') as expand_fp, \
          util.ntf(prefix='expand_hits-', suffix='.fasta') as hits_fp:
         # Extract sequences
-        c = wrap.esl_sfetch(a.sequence_file, seq_group, expand_fp)
+        c = 0
+        for r in SeqIO.parse(a.sequence_file):
+            if r.id in seq_group:
+                expand_fp.write('{}\n{}\n'.format(r.description, r.seq))
+                c += 1
         logging.info('fetched %d sequences', c)
         expand_fp.close()
 
@@ -89,7 +97,11 @@ def action(a):
         hit_group = {i.target_label: seq_group[i.query_label] for i in hits}
 
         # Extract hits
-        c = wrap.esl_sfetch(a.unnamed_file, hit_group, hits_fp)
+        c = 0
+        for r in SeqIO.parse(a.unnamed_file):
+            if r.id in hit_group:
+                hits_fp.write('{}\n{}\n'.format(r.description, r.seq))
+                c += 1
         logging.info('%d hits', c)
         hits_fp.close()
 
@@ -111,10 +123,9 @@ def action(a):
         with open(a.output + '.fasta', 'w') as ofp:
             with open(a.sequence_file) as fp:
                 shutil.copyfileobj(fp, ofp)
-            try:
-                wrap.esl_sfetch(hits_fp.name, frozenset(update_hits) - current_seqs, ofp)
-            finally:
-                os.remove(hits_fp.name + '.ssi')
+            for r in SeqIO.parse(hits_fp.name):
+                if r.id in frozenset(update_hits) - current_seqs:
+                    ofp.write('{}\n{}\n'.format(r.description, r.seq))
 
         # Write a new seq_info
         with open(a.output + '.seq_info.csv', 'w') as ofp, open(a.seqinfo_file.name) as sinfo:
