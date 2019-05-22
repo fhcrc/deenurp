@@ -2,7 +2,10 @@
  Changes for deenurp
 =====================
 
-0.2.4-dev
+0.2.6-dev
+=========
+
+0.2.5
 =========
 
 * new ``deenurp filter_outliers --no-filter`` list of taxids argument [GH-65]
