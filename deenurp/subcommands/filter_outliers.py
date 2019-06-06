@@ -532,7 +532,7 @@ def action(a):
     outcomes = []  # accumulate DatFrame objects
 
     # Sequences which are classified above the desired rank should just be kept
-    names_above_rank = list(sequences_above_rank(taxonomy, a.filter_rank))
+    names_above_rank = set(sequences_above_rank(taxonomy, a.filter_rank))
     log.info('Keeping %d sequences classified above %s',
              len(names_above_rank), a.filter_rank)
     above_rank = mock_filter(names_above_rank, keep=True)
@@ -544,7 +544,8 @@ def action(a):
     nodes = [i for i in taxonomy if i.rank == a.filter_rank]
 
     # make sure all seqs are accounted for
-    names_at_rank = [s for n in nodes for s in n.subtree_sequence_ids()]
+    names_at_rank = set(s for n in nodes for s in n.subtree_sequence_ids())
+
     for s in seqnames:
         if s not in names_above_rank and s not in names_at_rank:
             raise ValueError(s + ' missing tax_id at filter rank')
