@@ -2,8 +2,10 @@
  Changes for deenurp
 =====================
 
-0.2.6-dev
-=========
+0.2.6
+=====
+
+* ``filter_outliers`` performance improvements
 
 0.2.5
 =========
