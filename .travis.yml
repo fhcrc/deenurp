@@ -29,7 +29,7 @@ addons:
       - liblapack-dev
 
 install:
-  - bin/bootstrap.sh $VIRTUAL_ENV
+  - "bin/bootstrap.sh $VIRTUAL_ENV"
 
 script:
   - python setup.py test
