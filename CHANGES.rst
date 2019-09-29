@@ -2,6 +2,11 @@
  Changes for deenurp
 =====================
 
+0.2.7
+=====
+
+* removed peasel requirement
+
 0.2.6
 =====
 
