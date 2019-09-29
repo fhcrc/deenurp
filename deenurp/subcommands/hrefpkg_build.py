@@ -78,6 +78,8 @@ def partition_hrefpkg(a, taxonomy):
             action(args)
 
 def action(a):
+    fa_idx = wrap.read_seq_file(a.sequence_file)
+
     random.seed(a.seed)
     j = functools.partial(os.path.join, a.output_dir)
     if not os.path.isdir(j()):
@@ -123,7 +125,7 @@ def action(a):
                 continue
 
             f = executor.submit(tax_id_refpkg, node.tax_id, taxonomy, seqinfo,
-                    a.sequence_file, output_dir=a.output_dir, test_file=test_fp,
+                    a.sequence_file, fa_idx, output_dir=a.output_dir, test_file=test_fp,
                     train_file=train_fp)
             futs[f] = node.tax_id, node.name
 
@@ -140,7 +142,7 @@ def action(a):
         # Build index refpkg
         logging.info('Building index.refpkg')
         index_rp, sequence_ids = build_index_refpkg(hrefpkgs, a.sequence_file,
-            seqinfo, taxonomy, dest=j('index.refpkg'),
+            seqinfo, taxonomy, fa_idx, dest=j('index.refpkg'),
             index_rank=a.index_rank)
 
         # Write unused seqs
@@ -196,7 +198,7 @@ def load_seqinfo(seqinfo_fp):
     r = csv.DictReader(seqinfo_fp)
     return list(r)
 
-def build_index_refpkg(hrefpkg_paths, sequence_file, seqinfo, taxonomy,
+def build_index_refpkg(hrefpkg_paths, sequence_file, seqinfo, taxonomy, fa_idx,
         dest='index.refpkg', **meta):
     """
     Build an index.refpkg from a set of hrefpkgs
@@ -229,7 +231,7 @@ def build_index_refpkg(hrefpkg_paths, sequence_file, seqinfo, taxonomy,
     with util.ntf(prefix='aln_fasta', suffix='.fasta') as tf, \
          util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp, \
          util.ntf(prefix='taxonomy', suffix='.csv') as tax_fp:
-        wrap.esl_sfetch(sequence_file, sequence_ids, tf)
+        wrap.esl_sfetch(sequence_file, sequence_ids, tf, fa_idx)
         tf.close()
 
         # Seqinfo file
@@ -271,7 +273,7 @@ def choose_sequence_ids(taxonomy, seqinfo_rows, per_taxon=PER_TAXON, index_rank=
             random.shuffle(node_seqs)
         yield node_seqs[:per_taxon], node_seqs[per_taxon:]
 
-def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
+def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, fa_idx,
         output_dir='.',
         index_rank='order', train_file=None, test_file=None):
     """
@@ -320,7 +322,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
         # Fetch sequences
         with tempfile.NamedTemporaryFile() as tf:
             wrap.esl_sfetch(sequence_file,
-                            keep_seq_ids, tf)
+                            keep_seq_ids, tf, fa_idx)
             # Rewind
             tf.seek(0)
             sequences = list(SeqIO.parse(tf, 'fasta'))
@@ -338,10 +340,10 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file,
         # Extract training & test seqs
         if train_file:
             logging.info("%d training sequences", len(train_seq_ids))
-            wrap.esl_sfetch(sequence_file, train_seq_ids, train_file)
+            wrap.esl_sfetch(sequence_file, train_seq_ids, train_file, fa_idx)
         if test_file:
             logging.info("%d test sequences", len(test_seq_ids))
-            wrap.esl_sfetch(sequence_file, test_seq_ids, test_file)
+            wrap.esl_sfetch(sequence_file, test_seq_ids, test_file, fa_idx)
 
         # Cmalign
         aligned = wrap.cmalign(sequences, output=sto_fp)

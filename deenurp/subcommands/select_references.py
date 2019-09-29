@@ -10,7 +10,7 @@ import sqlite3
 
 from Bio import SeqIO
 
-from .. import config, search, select, util
+from .. import config, search, select, util, wrap
 
 
 def meta_writer(fp):
@@ -144,10 +144,15 @@ def action(args):
 
     with util.tempcopy(args.search_db) as search_path:
         search_db = sqlite3.connect(search_path)
+        params = search.load_params(search_db)
+        ref_idx = wrap.read_seq_file(params['ref_fasta'])
+        fa_idx = wrap.read_seq_file(params['fasta_file'])
         with contextlib.closing(search_db):
             sequences = select.choose_references(
                 search_db,
-                args.refs_per_cluster,
+                ref_idx,
+                fa_idx,
+                refs_per_cluster=args.refs_per_cluster,
                 threads=args.threads,
                 min_cluster_prop=args.min_mass_prop,
                 include_clusters=include_clusters,

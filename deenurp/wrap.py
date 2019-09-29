@@ -1,7 +1,6 @@
 """
 Wrappers and context managers around external programs.
 """
-
 import contextlib
 import csv
 import functools
@@ -16,7 +15,6 @@ from cStringIO import StringIO
 import pandas as pd
 
 from Bio import SeqIO
-import peasel
 from taxtastic.refpkg import Refpkg
 
 from .util import (as_fasta, ntf, tempdir, nothing, maybe_tempfile,
@@ -335,28 +333,40 @@ def muscle_files(input_file, output_file, maxiters=MUSCLE_MAXITERS):
         raise subprocess.CalledProcessError(p.returncode, error)
 
 
-def esl_sfetch(sequence_file, name_iter, output_fp, use_temp=False):
+def read_seq_file(sequence_file):
+    """
+    Reads a fasta file and records the binary offsets of each sequence
+    """
+    fa_idx = {}
+    with open(sequence_file, 'rb') as sf:
+        offset = 0
+        name = None
+        for line in sf:
+            line_len = len(line)
+            if line.startswith(b'>'):
+                if name is not None:
+                    fa_idx[name].append(offset)
+                name = line[1:].split()[0].strip().decode()
+                fa_idx[name] = [offset]
+            offset += line_len
+        # last sequence
+        if name:
+            fa_idx[name].append(offset)
+    return fa_idx
+
+
+def esl_sfetch(sequence_file, name_iter, output_fp, fa_idx):
     """
     Fetch sequences named in name_iter from sequence_file, indexing if
     necessary, writing to output_fp.
-
-    If ``use_temp`` is True, a temporary index is created and used.
     """
-
-    if use_temp:
-        with peasel.temp_ssi(sequence_file) as index:
-            sequences = (index[i] for i in name_iter)
-            count = peasel.write_fasta(sequences, output_fp)
-    else:
-        try:
-            peasel.create_ssi(sequence_file)
-        except IOError:
-            logging.debug("An index already exists for %s", sequence_file)
-
-        index = peasel.open_ssi(sequence_file)
-        sequences = (index[i] for i in name_iter)
-        count = peasel.write_fasta(sequences, output_fp)
-
+    count = 0
+    with open(sequence_file, 'rb') as fi:
+        for name in name_iter:
+            indices = fa_idx[name]
+            fi.seek(indices[0])
+            output_fp.write(fi.read(indices[1] - indices[0]))
+            count += 1
     return count
 
 

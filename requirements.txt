@@ -27,7 +27,6 @@ Cython==0.27.3
 futures==3.2.0
 hdbscan==0.8.11
 pandas==0.22.0
-peasel==0.3.1
 scipy==1.0.0
 seqmagick==0.6.2
 taxtastic==0.8.5

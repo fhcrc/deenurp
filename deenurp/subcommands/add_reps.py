@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from taxtastic import taxonomy, ncbi
 
 from .. import wrap
+from Bio import SeqIO
 
 def build_parser(p):
     p.add_argument('fasta_file', help="""Sequence file to augment reference
@@ -36,10 +37,14 @@ def action(args):
 
     tax = taxonomy.Taxonomy(create_engine('sqlite:///{0}'.format(args.tax_db)), ncbi.ranks)
 
-    sequence_ids = (k for k, v in tax_map.items()
+    sequence_ids = set(k for k, v in tax_map.items()
             if v and tax.lineage(tax_id=v).get(args.rank) in tax_ids)
 
     # Fetch
+    count = 0
     with args.outfile:
-        count = wrap.esl_sfetch(args.fasta_file, sequence_ids, args.outfile)
+        for r in SeqIO.parse(args.fasta_file, 'fasta'):
+            if r.id in sequence_ids:
+                args.outfile.write('{}\n{}\n'.format(r.description, r.seq))
+                count += 1
     print 'selected', count, 'sequences'

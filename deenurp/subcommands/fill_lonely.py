@@ -34,7 +34,7 @@ def is_lonely(node, parent_rank=PARENT_RANK):
 
 
 def fill_lonely_worker(
-        node_id, parent_id, full_taxonomy, full_fasta, n_reps=5):
+        node_id, parent_id, full_taxonomy, full_fasta, fa_idx, n_reps=5):
     """
     Finds some company for lonely taxonomic node identified by ``node_id``
 
@@ -62,7 +62,7 @@ def fill_lonely_worker(
     # Choose representatives
     with util.ntf(suffix='.fasta') as tf, \
             util.ntf(suffix='.fast.tre') as tree_fp:
-        wrap.esl_sfetch(full_fasta, other_sequence_ids, tf)
+        wrap.esl_sfetch(full_fasta, other_sequence_ids, tf, fa_idx)
         tf.seek(0)
         sequences = SeqIO.parse(tf, 'fasta')
 
@@ -144,6 +144,8 @@ def build_parser(p):
 
 
 def action(args):
+    fa_idx = wrap.read_seq_file(args.search_fasta)
+
     logging.info("Loading taxtable")
     with args.search_taxtable as fp:
         full_taxonomy = taxtable.read(fp)
@@ -176,6 +178,7 @@ def action(args):
                     node.at_rank(args.parent_rank).tax_id,
                     full_taxonomy,
                     args.search_fasta,
+                    fa_idx,
                     n_reps=args.number_of_reps))
 
         while futs:
@@ -208,7 +211,7 @@ def action(args):
     logging.info("%d additional references", len(additional_reps))
     with open(args.chosen_fasta) as fp, args.output as ofp:
         shutil.copyfileobj(fp, ofp)
-        wrap.esl_sfetch(args.search_fasta, additional_reps, ofp)
+        wrap.esl_sfetch(args.search_fasta, additional_reps, ofp, fa_idx)
 
     with args.chosen_seqinfo as fp, args.output_seqinfo as ofp, \
             args.search_seqinfo as sub_fp:
