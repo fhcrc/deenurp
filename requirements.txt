@@ -9,7 +9,7 @@
 # - correct any incompatibilities (eg, seqmagick running under python2 requires biopython <= 1.66
 
 MarkupSafe==1.0
-numpy==1.14.0
+numpy==1.16.4
 setuptools==38.4.0
 six==1.11.0
 DendroPy==4.3.0
@@ -25,7 +25,7 @@ pytz==2017.3
 scikit-learn==0.19.1
 Cython==0.27.3
 futures==3.2.0
-hdbscan==0.8.11
+hdbscan==0.8.16
 pandas==0.22.0
 scipy==1.0.0
 seqmagick==0.6.2
