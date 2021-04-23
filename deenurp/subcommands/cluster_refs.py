@@ -154,7 +154,7 @@ def action(a):
         seqinfo_records = (seqinfo.get(i, {'seqname': i}) for i in done)
         seqinfo_records = (add_cluster(i) for i in seqinfo_records)
 
-        fields = list(seqinfo.values()[0].keys())
+        fields = list(list(seqinfo.values())[0].keys())
         fields.append('cluster')
         w = csv.DictWriter(fp, fields,
                 quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')

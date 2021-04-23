@@ -225,7 +225,7 @@ VALUES (?, ?)"""
         seq_count += 1
         if sequence.id not in weights:
             continue
-        for sample, weight in weights[sequence.id].items():
+        for sample, weight in list(weights[sequence.id].items()):
             sample_id = get_sample_id(sample)
             cursor.execute("""INSERT INTO sequences_samples
                            (sequence_id, sample_id, weight)
@@ -248,7 +248,7 @@ def _create_tables(
     cursor = con.cursor()
     cursor.executescript(open(schema).read().strip())
     # Save parameters
-    rows = [(k, locals().get(k)) for k in _PARAMS.keys()]
+    rows = [(k, locals().get(k)) for k in list(_PARAMS.keys())]
     cursor.executemany("INSERT INTO params VALUES (?, ?)", rows)
 
 

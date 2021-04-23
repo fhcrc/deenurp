@@ -158,7 +158,7 @@ def find_nodes(taxonomy, index_rank, want_rank='species'):
     moving up a rank if no species-level nodes with sequences exist.
     """
     ranks = taxonomy.ranks
-    rdict = dict(zip(ranks, xrange(len(ranks))))
+    rdict = dict(list(zip(ranks, list(range(len(ranks))))))
     assert index_rank in rdict
     assert want_rank in rdict
 
@@ -236,7 +236,7 @@ def build_index_refpkg(hrefpkg_paths, sequence_file, seqinfo, taxonomy, fa_idx,
 
         # Seqinfo file
         r = (i for i in seqinfo if i['seqname'] in sequence_ids)
-        w = csv.DictWriter(seq_info_fp, seqinfo[0].keys(), lineterminator='\n',
+        w = csv.DictWriter(seq_info_fp, list(seqinfo[0].keys()), lineterminator='\n',
                 quoting=csv.QUOTE_NONNUMERIC)
         w.writeheader()
         w.writerows(r)
@@ -252,7 +252,7 @@ def build_index_refpkg(hrefpkg_paths, sequence_file, seqinfo, taxonomy, fa_idx,
         rp.update_file('taxonomy', tax_fp.name)
         rp.update_file('profile', wrap.CM)
 
-        for k, v in meta.items():
+        for k, v in list(meta.items()):
             rp.update_metadata(k, v)
 
         rp.commit_transaction()
@@ -295,7 +295,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, fa_idx,
         tax_fp.close()
 
         # Subset seq_info
-        w = csv.DictWriter(seq_info_fp, seqinfo[0].keys(),
+        w = csv.DictWriter(seq_info_fp, list(seqinfo[0].keys()),
                 quoting=csv.QUOTE_NONNUMERIC)
         w.writeheader()
         rows = [i for i in seqinfo if i['tax_id'] in descendants]
@@ -366,7 +366,7 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, fa_idx,
         try:
             rp.update_phylo_model('FastTree', stats_fp.name)
         except:
-            print >> sys.stderr, stats_fp.read()
+            print(stats_fp.read(), file=sys.stderr)
             raise
         rp.update_file('profile', wrap.CM)
         rp.commit_transaction()
@@ -403,7 +403,7 @@ def partition_taxonomy(taxonomy, partition_below_rank, partition_rank, partition
         partition_count = int(partition_prop * child_count)
         logging.info("Pruning %d/%d from %s-%s", partition_count, child_count,
                 node.tax_id, node.name)
-        prune = set(random.sample(range(len(children)), partition_count))
+        prune = set(random.sample(list(range(len(children))), partition_count))
 
         # Lists of taxa to prune from the individual partitions
         p1_prune = [n.tax_id for i, n in enumerate(children) if i in prune]

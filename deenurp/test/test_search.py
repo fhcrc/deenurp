@@ -1,6 +1,6 @@
 import collections
 import os.path
-from cStringIO import StringIO
+from io import StringIO
 import unittest
 from deenurp import search
 

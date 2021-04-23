@@ -23,7 +23,7 @@ def apply_df_status(func, df, msg=''):
     """
     tmp_column = 'index_number'
     row_count = float(len(df))
-    df[tmp_column] = xrange(int(row_count))
+    df[tmp_column] = range(int(row_count))
     msg += ' {:.0%}\r'
 
     def apply_func(item, msg):

@@ -492,7 +492,7 @@ def filter_worker(tax_id,
 def action(a):
     # itemize sequences provided in the input file
     fa_idx = wrap.read_seq_file(a.sequence_file)
-    seqnames = fa_idx.keys()
+    seqnames = list(fa_idx.keys())
 
     # Load taxonomy
     with a.taxonomy as fp:

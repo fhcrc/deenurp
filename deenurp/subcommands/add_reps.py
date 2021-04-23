@@ -37,7 +37,7 @@ def action(args):
 
     tax = taxonomy.Taxonomy(create_engine('sqlite:///{0}'.format(args.tax_db)), ncbi.ranks)
 
-    sequence_ids = set(k for k, v in tax_map.items()
+    sequence_ids = set(k for k, v in list(tax_map.items())
             if v and tax.lineage(tax_id=v).get(args.rank) in tax_ids)
 
     # Fetch
@@ -47,4 +47,4 @@ def action(args):
             if r.id in sequence_ids:
                 args.outfile.write('{}\n{}\n'.format(r.description, r.seq))
                 count += 1
-    print 'selected', count, 'sequences'
+    print('selected', count, 'sequences')

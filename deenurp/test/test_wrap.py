@@ -70,7 +70,7 @@ class RpprMinAdclTreeTestCase(unittest.TestCase):
 
 try:
     wrap.require_executable(wrap.VSEARCH)
-except MissingDependencyError, e:
+except MissingDependencyError as e:
     vsearch_available = False
 else:
     vsearch_available = True

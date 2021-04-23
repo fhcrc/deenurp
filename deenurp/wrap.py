@@ -10,7 +10,7 @@ import os.path
 import subprocess
 import re
 from distutils.version import LooseVersion
-from cStringIO import StringIO
+from io import StringIO
 
 import pandas as pd
 

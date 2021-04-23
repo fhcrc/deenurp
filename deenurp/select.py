@@ -306,11 +306,11 @@ ORDER BY ref_seqs.cluster_name ASC, SUM(sequences_samples.weight) DESC
             sample_weights = get_sample_weights(deenurp_db, cluster_seq_names)
 
             norm_sw = dict()
-            for k, v in sample_weights.items():
+            for k, v in list(sample_weights.items()):
                 norm_sw[k] = v / sample_total_weights[k]
 
             max_sample, max_weight = max(
-                norm_sw.items(), key=operator.itemgetter(1))
+                list(norm_sw.items()), key=operator.itemgetter(1))
 
             logging.info(
                 'Cluster %s: Max hit by %s: %.3f%%, %d hits',

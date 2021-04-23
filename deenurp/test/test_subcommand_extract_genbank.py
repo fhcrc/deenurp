@@ -7,7 +7,7 @@ FIXME:
 import os
 import unittest
 
-from cStringIO import StringIO
+from io import StringIO
 
 from deenurp.subcommands import ncbi_extract_genbank
 

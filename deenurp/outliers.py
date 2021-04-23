@@ -33,7 +33,7 @@ def read_dists(fobj):
         spl = line.split()
         assert len(spl) == N + 1
         taxa.append(spl.pop(0))
-        distmat[row, :] = map(float, spl)
+        distmat[row, :] = list(map(float, spl))
 
     return taxa, distmat
 
@@ -192,7 +192,7 @@ def scipy_cluster(X, module, t, **kwargs):
     Z = fun(y)
     clusters = scipy.cluster.hierarchy.fcluster(Z, t, **args)
     title = 'scipy.cluster.hierarchy.{} {}'.format(
-        module, ' '.join('%s=%s' % item for item in args.items()))
+        module, ' '.join('%s=%s' % item for item in list(args.items())))
 
     return clusters, title
 
@@ -237,7 +237,7 @@ def find_cluster_medoids(X, clusters):
         zip([0 if c == -1 else 1 for c in uclusters], counts, uclusters),
         reverse=True)
 
-    __, counts, uclusters = zip(*tallies)
+    __, counts, uclusters = list(zip(*tallies))
 
     medoids = [(None if cluster == -1 else find_medoid(X, clusters == cluster))
                for _, _, cluster in tallies]

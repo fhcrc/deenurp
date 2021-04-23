@@ -44,7 +44,7 @@ def _handle(s, *args, **kwargs):
     If s is a string, opens s and yields the open file. Otherwise, has no
     effect.
     """
-    if isinstance(s, basestring):
+    if isinstance(s, str):
         with open(s, *args, **kwargs) as fp:
             yield fp
     else:
@@ -65,7 +65,7 @@ def _check_call(cmd, **kwargs):
     Log and run command. Additional arguments are passed to
     ``subprocess.check_call``
     """
-    cmd = map(str, cmd)
+    cmd = list(map(str, cmd))
     logging.debug(' '.join(cmd))
     subprocess.check_call(cmd, **kwargs)
 
@@ -303,6 +303,6 @@ def guppy_redup_from_uclust(uclust_records, sample_map=None):
             clusters[number][sample].count += 1
 
     rows = [(seeds[num], dedup_seq.id, dedup_seq.count)
-            for num, samples in clusters.items()
-            for dedup_seq in samples.values()]
+            for num, samples in list(clusters.items())
+            for dedup_seq in list(samples.values())]
     return rows

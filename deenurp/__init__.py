@@ -24,7 +24,7 @@ import logging
 import os
 import pkgutil
 import sys
-import util
+from . import util
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ def parse_subcommands(parser, argv):
     """
     Setup all sub-commands
     """
-    import subcommands
+    from . import subcommands
 
     subparsers = parser.add_subparsers(dest='subparser_name')
 
@@ -158,7 +158,7 @@ def parse_subcommands(parser, argv):
         try:
             imp = '{}.{}'.format(subcommands.__name__, name)
             mod = importlib.import_module(imp)
-        except Exception, e:
+        except Exception as e:
             log.error('error importing subcommand {}'.format(name))
             log.error(e)
             continue
