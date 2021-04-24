@@ -45,14 +45,15 @@ class AsRefpkgTestCase(unittest.TestCase):
             self.assertTrue(os.path.isdir(refpkg.path))
 
             if which('rppr'):
-                out = subprocess.check_output(['rppr', 'check', '-c', refpkg.path])
-                self.assertTrue('OK!' in out, out)
+                job = subprocess.run(['rppr', 'check', '-c', refpkg.path],
+                                     capture_output=True, text=True)
+                self.assertTrue('OK!' in job.stdout)
 
 
 @unittest.skipUnless(which('rppr'), "rppr not found")
 class RpprMinAdclTreeTestCase(unittest.TestCase):
     def setUp(self):
-        self.tf = tempfile.NamedTemporaryFile(prefix='adcl', suffix='.tre')
+        self.tf = tempfile.NamedTemporaryFile('w+', prefix='adcl', suffix='.tre')
         self.tf.write("((C000721552:0.20692,C002038857:0.00015)0.844:0.01031,C002038856:0.00014,((C002963332:0.08558,(C001550734:0.06763,((C000004779:0.03889,C002963310:0.04622)0.633:0.00151,(C002963318:0.00014,C002963266:0.00014)0.697:0.00016)0.992:0.15253)0.889:0.07332)0.924:0.07668,C002038858:0.01032)0.907:0.00014);\n")
         self.tf.flush()
 
@@ -89,7 +90,7 @@ class VsearchTestCase(unittest.TestCase):
                           wrap._require_vsearch_version, version='5.0')
 
     def test_vsearch_allpairs_files(self):
-        with deenurp.util.ntf(suffix='.blast6out', mode='rw') as outfile:
+        with deenurp.util.ntf(suffix='.blast6out', mode='w+') as outfile:
             wrap.vsearch_allpairs_files(self.sequencefile, outfile.name)
             self.assertTrue(os.path.exists(outfile.name))
             outfile.flush()

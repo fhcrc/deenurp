@@ -48,7 +48,7 @@ def fasttree_dists(fasta):
 
     cmd = ['FastTree', '-nt', '-makematrix', fasta]
 
-    with tempfile.TemporaryFile('rw') as stdout, open(os.devnull) as devnull:
+    with tempfile.TemporaryFile('w+') as stdout, open(os.devnull) as devnull:
         proc = subprocess.Popen(cmd, stdout=stdout, stderr=devnull)
         proc.communicate()
         stdout.flush()

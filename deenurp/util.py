@@ -120,13 +120,13 @@ def nothing(obj=None):
 
 
 @contextlib.contextmanager
-def ntf(**kwargs):
+def ntf(*args, **kwargs):
     """
     Near-clone of tempfile.NamedTemporaryFile, but the file is deleted when the
     context manager exits, rather than when it's closed.
     """
     kwargs['delete'] = False
-    tf = tempfile.NamedTemporaryFile(**kwargs)
+    tf = tempfile.NamedTemporaryFile(*args, **kwargs)
     try:
         with tf:
             yield tf
@@ -179,7 +179,7 @@ def as_fasta(sequences, **kwargs):
     """
     if 'suffix' not in kwargs:
         kwargs['suffix'] = '.fasta'
-    with ntf(**kwargs) as tf:
+    with ntf('w+', **kwargs) as tf:
         SeqIO.write(sequences, tf, 'fasta')
         tf.flush()
         tf.close()

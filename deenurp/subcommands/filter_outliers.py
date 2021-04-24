@@ -233,22 +233,19 @@ def distmat_muscle(sequence_file, prefix, maxiters=wrap.MUSCLE_MAXITERS):
     with util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
         wrap.muscle_files(sequence_file, a_fasta.name, maxiters=maxiters)
         a_fasta.flush()
-
         taxa, distmat = outliers.fasttree_dists(a_fasta.name)
 
     return taxa, distmat
 
 
-def distmat_cmalign(
-        sequence_file,
-        prefix,
-        cpu=wrap.CMALIGN_THREADS,
-        min_bitscore=10):
+def distmat_cmalign(sequence_file, prefix, cpu=wrap.CMALIGN_THREADS,
+                    min_bitscore=10):
 
-    with util.ntf(prefix=prefix, suffix='.aln') as a_sto, \
-            util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
+    with util.ntf('w+', prefix=prefix, suffix='.aln') as a_sto, \
+            util.ntf('w+', prefix=prefix, suffix='.fasta') as a_fasta:
 
         scores = wrap.cmalign_files(sequence_file, a_sto.name, cpu=cpu)
+        a_sto.seek(0)
 
         low_scores = scores['bit_sc'] < min_bitscore
         if low_scores.any():
