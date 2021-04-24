@@ -14,22 +14,8 @@ set -e
 # installs deenurp and dependencies to $VIRTUAL_ENV if defined;
 # otherwise creates a virtualenv locally.
 
-# Will attempt to install python packages from wheels if $PIP_FIND_LINKS is defined
-# and pip --use-wheel is specified
-
-# set $PIP_WHEEL_DIR and $PIP_FIND_LINKS in the parent environment if
-# desired
-
-# Will attempt to create wheels if $PIP_WHEEL_DIR is defined
-# see https://pip.pypa.io/en/latest/user_guide.html#environment-variables
-
-
 mkdir -p src
 SRCDIR=$(readlink -f src)
-
-if [[ -n "$PIP_WHEEL_DIR" ]]; then
-    mkdir -p "$PIP_WHEEL_DIR"
-fi
 
 srcdir(){
     tar -tf $1 | head -1
@@ -44,7 +30,7 @@ else
 fi
 
 if [[ -z $PYTHON ]]; then
-    PYTHON=$(which python2)
+    PYTHON=$(which python3)
 fi
 
 # Defines the default source directory for deenurp as the parent of
@@ -60,60 +46,18 @@ RAXML_VERSION=8.0.5
 MUSCLE_VERSION=3.8.31
 VSEARCH_VERSION=2.6.2
 
-check_version(){
-    # usage: check_version module version-string
-    "$PYTHON" <<EOF 2> /dev/null
-import $1
-from distutils.version import LooseVersion
-assert LooseVersion($1.__version__) >= LooseVersion("$2")
-EOF
-}
-
-# create virtualenv if necessary, downloading source if available
-# version is not up to date.
-VENV_URL="https://github.com/pypa/virtualenv/archive/${VENV_VERSION}"
+# create virtualenv
 if [[ ! -f "${venv:?}/bin/activate" ]]; then
-    # if the system virtualenv is up to date, use it
-    if check_version virtualenv $VENV_VERSION; then
-      echo "using $(which virtualenv) (version $(virtualenv --version))"
-	    virtualenv "$venv"
-    else
-	echo "downloading virtualenv version $VENV_VERSION"
-	if [[ ! -f src/virtualenv-${VENV_VERSION}/virtualenv.py ]]; then
-	    mkdir -p src
-	    (cd src && \
-		wget --quiet -nc ${VENV_URL}.tar.gz && \
-		tar -xf ${VENV_VERSION}.tar.gz)
-	fi
-	"$PYTHON" src/virtualenv-${VENV_VERSION}/virtualenv.py "$venv"
-    fi
+    $PYTHON -m venv $venv
 else
     echo "virtualenv $venv already exists"
 fi
 
 source $venv/bin/activate
-
 # full path; set by activate
 venv=$VIRTUAL_ENV
-
-# Preserve the order of installation. The requirements are sorted so
-# that secondary (and higher-order) dependencies appear first. See
-# bin/pipdeptree2requirements.py. We use --no-deps to prevent various
-# packages from being repeatedly installed, uninstalled, reinstalled,
-# etc. Also, enfoprcing the order of installation ensures that
-# install-time dependencies are met (`pip install -r requirements.txt`
-# fails due to a install-time dependency that cogent has for numpy)
-pip2 install -U pip
-
-# install pysqlite and updated sqlite3 libraries
-wget --quiet -O - \
-     https://raw.githubusercontent.com/fhcrc/taxtastic/master/dev/install_pysqlite.sh | bash
-
-while read pkg; do
-    pip2 install "$pkg" --no-deps --upgrade
-done < <(/bin/grep -v -E '^#|^$' "$DEENURP/requirements.txt")
-
-pip2 install "$DEENURP"
+pip install -U pip wheel
+pip install -r requirements.in
 
 # install pplacer and accompanying python scripts
 PPLACER_DIR=pplacer-Linux-v${PPLACER_BUILD}
@@ -128,11 +72,12 @@ if pplacer_is_installed; then
     $venv/bin/pplacer --version
 else
     mkdir -p src && \
-	(cd src && \
-	wget -nc --quiet https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP && \
-	unzip -o $PPLACER_ZIP && \
-	cp $PPLACER_DIR/{pplacer,guppy,rppr} $venv/bin && \
-	pip2 install -U $PPLACER_DIR/scripts)
+	(cd src \
+	     && wget -nc --quiet https://github.com/matsen/pplacer/releases/download/v$PPLACER_BUILD/$PPLACER_ZIP \
+	     && unzip -o $PPLACER_ZIP \
+	     && cp $PPLACER_DIR/{pplacer,guppy,rppr} $venv/bin \
+	     # && pip2 install -U $PPLACER_DIR/scripts \
+	)
     # confirm that we have installed the requested build
     if ! pplacer_is_installed; then
 	echo -n "Error: you requested pplacer build $PPLACER_BUILD "
@@ -218,4 +163,3 @@ else
 	    cd muscle${MUSCLE_VERSION}/src && \
 	    ./mk && cp muscle $venv/bin)
 fi
-
