@@ -296,12 +296,12 @@ def vsearch_allpairs_files(input_file, output_file, executable=VSEARCH,
            '--blast6out', output_file]
 
     logging.info(' '.join(cmd))
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    logging.debug(p.stdout.read().strip())
-    error = p.stderr.read().strip()
-    if p.wait() != 0:
+    job = subprocess.run(cmd, capture_output=True, text=True)
+    logging.debug(job.stdout)
+
+    if job.returncode != 0:
         # TODO: preserve output files (input_file, output_file)
-        raise subprocess.CalledProcessError(p.returncode, error)
+        raise subprocess.CalledProcessError(job.returncode, job.stderr)
 
 
 def muscle_files(input_file, output_file, maxiters=MUSCLE_MAXITERS):
