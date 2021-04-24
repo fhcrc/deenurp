@@ -294,8 +294,10 @@ def parse_usearch_allpairs(filename, seqnames):
     nseqs = len(seqnames)
     distmat = numpy.repeat(0.0, nseqs ** 2)
     distmat.shape = (nseqs, nseqs)
-    ii = pd.match(data['query'], seqnames)
-    jj = pd.match(data['target'], seqnames)
+
+    idx = dict(zip(seqnames, range(nseqs)))
+    ii = [idx[name] for name in data['query']]
+    jj = [idx[name] for name in data['target']]
 
     # usearch_allpairs_files returns comparisons corresponding to a
     # triangular matrix, whereas vsearch_allpairs_files returns all

@@ -147,12 +147,13 @@ def outliers_by_cluster(distmat, t, D, min_size=1, cluster_type='single', **kwar
         # all of the sequences
         log.warning('no clusters were found')
 
-        medoids = pd.DataFrame.from_items([
-            ('cluster', [-1]),
-            ('count', [len(clusters)]),
-            ('medoid', [find_medoid(distmat)]),
-            ('dist', [None])
-        ])
+        medoids = pd.DataFrame({
+            'cluster': [-1],
+            'count': [len(clusters)],
+            'medoid': [find_medoid(distmat)],
+            'dist': [None],
+        })
+
         to_prune = pd.Series([False for x in clusters])
     else:
         medoids = find_cluster_medoids(distmat, clusters)
@@ -245,12 +246,12 @@ def find_cluster_medoids(X, clusters):
     # measure distances from the medoid of the first (largest) cluster
     dists = [None if medoid is None else X[medoids[0], medoid] for medoid in medoids]
 
-    return pd.DataFrame.from_items([
-        ('cluster', uclusters),
-        ('count', counts),
-        ('medoid', medoids),
-        ('dist', dists)
-    ])
+    return pd.DataFrame({
+        'cluster': uclusters,
+        'count': counts,
+        'medoid': medoids,
+        'dist': dists,
+    })
 
 
 def choose_clusters(df, min_size, max_dist):
@@ -317,11 +318,11 @@ def mds(X, taxa, n_jobs=1):
         n_jobs=n_jobs)
 
     if np.all(X == 0):
-        df = pd.DataFrame.from_items([
-            ('seqname', taxa),
-            ('x', np.zeros(n)),
-            ('y', np.zeros(n))
-        ])
+        df = pd.DataFrame({
+            'seqname': taxa,
+            'x': np.zeros(n),
+            'y': np.zeros(n),
+        })
     else:
         mds_fit = mds.fit_transform(X)
         df = pd.DataFrame(mds_fit, columns=['x', 'y'])

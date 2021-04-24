@@ -58,5 +58,5 @@ class SelectHitsTestCase(unittest.TestCase):
         expected = [
             ('seq1', [TestHit('seq1', 't2', 99.9)]),
             ('seq2', [TestHit('seq2', 't6', 98.4)])]
-        self.assertItemsEqual(expected, r)
+        self.assertEqual(expected, r)
 
