@@ -98,14 +98,20 @@ def outliers(distmat, radius):
 
     """
 
+    # A previous implementation used a masked_array to guard againt na
+    # values, but apparently this results in undefined behavior:
+    # https://github.com/numpy/numpy/issues/14716
+
     # use a masked array in case there are any nan
-    ma = np.ma.masked_array(distmat, np.isnan(distmat))
+    # ma = np.ma.masked_array(distmat, np.isnan(distmat))
 
     # index of most central element.
-    medoid = find_medoid(ma)
+    # medoid = find_medoid(ma)
+    medoid = find_medoid(distmat)
 
     # distance from each element to most central element
-    dists = ma[medoid, :]
+    # dists = ma[medoid, :]
+    dists = distmat[medoid, :]
     to_prune = dists > radius
 
     return medoid, dists, to_prune
