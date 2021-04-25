@@ -1,25 +1,43 @@
 import os
 import sys
 import subprocess
-from setuptools import setup, find_packages, Command
 
-# Fix for `setup.py test`
-# See http://bugs.python.org/issue15881
-try:
-    import multiprocessing
-    from concurrent import futures
-except ImportError:
-    pass
+from distutils.core import Command
+from setuptools import setup, find_packages
+
+datadir = 'deenurp/data'
+version_file = f'{datadir}/version.txt'
 
 subprocess.call(
-    ('mkdir -p {data} && '
-     'git describe --tags --dirty > {data}/{file}.tmp '
-     '&& mv {data}/{file}.tmp {data}/{file} '
-     '|| rm -f {data}/{file}.tmp').format(data='deenurp/data', file='version.txt'),
+    (f'mkdir -p {datadir} && '
+     f'git describe --tags --dirty > {version_file}.tmp '
+     f'&& mv {version_file}.tmp {version_file} '
+     f'|| rm -f {version_file}.tmp'),
     shell=True, stderr=open(os.devnull, "w"))
 
 # import must follow 'git describe' command above to update version
 from deenurp import __version__
+
+
+class CheckVersion(Command):
+    description = 'Confirm that the stored package version is correct'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        with open(version_file) as f:
+            stored_version = f.read().strip()
+
+        git_version = subprocess.check_output(
+            ['git', 'describe', '--tags', '--dirty']).strip()
+
+        assert stored_version == git_version
+        print('the current version is', stored_version)
 
 
 class run_audit(Command):
@@ -58,12 +76,25 @@ class run_audit(Command):
             print("No problems found in sourcecode.")
 
 
-setup(name='deenurp',
-      version=__version__,
-      package_data={'deenurp': ['data/*', 'test/data/*']},
-      entry_points={
-          'console_scripts': {'deenurp = deenurp:main'}},
-      cmdclass={'audit': run_audit},
-      test_suite='deenurp.test.suite',
-      packages=find_packages(exclude=['tests'])
-      )
+setup(
+    name='deenurp',
+    version=__version__,
+    package_data={'deenurp': ['data/*', 'test/data/*']},
+    entry_points={
+        'console_scripts': {'deenurp = deenurp:main'}},
+    cmdclass={'audit': run_audit, 'check_version': CheckVersion},
+    test_suite='deenurp.test.suite',
+    packages=find_packages(exclude=['tests']),
+    install_requires=[
+        'numpy',
+        'cython',
+        'pandas',
+        'scipy',
+        'scikit-learn',
+        'hdbscan',
+        'biopython',
+        'taxtastic',
+        'futures',
+        'seqmagick',
+    ],
+)
