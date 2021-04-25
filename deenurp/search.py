@@ -123,7 +123,7 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
     cursor = con.cursor()
     count = 0
     ref_name = p['ref_fasta']
-    with open(p['ref_meta']) as fp:
+    with open(p['ref_meta'], 'r') as fp:
         cluster_info = _load_cluster_info(fp, p['group_field'])
 
     @memoize
@@ -140,7 +140,7 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
         cursor.execute(sql, [name])
         return cursor.fetchone()[0]
 
-    with _ntf(prefix='usearch') as uc_fp:
+    with _ntf('w+', prefix='usearch') as uc_fp:
         uclust.search(
             ref_name,
             p['fasta_file'],
