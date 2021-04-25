@@ -135,17 +135,16 @@ def ntf(*args, **kwargs):
 
 
 @contextlib.contextmanager
-def tempcopy(path, **kwargs):
+def tempcopy(path):
+    """Create a temporary copy of ``path``, available for the duration of
+    the context manager
+
     """
-    Create a temporary copy of ``path``, available for the duration of the
-    context manager
-    """
+
     prefix, suffix = os.path.splitext(os.path.basename(path))
-    a = {'prefix': prefix, 'suffix': suffix}
-    a.update(kwargs)
-    with open(path) as fp, ntf(**a) as tf:
-        shutil.copyfileobj(fp, tf)
+    with ntf(prefix=prefix, suffix=suffix) as tf:
         tf.close()
+        shutil.copyfile(path, tf.name)
         yield tf.name
 
 
