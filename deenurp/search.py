@@ -244,11 +244,13 @@ def _create_tables(
         search_identity=SEARCH_IDENTITY,
         quiet=True,
         group_field='cluster'):
+
     schema = os.path.join(os.path.dirname(__file__), 'data', 'search.schema')
     cursor = con.cursor()
     cursor.executescript(open(schema).read().strip())
+
     # Save parameters
-    rows = [(k, locals().get(k)) for k in list(_PARAMS.keys())]
+    rows = [(k, v) for k, v in locals().items() if k in _PARAMS]
     cursor.executemany("INSERT INTO params VALUES (?, ?)", rows)
 
 
