@@ -89,9 +89,8 @@ def setup_logging(namespace):
                   '%(funcName)s %(lineno)s %(message)s')
     datefmt = '%Y-%m-%d %H:%M:%S'
 
-    logging.basicConfig(stream=namespace.log, format=log_format,
-                        level=loglevel, log_format=log_format,
-                        datefmt=datefmt)
+    logging.basicConfig(
+        stream=namespace.log, format=log_format, level=loglevel, datefmt=datefmt)
 
 
 def parse_version(parser):
