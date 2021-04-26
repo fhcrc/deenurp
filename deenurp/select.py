@@ -19,7 +19,7 @@ from concurrent import futures
 
 from . import util, wrap
 from .config import DEFAULT_THREADS
-from .util import as_fasta, tempdir
+from .util import as_fasta, tempdir, ntf
 from .wrap import (cmalign, as_refpkg, redupfile_of_seqs,
                    rppr_min_adcl, guppy_redup, pplacer, esl_sfetch)
 
@@ -64,12 +64,10 @@ def _cluster(sequences, threshold=CLUSTER_THRESHOLD):
     """
     sequences = list(sequences)
     assert sequences
-    with as_fasta(sequences) as fasta_name, \
-            tempfile.NamedTemporaryFile(prefix='uc-') as ntf:
-
-        uclust.cluster(fasta_name, ntf.name, pct_id=threshold, quiet=True)
-        ntf.seek(0)
-        r = list(uclust.cluster_seeds(fasta_name, ntf))
+    with as_fasta(sequences) as fasta_name, ntf(prefix='uc-') as uc:
+        uc.close()
+        uclust.cluster(fasta_name, uc.name, pct_id=threshold, quiet=True)
+        r = list(uclust.cluster_seeds(fasta_name, uc.name))
 
     logging.debug("Clustered %d to %d", len(sequences), len(r))
     return r
@@ -115,7 +113,7 @@ def select_sequences_for_cluster(
     # the operation below assumes unique identifiers for the set of
     # ref and query seqs, so ensure that this is the case
     for seq in query_seqs:
-        seq.id = seq.id + hashlib.md5(seq.id).hexdigest()[:8]
+        seq.id = seq.id + hashlib.md5(seq.id.encode('utf-8')).hexdigest()[:8]
 
     c = itertools.chain(ref_seqs, query_seqs)
 
@@ -127,10 +125,10 @@ def select_sequences_for_cluster(
             redupfile_of_seqs(query_seqs) as redup_path:
 
         jplace = pplacer(rp.path, fasta, out_dir=placedir(), threads=1)
+
         # Redup
         guppy_redup(jplace, redup_path, placedir('redup.jplace'))
-        prune_leaves = set(
-            rppr_min_adcl(placedir('redup.jplace'), keep_leaves))
+        prune_leaves = set(rppr_min_adcl(placedir('redup.jplace'), keep_leaves))
 
     result = frozenset(i.id for i in ref_seqs) - prune_leaves
     assert len(result) == keep_leaves
@@ -223,10 +221,13 @@ def sequences_hitting_cluster(con, cluster_name):
 def esl_sfetch_seqs(sequence_file, sequence_names, fa_idx):
     """
     """
-    with tempfile.NamedTemporaryFile(prefix='esl', suffix='.fasta') as tf:
+    with ntf('wb', prefix='esl', suffix='.fasta') as tf:
+        # esl_sfetch() writes binary data, so we close and reopen the
+        # file to access the sequence data in text mode
         esl_sfetch(sequence_file, sequence_names, tf, fa_idx)
-        tf.seek(0)
-        return list(SeqIO.parse(tf, 'fasta'))
+        tf.close()
+        with open(tf.name, 'r') as seqs:
+            return list(SeqIO.parse(seqs, 'fasta'))
 
 
 def get_total_weight_per_sample(con):

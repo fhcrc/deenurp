@@ -75,8 +75,8 @@ def as_refpkg(sequences, name='temp.refpkg', threads=FASTTREE_THREADS):
 
 
 @contextlib.contextmanager
-def redupfile_of_seqs(sequences, **kwargs):
-    with ntf(**kwargs) as tf:
+def redupfile_of_seqs(sequences):
+    with ntf('w') as tf:
         writer = csv.writer(tf, lineterminator='\n')
         rows = ((s.id, s.id, s.annotations.get('weight', 1.0)) for s in sequences)
         writer.writerows(rows)
@@ -173,8 +173,8 @@ def rppr_min_adcl(jplace, leaves, algorithm='pam', posterior_prob=False,
     if always_include:
         cmd.extend(('--always-include', always_include))
     logging.debug(' '.join(cmd))
-    output = subprocess.check_output(cmd)
-    return output.splitlines()
+    job = subprocess.run(cmd, capture_output=True, text=True)
+    return job.stdout.strip().splitlines()
 
 
 def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam', always_include=None):

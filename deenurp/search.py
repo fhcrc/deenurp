@@ -13,9 +13,7 @@ import tempfile
 from deenurp import uclust
 from Bio import SeqIO
 
-from .util import SingletonDefaultDict, memoize
-
-_ntf = tempfile.NamedTemporaryFile
+from .util import SingletonDefaultDict, memoize, ntf
 
 SELECT_THRESHOLD = 0.05
 SEARCH_THRESHOLD = 0.90
@@ -140,7 +138,8 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
         cursor.execute(sql, [name])
         return cursor.fetchone()[0]
 
-    with _ntf('w+', prefix='usearch') as uc_fp:
+    with ntf(prefix='usearch') as uc_fp:
+        uc_fp.close()
         uclust.search(
             ref_name,
             p['fasta_file'],
@@ -153,16 +152,16 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
         # import shutil
         # shutil.copy(uc_fp.name, '.')
 
-        records = uclust.parse_uclust_out(uc_fp)
-        records = (i for i in records if i.type ==
-                   'H' and i.pct_id >= p['search_identity'] * 100.0)
+        records = uclust.parse_uclust_out(uc_fp.name)
+        records = (i for i in records
+                   if i.type == 'H' and i.pct_id >= p['search_identity'] * 100.0)
         by_seq = uclust.hits_by_sequence(records)
         by_seq = select_hits(by_seq, select_threshold)
 
         sql = """
-INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
-VALUES (?, ?, ?, ?)
-"""
+        INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
+        VALUES (?, ?, ?, ?)
+        """
         for _, hits in by_seq:
             # Drop clusters from blacklist
             hits = (
