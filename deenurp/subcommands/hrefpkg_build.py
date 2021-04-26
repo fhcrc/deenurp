@@ -106,8 +106,8 @@ def action(a):
     hrefpkgs = []
     futs = {}
     with open(j('index.csv'), 'w') as fp, \
-         open(j('train.fasta'), 'w') as train_fp, \
-         open(j('test.fasta'), 'w') as test_fp, \
+         open(j('train.fasta'), 'wb') as train_fp, \
+         open(j('test.fasta'), 'wb') as test_fp, \
          futures.ThreadPoolExecutor(a.threads) as executor:
         def log_hrefpkg(tax_id):
             path = j(tax_id + '.refpkg')
@@ -125,8 +125,8 @@ def action(a):
                 continue
 
             f = executor.submit(tax_id_refpkg, node.tax_id, taxonomy, seqinfo,
-                    a.sequence_file, fa_idx, output_dir=a.output_dir, test_file=test_fp,
-                    train_file=train_fp)
+                                a.sequence_file, fa_idx, output_dir=a.output_dir,
+                                test_file=test_fp, train_file=train_fp)
             futs[f] = node.tax_id, node.name
 
         while futs:
@@ -135,7 +135,8 @@ def action(a):
                 tax_id, name = futs.pop(f)
                 r = f.result()
                 if r:
-                    logging.info("Finished refpkg for %s (%s) [%d remaining]", name, tax_id, len(pending))
+                    logging.info(
+                        'Finished refpkg for %s (%s) [%d remaining]', name, tax_id, len(pending))
                     log_hrefpkg(tax_id)
             assert len(futs) == len(pending)
 
@@ -229,8 +230,8 @@ def build_index_refpkg(hrefpkg_paths, sequence_file, seqinfo, taxonomy, fa_idx,
     sequence_ids = frozenset(taxonomy.subtree_sequence_ids())
 
     with util.ntf(prefix='aln_fasta', suffix='.fasta') as tf, \
-         util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp, \
-         util.ntf(prefix='taxonomy', suffix='.csv') as tax_fp:
+         util.ntf('w', prefix='seq_info', suffix='.csv') as seq_info_fp, \
+         util.ntf('w', prefix='taxonomy', suffix='.csv') as tax_fp:
         wrap.esl_sfetch(sequence_file, sequence_ids, tf, fa_idx)
         tf.close()
 
@@ -280,12 +281,12 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, fa_idx,
     Build a reference package containing all descendants of tax_id from an
     index reference package.
     """
-    with util.ntf(prefix='taxonomy', suffix='.csv') as tax_fp, \
-         util.ntf(prefix='aln_sto', suffix='.sto') as sto_fp, \
-         util.ntf(prefix='aln_fasta', suffix='.fasta') as fasta_fp, \
+    with util.ntf('w', prefix='taxonomy', suffix='.csv') as tax_fp, \
+         util.ntf('w+', prefix='aln_sto', suffix='.sto') as sto_fp, \
+         util.ntf('w', prefix='aln_fasta', suffix='.fasta') as fasta_fp, \
          util.ntf(prefix='tree', suffix='.tre') as tree_fp, \
          util.ntf(prefix='tree', suffix='.stats') as stats_fp, \
-         util.ntf(prefix='seq_info', suffix='.csv') as seq_info_fp:
+         util.ntf('w', prefix='seq_info', suffix='.csv') as seq_info_fp:
 
         # Subset taxonomy
         n = full_tax.get_node(tax_id)
@@ -311,8 +312,8 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, fa_idx,
             keep_seq_ids |= frozenset(keep)
             l = len(rest)
             if l >= 2 * PER_TAXON:
-                train_seq_ids |= frozenset(rest[:l / 2])
-                test_seq_ids |= frozenset(rest[l / 2:])
+                train_seq_ids |= frozenset(rest[:l // 2])
+                test_seq_ids |= frozenset(rest[l // 2:])
 
         # Picked
         rows = [sinfo[i] for i in keep_seq_ids]
@@ -320,12 +321,13 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, fa_idx,
         seq_info_fp.close()
 
         # Fetch sequences
-        with tempfile.NamedTemporaryFile() as tf:
-            wrap.esl_sfetch(sequence_file,
-                            keep_seq_ids, tf, fa_idx)
-            # Rewind
-            tf.seek(0)
-            sequences = list(SeqIO.parse(tf, 'fasta'))
+        with util.ntf() as tf:
+            wrap.esl_sfetch(sequence_file, keep_seq_ids, tf, fa_idx)
+            tf.close()
+            # reopen in text mode and read extracted sequences
+            with open(tf.name) as seqfile:
+                sequences = list(SeqIO.parse(seqfile, 'fasta'))
+
         logging.info("Tax id %s: %d sequences", tax_id, len(sequences))
 
         if len(set(str(i.seq) for i in sequences)) == 1:
@@ -349,8 +351,9 @@ def tax_id_refpkg(tax_id, full_tax, seqinfo, sequence_file, fa_idx,
         aligned = wrap.cmalign(sequences, output=sto_fp)
         aligned = list(aligned)
         assert aligned
+
         # Tree
-        wrap.fasttree(aligned, log_path=stats_fp.name, output_fp=tree_fp, threads=1, gtr=True)
+        wrap.fasttree(aligned, log_path=stats_fp.name, output_fp=tree_fp.name, threads=1, gtr=True)
         tree_fp.close()
         sto_fp.close()
         SeqIO.write(aligned, fasta_fp, 'fasta')

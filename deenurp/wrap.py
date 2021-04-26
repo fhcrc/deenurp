@@ -229,6 +229,7 @@ def cmalign_scores(text):
 
 
 def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
+
     executable = 'cmalign'
     require_executable(executable)
     _require_cmalign_11(executable)
@@ -239,6 +240,7 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
     cmd.extend(['-o', output_file, cm, input_file])
 
     logging.debug(' '.join(cmd))
+
     job = subprocess.run(cmd, capture_output=True, text=True)
     if job.returncode != 0:
         # TODO: preserve output files (input_file, output_file)
@@ -247,18 +249,19 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
     output = job.stdout.strip()
     logging.debug(output)
     scores = cmalign_scores(output)
+
     return scores
 
 
 def cmalign(sequences, output=None, cm=CM, cpu=CMALIGN_THREADS):
-    """
-    Run cmalign
+    """Run cmalign. If provided, saves output to the file path
+    corresponding to file-like object `output`.
+
     """
     with as_fasta(sequences) as fasta, maybe_tempfile(
             output, mode='w+', prefix='cmalign', suffix='.sto', dir='.') as tf:
 
         cmalign_files(fasta, tf.name, cm=cm, cpu=cpu)
-
         for sequence in SeqIO.parse(tf, 'stockholm'):
             yield sequence
 
