@@ -135,7 +135,7 @@ def build_parser(p):
     output_group.add_argument(
         '--output-seqs', help="""REQUIRED destination for sequences""",
         required=True,
-        type=argparse.FileType('w'), metavar='FILE')
+        type=argparse.FileType('wb'), metavar='FILE')
     output_group.add_argument(
         '--filtered-seqinfo', type=argparse.FileType('w'), metavar='FILE',
         help="""Path to write filtered sequence info""")
