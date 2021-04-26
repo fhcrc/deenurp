@@ -2,8 +2,7 @@ import os
 import sys
 import subprocess
 
-from distutils.core import Command
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Command
 
 datadir = 'deenurp/data'
 version_file = f'{datadir}/version.txt'
