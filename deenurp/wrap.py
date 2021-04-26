@@ -348,7 +348,7 @@ def read_seq_file(sequence_file):
 def esl_sfetch(sequence_file, name_iter, output_fp, fa_idx):
     """
     Fetch sequences named in name_iter from sequence_file, indexing if
-    necessary, writing to output_fp.
+    necessary, writing binary data to open file object output_fp.
     """
     count = 0
     with open(sequence_file, 'rb') as fi:
