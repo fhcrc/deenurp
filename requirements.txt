@@ -21,5 +21,5 @@ scipy==1.6.2
 seqmagick==0.8.4
 six==1.15.0
 SQLAlchemy==1.4.11
-taxtastic==0.9.0
+taxtastic==0.9.1
 threadpoolctl==2.1.0
