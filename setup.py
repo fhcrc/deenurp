@@ -84,6 +84,7 @@ setup(
     cmdclass={'audit': run_audit, 'check_version': CheckVersion},
     test_suite='deenurp.test.suite',
     packages=find_packages(exclude=['tests']),
+    python_requires='>=3.8',
     install_requires=[
         'numpy',
         'cython',
