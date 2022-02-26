@@ -94,7 +94,6 @@ setup(
         'hdbscan',
         'biopython',
         'taxtastic',
-        'futures',
         'seqmagick',
     ],
 )

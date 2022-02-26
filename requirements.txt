@@ -3,7 +3,6 @@ Cython==0.29.23
 decorator==5.0.7
 DendroPy==4.5.2
 fastalite==0.3
-futures==3.1.1
 greenlet==1.0.0
 hdbscan==0.8.27
 Jinja2==2.11.3
