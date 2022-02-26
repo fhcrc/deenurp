@@ -617,7 +617,8 @@ def action(a):
                     log.exception(
                         "Error in child process: %s", exception)
                     executor.shutdown(wait=False)
-                    traceback.print_tb(f._traceback)
+                    # traceback.print_tb(f._traceback)
+                    traceback.print_tb(sys.exc_info()[2])
                     raise exception
 
                 info = futs.pop(f)
