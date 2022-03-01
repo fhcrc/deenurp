@@ -210,22 +210,28 @@ def cmalign_scores(text):
     """
     Parse stdout of cmalign into a data.frame
     """
-
-    header_rexp = re.compile(r'^#\s+idx')
-
-    lines = []
-    for line in text.splitlines():
-        if header_rexp.search(line):
-            line = ' ' + line[1:].replace(' (Mb)', '')
-            # replace single spaces
-            line = re.sub(r'(?<! ) (?! )', '_', line)
-        elif line.startswith('#'):
-            continue
-        lines.append(line)
-
-    buf = StringIO('\n'.join(lines))
-    tab = pd.read_fwf(buf, index_col=1)
-    return tab
+    dtypes = {
+        "idx": int,
+        "seq_name": str,
+        "length": int,
+        "cm_from": int,
+        "cm_to": int,
+        "trunc": str,
+        "bit_sc": float,
+        "avg_pp": str,
+        "band_calc": float,
+        "alignment": float,
+        "total": float,
+        "mem": float
+        }
+    return pd.read_csv(
+        StringIO(text),
+        comment="#",
+        delim_whitespace=True,
+        dtype=dtypes,
+        index_col='seq_name',
+        names=dtypes.keys()
+        )
 
 
 def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
