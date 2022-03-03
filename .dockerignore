@@ -3,3 +3,6 @@ tests/*/output/*
 tests/*/temp.fasta
 tests/hrefpkg-build/hrefpkg
 *.ssi
+*-env
+deenurp.egg-info
+build

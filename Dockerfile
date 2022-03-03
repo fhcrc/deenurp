@@ -1,23 +1,10 @@
-# FROM ubuntu:20.04
-FROM python:3.9-slim-bullseye
-MAINTAINER sminot@fredhutch.org
-MAINTAINER nhoffman@uw.edu
-MAINTAINER crosenth@uw.edu
+FROM python:3.9
+LABEL org.opencontainers.image.authors="sminot@fredhutch.org,nhoffman@uw.edu,crosenth@uw.edu"
 
 # Install prerequisites
-RUN apt-get update && apt-get upgrade -y && apt-get install --assume-yes --no-install-recommends \
-    build-essential \
-    gfortran \
-    git \
-    liblapack-dev \
-    libopenblas-dev \
-    make \
-    python3 \
-    python3-pip \
-    python3-dev \
-    python3-venv \
-    unzip \
-    wget
+RUN apt-get update && \
+apt-get upgrade --assume-yes && \
+apt-get install --assume-yes --no-install-recommends git wget
 
 # Add files
 RUN mkdir /usr/local/share/deenurp/
@@ -28,7 +15,7 @@ ADD deenurp.py setup.py requirements.txt /usr/local/share/deenurp/
 
 # Install deenurp and dependencies
 RUN cd /usr/local/share/deenurp/ && \
-    PYTHON=/usr/bin/python3.8 \
+    PYTHON=/usr/local/bin/python3 \
     DEENURP=/usr/local/share/deenurp/ \
     bin/bootstrap.sh /usr/local/
 
@@ -36,12 +23,7 @@ RUN cd /usr/local/share/deenurp/ && \
 RUN rm -rf /var/lib/apt/lists/* && \
     rm -rf /root/.cache/pip && \
     rm -rf /usr/local/share/deenurp/src && \
-    apt-get purge -y --auto-remove \
-      build-essential \
-      unzip \
-      git \
-      python3-dev \
-      make
+    apt-get purge -y --auto-remove git
 
 # create some mount points
 RUN mkdir -p /app /fh /mnt /run/shm
