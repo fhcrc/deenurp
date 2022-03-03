@@ -1,8 +1,11 @@
-FROM ubuntu:20.04
+# FROM ubuntu:20.04
+FROM python:3.9-slim-bullseye
 MAINTAINER sminot@fredhutch.org
+MAINTAINER nhoffman@uw.edu
+MAINTAINER crosenth@uw.edu
 
 # Install prerequisites
-RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install --assume-yes --no-install-recommends \
     build-essential \
     gfortran \
     git \
