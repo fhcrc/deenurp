@@ -427,7 +427,7 @@ def mock_filter(seqs, keep):
 
     empty = numpy.repeat(numpy.nan, len(seqs))
     return pd.DataFrame({
-        'seqname': seqs,
+        'seqname': list(seqs),
         'centroid': empty,
         'dist': empty,
         'is_out': numpy.repeat(not keep, len(seqs))})
