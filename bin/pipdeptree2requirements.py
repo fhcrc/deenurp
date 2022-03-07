@@ -21,5 +21,5 @@ for line in sys.stdin:
 deps = set()
 for __, pkg in sorted(lines):
     if pkg not in deps:
-        print pkg
+        print(pkg)
         deps.add(pkg)

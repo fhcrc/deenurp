@@ -102,7 +102,7 @@ def build_parser(p):
 
     p.add_argument('output',
                    help="""Output file (fasta)""",
-                   type=argparse.FileType('w'))
+                   type=argparse.FileType('wb'))
     p.add_argument('output_seqinfo',
                    help="""Destination to write seqinfo
                            for new representatives""",
@@ -209,7 +209,7 @@ def action(args):
                 additional_reps.add(s)
 
     logging.info("%d additional references", len(additional_reps))
-    with open(args.chosen_fasta) as fp, args.output as ofp:
+    with open(args.chosen_fasta, 'rb') as fp, args.output as ofp:
         shutil.copyfileobj(fp, ofp)
         wrap.esl_sfetch(args.search_fasta, additional_reps, ofp, fa_idx)
 

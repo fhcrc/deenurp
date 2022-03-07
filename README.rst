@@ -12,9 +12,13 @@ The Easy Way
 
 * confirm availability of necessary libraries to compile dependencies
   (on Ubuntu: ``sudo apt-get install gfortran libopenblas-dev liblapack-dev``)
-* Install Python 2.7
-* run `bin/bootstrap.sh`
-* run `source bin-env/bin/activate`
+* Install Python >= 3.8 or Python 3 Virtual Environment 
+::
+
+  % python3 -m venv bin-env
+  % source bin-env/bin/activate
+  % bin/bootstrap.sh
+
 
 the `deenurp` executable should now be on your `$PATH`
 
@@ -25,7 +29,7 @@ See required system libraries above.
 
 First, install binary dependencies:
 
-* Python 2.7
+* Python 3
 
     - pip, for installing python dependencies (http://www.pip-installer.org/)
     - Python packages:
@@ -45,6 +49,12 @@ Optional (for ``filter-outliers`` and ``pairwise-distances``):
 Finally, install::
 
     python setup.py install
+
+The Docker Way
+==============
+
+Deenurp can be run from a Docker image which can be built locally from the Dockerfile
+or pulled ``docker pull nghoffman/deenurp:v0.3.0``
 
 De-novo reference set creation
 ==============================

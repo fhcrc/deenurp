@@ -23,7 +23,7 @@ def apply_df_status(func, df, msg=''):
     """
     tmp_column = 'index_number'
     row_count = float(len(df))
-    df[tmp_column] = xrange(int(row_count))
+    df[tmp_column] = range(int(row_count))
     msg += ' {:.0%}\r'
 
     def apply_func(item, msg):
@@ -120,13 +120,13 @@ def nothing(obj=None):
 
 
 @contextlib.contextmanager
-def ntf(**kwargs):
+def ntf(*args, **kwargs):
     """
     Near-clone of tempfile.NamedTemporaryFile, but the file is deleted when the
     context manager exits, rather than when it's closed.
     """
     kwargs['delete'] = False
-    tf = tempfile.NamedTemporaryFile(**kwargs)
+    tf = tempfile.NamedTemporaryFile(*args, **kwargs)
     try:
         with tf:
             yield tf
@@ -135,17 +135,16 @@ def ntf(**kwargs):
 
 
 @contextlib.contextmanager
-def tempcopy(path, **kwargs):
+def tempcopy(path):
+    """Create a temporary copy of ``path``, available for the duration of
+    the context manager
+
     """
-    Create a temporary copy of ``path``, available for the duration of the
-    context manager
-    """
+
     prefix, suffix = os.path.splitext(os.path.basename(path))
-    a = {'prefix': prefix, 'suffix': suffix}
-    a.update(kwargs)
-    with open(path) as fp, ntf(**a) as tf:
-        shutil.copyfileobj(fp, tf)
+    with ntf(prefix=prefix, suffix=suffix) as tf:
         tf.close()
+        shutil.copyfile(path, tf.name)
         yield tf.name
 
 
@@ -179,7 +178,7 @@ def as_fasta(sequences, **kwargs):
     """
     if 'suffix' not in kwargs:
         kwargs['suffix'] = '.fasta'
-    with ntf(**kwargs) as tf:
+    with ntf('w+', **kwargs) as tf:
         SeqIO.write(sequences, tf, 'fasta')
         tf.flush()
         tf.close()

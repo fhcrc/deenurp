@@ -10,6 +10,7 @@ while read subdir; do
     if echo $subdir | grep -qv -E '^#'; then
 	echo $subdir
 	(cd $TESTS_DIR/$subdir && ./run.sh)
+	# (cd $TESTS_DIR/$subdir && bash -v ./run.sh)
     fi
 done <<EOF
 search-select

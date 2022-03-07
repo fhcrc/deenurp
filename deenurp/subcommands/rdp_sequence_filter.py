@@ -65,7 +65,7 @@ def action(a):
 
             accepted = 0
             rejected = 0
-            for sequence, info in itertools.izip(sequences, reader):
+            for sequence, info in zip(sequences, reader):
                 assert sequence.id == info['seqname']
 
                 # Check quality

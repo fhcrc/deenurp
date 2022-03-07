@@ -2,6 +2,11 @@
  Changes for deenurp
 =====================
 
+0.3.0
+=====
+
+* Python 3 support and other dependency upgrades and bug fixes
+
 0.2.7
 =====
 

@@ -135,7 +135,7 @@ def build_parser(p):
     output_group.add_argument(
         '--output-seqs', help="""REQUIRED destination for sequences""",
         required=True,
-        type=argparse.FileType('w'), metavar='FILE')
+        type=argparse.FileType('wb'), metavar='FILE')
     output_group.add_argument(
         '--filtered-seqinfo', type=argparse.FileType('w'), metavar='FILE',
         help="""Path to write filtered sequence info""")
@@ -233,22 +233,19 @@ def distmat_muscle(sequence_file, prefix, maxiters=wrap.MUSCLE_MAXITERS):
     with util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
         wrap.muscle_files(sequence_file, a_fasta.name, maxiters=maxiters)
         a_fasta.flush()
-
         taxa, distmat = outliers.fasttree_dists(a_fasta.name)
 
     return taxa, distmat
 
 
-def distmat_cmalign(
-        sequence_file,
-        prefix,
-        cpu=wrap.CMALIGN_THREADS,
-        min_bitscore=10):
+def distmat_cmalign(sequence_file, prefix, cpu=wrap.CMALIGN_THREADS,
+                    min_bitscore=10):
 
-    with util.ntf(prefix=prefix, suffix='.aln') as a_sto, \
-            util.ntf(prefix=prefix, suffix='.fasta') as a_fasta:
+    with util.ntf('w+', prefix=prefix, suffix='.aln') as a_sto, \
+            util.ntf('w+', prefix=prefix, suffix='.fasta') as a_fasta:
 
         scores = wrap.cmalign_files(sequence_file, a_sto.name, cpu=cpu)
+        a_sto.seek(0)
 
         low_scores = scores['bit_sc'] < min_bitscore
         if low_scores.any():
@@ -294,8 +291,10 @@ def parse_usearch_allpairs(filename, seqnames):
     nseqs = len(seqnames)
     distmat = numpy.repeat(0.0, nseqs ** 2)
     distmat.shape = (nseqs, nseqs)
-    ii = pd.match(data['query'], seqnames)
-    jj = pd.match(data['target'], seqnames)
+
+    idx = dict(zip(seqnames, range(nseqs)))
+    ii = [idx[name] for name in data['query']]
+    jj = [idx[name] for name in data['target']]
 
     # usearch_allpairs_files returns comparisons corresponding to a
     # triangular matrix, whereas vsearch_allpairs_files returns all
@@ -428,7 +427,7 @@ def mock_filter(seqs, keep):
 
     empty = numpy.repeat(numpy.nan, len(seqs))
     return pd.DataFrame({
-        'seqname': seqs,
+        'seqname': list(seqs),
         'centroid': empty,
         'dist': empty,
         'is_out': numpy.repeat(not keep, len(seqs))})
@@ -492,7 +491,7 @@ def filter_worker(tax_id,
 def action(a):
     # itemize sequences provided in the input file
     fa_idx = wrap.read_seq_file(a.sequence_file)
-    seqnames = fa_idx.keys()
+    seqnames = list(fa_idx.keys())
 
     # Load taxonomy
     with a.taxonomy as fp:
@@ -618,7 +617,7 @@ def action(a):
                     log.exception(
                         "Error in child process: %s", exception)
                     executor.shutdown(wait=False)
-                    traceback.print_tb(f._traceback)
+                    traceback.print_tb(sys.exc_info()[2])
                     raise exception
 
                 info = futs.pop(f)

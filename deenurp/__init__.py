@@ -24,7 +24,7 @@ import logging
 import os
 import pkgutil
 import sys
-import util
+from . import util
 
 log = logging.getLogger(__name__)
 
@@ -89,9 +89,8 @@ def setup_logging(namespace):
                   '%(funcName)s %(lineno)s %(message)s')
     datefmt = '%Y-%m-%d %H:%M:%S'
 
-    logging.basicConfig(stream=namespace.log, format=log_format,
-                        level=loglevel, log_format=log_format,
-                        datefmt=datefmt)
+    logging.basicConfig(
+        stream=namespace.log, format=log_format, level=loglevel, datefmt=datefmt)
 
 
 def parse_version(parser):
@@ -105,7 +104,7 @@ def parse_args(parser):
     parser.add_argument('-l', '--log',
                         metavar='FILE',
                         default=sys.stdout,
-                        type=util.file_opener('a', buffering=0),  # append
+                        type=util.file_opener('a'),  # append
                         help='Send logging to a file')
 
     parser.add_argument('-v', '--verbose',
@@ -128,7 +127,7 @@ def parse_subcommands(parser, argv):
     """
     Setup all sub-commands
     """
-    import subcommands
+    from . import subcommands
 
     subparsers = parser.add_subparsers(dest='subparser_name')
 
@@ -158,7 +157,7 @@ def parse_subcommands(parser, argv):
         try:
             imp = '{}.{}'.format(subcommands.__name__, name)
             mod = importlib.import_module(imp)
-        except Exception, e:
+        except Exception as e:
             log.error('error importing subcommand {}'.format(name))
             log.error(e)
             continue

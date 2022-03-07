@@ -147,7 +147,7 @@ def action(args):
 
         w = csv.DictWriter(new_seq_info, ref_seq_info_reader.fieldnames)
         w.writeheader()
-        w.writerows(ref_seq_info.values())
+        w.writerows(list(ref_seq_info.values()))
         new_seq_info.close()
 
         args.refpkg.start_transaction()

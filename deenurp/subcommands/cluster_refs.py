@@ -28,6 +28,7 @@ def build_parser(p):
             [default: %(default).3f]""")
     p.add_argument('-i', '--cluster-id', default=0.985, type=float, help="""Cluster ID [default: %(default).3f]""")
 
+
 def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
         threshold=0.97):
     with util.ntf(suffix='.uc', prefix='to_cluster') as tf:
@@ -38,11 +39,12 @@ def cluster_identify_redundant(named_sequence_file, named_ids, to_cluster,
                 maxrejects=100)
 
         # Uclust.search renames to tf, need a new handle.
-        records = uclust.parse_uclust_out(tf)
+        records = uclust.parse_uclust_out(tf.name)
         hits = (i.query_label for i in records
                 if i.type == 'H' and i.pct_id >= threshold * 100.0)
 
         return frozenset(hits)
+
 
 def taxonomic_clustered(taxonomy, cluster_rank):
     """
@@ -51,6 +53,7 @@ def taxonomic_clustered(taxonomy, cluster_rank):
     nodes = (node for node in taxonomy if node.rank == cluster_rank)
     return ((node.tax_id, frozenset(node.subtree_sequence_ids()))
             for node in nodes)
+
 
 def identify_otus_unnamed(seq_file, cluster_similarity):
     """
@@ -64,9 +67,10 @@ def identify_otus_unnamed(seq_file, cluster_similarity):
         # Sort and cluster
         uclust.cluster(
             seq_file, tf.name, pct_id=cluster_similarity, quiet=True)
-        clusters = uclust.sequences_by_cluster(uclust.parse_uclust_out(tf))
+        clusters = uclust.sequences_by_cluster(uclust.parse_uclust_out(tf.name))
         for _, sequences in clusters:
             yield [i.query_label for i in sequences]
+
 
 def action(a):
     # index fasta file
@@ -154,7 +158,7 @@ def action(a):
         seqinfo_records = (seqinfo.get(i, {'seqname': i}) for i in done)
         seqinfo_records = (add_cluster(i) for i in seqinfo_records)
 
-        fields = list(seqinfo.values()[0].keys())
+        fields = list(list(seqinfo.values())[0].keys())
         fields.append('cluster')
         w = csv.DictWriter(fp, fields,
                 quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')

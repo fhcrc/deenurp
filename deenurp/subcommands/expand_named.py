@@ -136,8 +136,8 @@ def action(a):
             w.writerows(i for i in r if i['seqname'] not in overlap)
             if 'cluster' in fn:
                 rows = ({'seqname': k, 'tax_id': v, 'inferred_tax_id': 'yes', 'cluster': v}
-                        for k, v in update_hits.items())
+                        for k, v in list(update_hits.items()))
             else:
                 rows = ({'seqname': k, 'tax_id': v, 'inferred_tax_id': 'yes'}
-                        for k, v in update_hits.items())
+                        for k, v in list(update_hits.items()))
             w.writerows(rows)

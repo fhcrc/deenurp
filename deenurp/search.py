@@ -13,9 +13,7 @@ import tempfile
 from deenurp import uclust
 from Bio import SeqIO
 
-from .util import SingletonDefaultDict, memoize
-
-_ntf = tempfile.NamedTemporaryFile
+from .util import SingletonDefaultDict, memoize, ntf
 
 SELECT_THRESHOLD = 0.05
 SEARCH_THRESHOLD = 0.90
@@ -123,7 +121,7 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
     cursor = con.cursor()
     count = 0
     ref_name = p['ref_fasta']
-    with open(p['ref_meta']) as fp:
+    with open(p['ref_meta'], 'r') as fp:
         cluster_info = _load_cluster_info(fp, p['group_field'])
 
     @memoize
@@ -140,7 +138,8 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
         cursor.execute(sql, [name])
         return cursor.fetchone()[0]
 
-    with _ntf(prefix='usearch') as uc_fp:
+    with ntf(prefix='usearch') as uc_fp:
+        uc_fp.close()
         uclust.search(
             ref_name,
             p['fasta_file'],
@@ -153,16 +152,16 @@ def _search(con, quiet=True, select_threshold=SELECT_THRESHOLD,
         # import shutil
         # shutil.copy(uc_fp.name, '.')
 
-        records = uclust.parse_uclust_out(uc_fp)
-        records = (i for i in records if i.type ==
-                   'H' and i.pct_id >= p['search_identity'] * 100.0)
+        records = uclust.parse_uclust_out(uc_fp.name)
+        records = (i for i in records
+                   if i.type == 'H' and i.pct_id >= p['search_identity'] * 100.0)
         by_seq = uclust.hits_by_sequence(records)
         by_seq = select_hits(by_seq, select_threshold)
 
         sql = """
-INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
-VALUES (?, ?, ?, ?)
-"""
+        INSERT INTO best_hits (sequence_id, hit_idx, ref_id, pct_id)
+        VALUES (?, ?, ?, ?)
+        """
         for _, hits in by_seq:
             # Drop clusters from blacklist
             hits = (
@@ -225,7 +224,7 @@ VALUES (?, ?)"""
         seq_count += 1
         if sequence.id not in weights:
             continue
-        for sample, weight in weights[sequence.id].items():
+        for sample, weight in list(weights[sequence.id].items()):
             sample_id = get_sample_id(sample)
             cursor.execute("""INSERT INTO sequences_samples
                            (sequence_id, sample_id, weight)
@@ -244,11 +243,13 @@ def _create_tables(
         search_identity=SEARCH_IDENTITY,
         quiet=True,
         group_field='cluster'):
+
     schema = os.path.join(os.path.dirname(__file__), 'data', 'search.schema')
     cursor = con.cursor()
     cursor.executescript(open(schema).read().strip())
+
     # Save parameters
-    rows = [(k, locals().get(k)) for k in _PARAMS.keys()]
+    rows = [(k, v) for k, v in locals().items() if k in _PARAMS]
     cursor.executemany("INSERT INTO params VALUES (?, ?)", rows)
 
 

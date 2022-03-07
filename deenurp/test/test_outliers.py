@@ -8,7 +8,7 @@ from deenurp.util import MissingDependencyError, which
 try:
     import numpy as np
     import pandas as pd
-except ImportError, err:
+except ImportError as err:
     # prefer errors within tests over failure at the time the test
     # suites are assembled
     print(err)
@@ -133,7 +133,7 @@ class TestFindOutliers(unittest.TestCase):
 
 try:
     wrap.require_executable(wrap.VSEARCH)
-except MissingDependencyError, e:
+except MissingDependencyError as e:
     vsearch_available = False
 else:
     vsearch_available = True

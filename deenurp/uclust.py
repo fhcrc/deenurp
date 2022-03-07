@@ -28,8 +28,9 @@ log = logging.getLogger(__name__)
 DEFAULT_PCT_ID = 0.99
 
 # For parsing .uc format
-UCLUST_HEADERS = ['type', 'cluster_number', 'size', 'pct_id', 'strand',
-                  'query_start', 'seed_start', 'alignment', 'query_label', 'target_label']
+UCLUST_HEADERS = ['type', 'cluster_number', 'size', 'pct_id',
+                  'strand', 'query_start', 'seed_start', 'alignment',
+                  'query_label', 'target_label']
 UCLUST_TYPES = {'cluster_number': int, 'pct_id': float, 'query_start': int,
                 'seed_start': int, 'size': int}
 
@@ -44,10 +45,11 @@ def _handle(s, *args, **kwargs):
     If s is a string, opens s and yields the open file. Otherwise, has no
     effect.
     """
-    if isinstance(s, basestring):
+    if isinstance(s, str):
         with open(s, *args, **kwargs) as fp:
             yield fp
     else:
+        raise ValueError('try passing in a string instead')
         yield s
 
 
@@ -65,7 +67,7 @@ def _check_call(cmd, **kwargs):
     Log and run command. Additional arguments are passed to
     ``subprocess.check_call``
     """
-    cmd = map(str, cmd)
+    cmd = list(map(str, cmd))
     logging.debug(' '.join(cmd))
     subprocess.check_call(cmd, **kwargs)
 
@@ -88,8 +90,9 @@ def parse_uclust_out(ucout_fp):
     """
     Parse the results of running UCLUST, returning UClustRecords.
 
-    ucout_fp can be file name or file handle.
+    ucout_fp can be file name or text mode file handle.
     """
+
     with _handle(ucout_fp) as fp:
         # Skip comments
         rows = (i.rstrip() for i in fp if not i.startswith('#'))
@@ -101,10 +104,12 @@ def parse_uclust_out(ucout_fp):
 def parse_uclust_as_df(ucout_fp):
     dtype = {'type': str, 'query_label': str,
              'target_label': str, 'alignment': str}
-    df = pd.read_csv(ucout_fp, sep='\t', na_values='*', names=UCLUST_HEADERS, dtype=dtype)
+    df = pd.read_csv(
+        ucout_fp, sep='\t', na_values='*', names=UCLUST_HEADERS, dtype=dtype)
 
     # define target_label as query_label for seed sequences
-    df['target_label'] = np.where(df['type'] == 'S', df['query_label'], df['target_label'])
+    df['target_label'] = np.where(
+        df['type'] == 'S', df['query_label'], df['target_label'])
 
     return df
 
@@ -303,6 +308,6 @@ def guppy_redup_from_uclust(uclust_records, sample_map=None):
             clusters[number][sample].count += 1
 
     rows = [(seeds[num], dedup_seq.id, dedup_seq.count)
-            for num, samples in clusters.items()
-            for dedup_seq in samples.values()]
+            for num, samples in list(clusters.items())
+            for dedup_seq in list(samples.values())]
     return rows
