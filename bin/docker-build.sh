@@ -10,6 +10,7 @@ if ! git diff-index --quiet HEAD; then
 fi
 
 # docker tag should reflect current version number
-python setup.py clean
+# python setup.py clean
 tag=deenurp:$(git describe --tags --dirty)
+# tag=deenurp:$(git describe)
 docker build -t $tag .
