@@ -6,3 +6,4 @@ tests/hrefpkg-build/hrefpkg
 *-env
 deenurp.egg-info
 build
+src
