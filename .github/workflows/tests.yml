@@ -13,5 +13,4 @@ jobs:
 
     steps:
     - name: Tests
-      run: python3 -m deenurp.test
-      run: tests/run.sh
+      run: python3 -m deenurp.test && tests/run.sh
