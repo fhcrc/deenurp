@@ -2,15 +2,19 @@ name: Run tests
 
 on:
   push:
-    branches: [ master ]
+    branches: [ gh_actions ]
   pull_request:
     branches: [ master ]
 
+env:
+  VIRTUAL_ENV: deenurp-env
+
 jobs:
   build:
-
-    runs-on: crosenth/deenurp:v0.3.0
-
+    runs-on: ubuntu-20.04
     steps:
-    - name: Tests
-      run: python3 -m deenurp.test && tests/run.sh
+    - uses: actions/checkout@v2
+    - name: provisioning
+      run: which python3
+      # - name: testing
+      # - run: python3 -m deenurp.test
