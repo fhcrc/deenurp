@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 env:
-  VIRTUAL_ENV: deenurp-env
+  VIRTUAL_ENV: $HOME/.local
 
 jobs:
   build:
@@ -15,6 +15,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: provisioning
-      run: env
+      run: bin/bootstrap.sh $VIRTUAL_ENV
       # - name: testing
       # - run: python3 -m deenurp.test
