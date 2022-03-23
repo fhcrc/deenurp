@@ -1,4 +1,4 @@
-name: Run tests
+name: Run deenurp tests on deenurp image
 
 on:
   push:
@@ -8,9 +8,11 @@ on:
 
 jobs:
   build:
-
-    runs-on: crosenth/deenurp:v0.3.0
-
+    runs-on: ubuntu-latest
+    container:
+      image: crosenth/deenurp:v0.3.0
     steps:
-    - name: Tests
-      run: python3 -m deenurp.test && tests/run.sh
+    - uses: actions/checkout@v3
+    - run: |
+        python3 -m deenurp.test
+        tests/run.sh
