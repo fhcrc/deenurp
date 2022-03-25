@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: nhoffman/deenurp:0.3.0
+      image: nghoffman/deenurp:0.3.0
     steps:
     - uses: actions/checkout@v3
     - run: |
