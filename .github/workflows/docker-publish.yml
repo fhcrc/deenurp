@@ -28,5 +28,5 @@ jobs:
         with:
           push: true
           tags: |
-            ghcr.io/fhcrc/taxtastic:latest
-            ghcr.io/fhcrc/taxtastic:${{ env.RELEASE_VERSION }}
+            ghcr.io/fhcrc/deenurp:latest
+            ghcr.io/fhcrc/deenurp:${{ env.RELEASE_VERSION }}
