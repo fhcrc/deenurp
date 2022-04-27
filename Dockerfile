@@ -8,10 +8,10 @@ apt-get install --assume-yes --no-install-recommends git wget
 
 # Add files
 RUN mkdir /usr/local/share/deenurp/
-ADD bin /usr/local/share/deenurp/bin
-ADD tests /usr/local/share/deenurp/tests
-ADD deenurp /usr/local/share/deenurp/deenurp
-ADD deenurp.py setup.py requirements.txt /usr/local/share/deenurp/
+COPY bin /usr/local/share/deenurp/bin
+COPY tests /usr/local/share/deenurp/tests
+COPY deenurp /usr/local/share/deenurp/deenurp
+COPY deenurp.py setup.py requirements.txt /usr/local/share/deenurp/
 
 # Install deenurp and dependencies
 RUN cd /usr/local/share/deenurp/ && \
@@ -27,8 +27,3 @@ RUN rm -rf /var/lib/apt/lists/* && \
 
 # create some mount points
 RUN mkdir -p /app /fh /mnt /run/shm
-
-# Run tests
-RUN python3 -m deenurp.test && \
-    cd /usr/local/share/deenurp && \
-    tests/run.sh
