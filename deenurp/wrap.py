@@ -239,18 +239,18 @@ def cmalign_files(input_file, output_file, cm=CM, cpu=CMALIGN_THREADS):
     executable = 'cmalign'
     require_executable(executable)
     _require_cmalign_11(executable)
-    cmd = [executable, '--noprob', '--dnaout']
+    cmd = executable + ' --noprob --dnaout'
 
     if cpu is not None:
-        cmd.extend(['--cpu', str(cpu)])
-    cmd.extend(['-o', output_file, cm, input_file])
+        cmd += ' --cpu ' + str(cpu)
+    cmd += ' -o {} {} {}'.format(output_file, cm, input_file)
 
-    logging.debug(' '.join(cmd))
+    logging.debug(cmd)
 
-    job = subprocess.run(cmd, capture_output=True, text=True)
-    if job.returncode != 0:
-        # TODO: preserve output files (input_file, output_file)
-        raise subprocess.CalledProcessError(job.returncode, job.error)
+    # TODO: preserve output files (input_file, output_file) on error
+    # using shell=True to avoid Docker cmalign segmentation fault error (SIG 11)
+    job = subprocess.run(
+        cmd, capture_output=True, check=True, shell=True, text=True)
 
     output = job.stdout.strip()
     logging.debug(output)
