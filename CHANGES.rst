@@ -2,6 +2,11 @@
  Changes for deenurp
 =====================
 
+0.3.1
+=====
+
+* building Docker image and test casese using Github Actions
+
 0.3.0
 =====
 
