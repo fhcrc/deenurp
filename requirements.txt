@@ -6,7 +6,7 @@ fastalite==0.3
 greenlet==1.1.2
 hdbscan==0.8.28
 Jinja2==3.0.3
-joblib==1.1.0
+joblib==1.2.0
 MarkupSafe==2.1.0
 numpy==1.22.2
 pandas==1.4.1
