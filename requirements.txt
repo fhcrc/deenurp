@@ -4,7 +4,7 @@ decorator==5.1.1
 DendroPy==4.5.2
 fastalite==0.3
 greenlet==1.1.2
-hdbscan==0.8.28
+hdbscan==0.8.33
 Jinja2==3.0.3
 joblib==1.1.0
 MarkupSafe==2.1.0
