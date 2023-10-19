@@ -48,20 +48,20 @@ class Counter(object):
         self.stream = stream
         self.report_every = report_every
         self.prefix = prefix
-        self.start = time.clock()
+        self.start = time.time()
         self.last = 0
 
     def _report(self):
         if self.stream:
             msg = '{0}{1:15d} [{2:10.2f}s]\r'
-            msg = msg.format(self.prefix, self.count, time.clock()-self.start)
+            msg = msg.format(self.prefix, self.count, time.time()-self.start)
             self.stream.write(msg)
 
     def __iter__(self):
         for i in self._it:
             yield i
             self.count += 1
-            now = time.clock()
+            now = time.time()
             if now - self.last > self.report_every:
                 self._report()
                 self.last = now
