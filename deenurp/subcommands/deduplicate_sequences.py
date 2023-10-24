@@ -51,7 +51,7 @@ def action(args):
         seqhashes = dict()
         for record in util.Counter(SeqIO.parse(sequences_in, 'fasta')):
             seq = str(record.seq).replace('\n', '').upper()
-            seqhashes[record.name] = hashlib.sha1(seq).hexdigest()
+            seqhashes[record.name] = hashlib.sha1(seq.encode('utf-8')).hexdigest()
 
     seqhash = pandas.Series(data=seqhashes, name='seqhash')
     seqhash.index.name = 'seqname'
