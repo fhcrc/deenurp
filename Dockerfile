@@ -1,10 +1,10 @@
-FROM python:3.9
+FROM python:3.11-slim-bookworm
 LABEL org.opencontainers.image.authors="sminot@fredhutch.org,nhoffman@uw.edu,crosenth@uw.edu"
 
 # Install prerequisites
 RUN apt-get update && \
 apt-get upgrade --assume-yes && \
-apt-get install --assume-yes --no-install-recommends git wget
+apt-get install --assume-yes --no-install-recommends build-essential git unzip wget
 
 # Add files
 RUN mkdir /usr/local/share/deenurp/
