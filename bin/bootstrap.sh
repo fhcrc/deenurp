@@ -39,7 +39,6 @@ if [[ -z $DEENURP ]]; then
     DEENURP=$(cd $(dirname $BASH_SOURCE) && cd .. && pwd)
 fi
 
-VENV_VERSION=15.1.0
 PPLACER_BUILD=1.1.alpha19
 INFERNAL_VERSION=1.1.4
 RAXML_VERSION=8.0.5
