@@ -86,14 +86,15 @@ setup(
     packages=find_packages(exclude=['tests']),
     python_requires='>=3.8',
     install_requires=[
-        'numpy',
-        'cython',
-        'pandas',
-        'scipy',
-        'scikit-learn',
-        'hdbscan',
         'biopython',
-        'taxtastic',
+        'cython',
+        'hdbscan',
+        'numpy',
+        'packaging',
+        'pandas',
+        'scikit-learn',
+        'scipy',
         'seqmagick',
+        'taxtastic'
     ],
 )
