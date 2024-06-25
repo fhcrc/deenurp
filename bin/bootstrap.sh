@@ -56,7 +56,6 @@ source $venv/bin/activate
 # full path; set by activate
 venv=$VIRTUAL_ENV
 pip install -U pip wheel
-pip install -r requirements.txt
 pip install .
 
 # install pplacer and accompanying python scripts
