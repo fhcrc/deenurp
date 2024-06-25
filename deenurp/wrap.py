@@ -9,7 +9,7 @@ import os
 import os.path
 import subprocess
 import re
-from distutils.version import LooseVersion
+from packaging.version import Version
 from io import StringIO
 
 import pandas as pd
@@ -227,10 +227,10 @@ def cmalign_scores(text):
     return pd.read_csv(
         StringIO(text),
         comment="#",
-        delim_whitespace=True,
         dtype=dtypes,
         index_col='seq_name',
-        names=dtypes.keys()
+        names=dtypes.keys(),
+        sep='\s+'
         )
 
 
@@ -281,7 +281,7 @@ def _require_vsearch_version(vsearch=VSEARCH, version=VSEARCH_VERSION):
     vsearch = re.search(r'^vsearch v(?P<vstr>\d+\.\d+\.[^_]+)', output.stderr)
     ver = vsearch.groupdict()['vstr']
 
-    if LooseVersion(ver) < LooseVersion(version):
+    if Version(ver) < Version(version):
         raise MissingDependencyError(
             'vsearch version >= v{} is required, got v{}'.format(version, ver))
 

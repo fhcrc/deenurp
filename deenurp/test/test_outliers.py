@@ -1,3 +1,4 @@
+import io
 import os
 import unittest
 
@@ -95,7 +96,7 @@ class TestFindOutliers(unittest.TestCase):
         "medoid":{"0":238.0,"1":null,"2":284.0},
         "dist":{"0":0.0,"1":null,"2":0.089}}"""
 
-        df = pd.read_json(s)
+        df = pd.read_json(io.StringIO(s))
         # output is a set of cluster names (not indices)
         self.assertSetEqual(set(outliers.choose_clusters(df, 2, 0.015)), {0})
         self.assertSetEqual(set(outliers.choose_clusters(df, 2, 0.1)), {0, 1})

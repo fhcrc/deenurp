@@ -279,8 +279,7 @@ def parse_usearch_allpairs(filename, seqnames):
     # for each sequence pair, select the longest alignment if there is
     # more than one (chooses first occurrence if there are two the same
     # length).
-    maxidx = data.groupby(['query', 'target']).apply(
-        lambda x: x['align_len'].idxmax())
+    maxidx = data.groupby(['query', 'target'])['align_len'].idxmax()
     data = data.iloc[maxidx]
 
     if set(seqnames) != set(data['query']) | set(data['target']):
