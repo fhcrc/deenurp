@@ -14,9 +14,12 @@ subprocess.call(
      f'|| rm -f {version_file}.tmp'),
     shell=True, stderr=open(os.devnull, "w"))
 
-with open(version_file) as f:
-    version = f.read().strip().lstrip('v').replace(
-        '-', '+', 1).replace('-', '.')
+try:
+    with open(version_file) as f:
+        version = f.read().strip().lstrip('v').replace(
+            '-', '+', 1).replace('-', '.')
+except Exception as e:
+    version = ''
 
 
 class CheckVersion(Command):
