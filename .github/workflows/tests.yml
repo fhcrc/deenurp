@@ -3,9 +3,11 @@ name: Run deenurp tests on deenurp image
 on: push
 
 jobs:
-  push_to_registry:
+  dev_image:
     environment: docker_build
     runs-on: ubuntu-latest
+    outputs:
+      sha_short: ${{ env.sha_short }}
     steps:
       -
         name: Set env
@@ -25,12 +27,12 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: |
-            ghcr.io/fhcrc/deenurp:${{ env.sha_short }}  
+          tags: ghcr.io/fhcrc/deenurp:${{ env.sha_short }}
   test:
+    needs: [dev_image]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/fhcrc/deenurp:${{ env.sha_short }}
+      image: ghcr.io/fhcrc/deenurp:${{ needs.dev_image.outputs.sha_short }}
     steps:
     - uses: actions/checkout@v3
     - run: |
