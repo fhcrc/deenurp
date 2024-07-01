@@ -17,7 +17,8 @@ COPY deenurp.py setup.py requirements.txt /usr/local/share/deenurp/
 RUN cd /usr/local/share/deenurp/ && \
     PYTHON=/usr/local/bin/python3 \
     DEENURP=/usr/local/share/deenurp/ \
-    bin/bootstrap.sh /usr/local/
+    bin/bootstrap.sh /usr/local/ \
+    pip install --upgrade --requirement requirements.txt
 
 # clean up sources apt packages
 RUN rm -rf /var/lib/apt/lists/* && \

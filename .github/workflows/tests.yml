@@ -1,18 +1,40 @@
 name: Run deenurp tests on deenurp image
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: push
 
 jobs:
-  build:
+  dev_image:
+    environment: docker_build
+    runs-on: ubuntu-latest
+    outputs:
+      sha_short: ${{ env.sha_short }}
+    steps:
+      -
+        name: Set env
+        run: echo "sha_short=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/fhcrc/deenurp:${{ env.sha_short }}
+  test:
+    needs: [dev_image]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/fhcrc/deenurp:latest
+      image: ghcr.io/fhcrc/deenurp:${{ needs.dev_image.outputs.sha_short }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: |
         python3 -m deenurp.test
         tests/run.sh

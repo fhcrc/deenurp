@@ -14,8 +14,12 @@ subprocess.call(
      f'|| rm -f {version_file}.tmp'),
     shell=True, stderr=open(os.devnull, "w"))
 
-# import must follow 'git describe' command above to update version
-from deenurp import __version__
+try:
+    with open(version_file) as f:
+        version = f.read().strip().lstrip('v').replace(
+            '-', '+', 1).replace('-', '.')
+except Exception as e:
+    version = ''
 
 
 class CheckVersion(Command):
@@ -77,7 +81,7 @@ class run_audit(Command):
 
 setup(
     name='deenurp',
-    version=__version__,
+    version=version,
     package_data={'deenurp': ['data/*', 'test/data/*']},
     entry_points={
         'console_scripts': {'deenurp = deenurp:main'}},
