@@ -230,7 +230,7 @@ def cmalign_scores(text):
         dtype=dtypes,
         index_col='seq_name',
         names=dtypes.keys(),
-        sep='\s+'
+        sep='\\s+'
         )
 
 
