@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
 LABEL org.opencontainers.image.authors="sminot@fredhutch.org,nhoffman@uw.edu,crosenth@uw.edu"
 
 # Install prerequisites
@@ -18,7 +18,7 @@ RUN cd /usr/local/share/deenurp/ && \
     PYTHON=/usr/local/bin/python3 \
     DEENURP=/usr/local/share/deenurp/ \
     bin/bootstrap.sh /usr/local/ \
-    pip install --upgrade --requirement requirements.txt
+    pip install --requirement requirements.txt --root-user-action=ignore
 
 # clean up sources apt packages
 RUN rm -rf /var/lib/apt/lists/* && \
