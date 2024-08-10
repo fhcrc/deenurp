@@ -91,13 +91,13 @@ setup(
     python_requires='>=3.8',
     install_requires=[
         'biopython',
-        'cython',
         'hdbscan',
         'numpy',
         'packaging',
         'pandas',
         'scikit-learn',
         'scipy',
+        'sqlalchemy',
         'seqmagick',
         'taxtastic'
     ],
