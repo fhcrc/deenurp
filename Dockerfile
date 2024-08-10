@@ -13,14 +13,13 @@ RUN mkdir /usr/local/share/deenurp/
 COPY bin /usr/local/share/deenurp/bin
 COPY tests /usr/local/share/deenurp/tests
 COPY deenurp /usr/local/share/deenurp/deenurp
-COPY deenurp.py setup.py requirements.txt /usr/local/share/deenurp/
+COPY deenurp.py setup.py /usr/local/share/deenurp/
 
 # Install deenurp and dependencies
 RUN cd /usr/local/share/deenurp/ && \
     PYTHON=/usr/local/bin/python3 \
     DEENURP=/usr/local/share/deenurp/ \
-    bin/bootstrap.sh /usr/local/ \
-    pip install --requirement requirements.txt
+    bin/bootstrap.sh /usr/local/
 
 # clean up sources apt packages
 RUN rm -rf /var/lib/apt/lists/* && \
