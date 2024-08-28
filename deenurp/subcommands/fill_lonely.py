@@ -5,6 +5,7 @@ Add taxa of the same rank to sole descendents of their parent taxon.
 import argparse
 import copy
 import csv
+import io
 import logging
 import shutil
 import sys
@@ -64,7 +65,7 @@ def fill_lonely_worker(
             util.ntf(suffix='.fast.tre') as tree_fp:
         wrap.esl_sfetch(full_fasta, other_sequence_ids, tf, fa_idx)
         tf.seek(0)
-        sequences = SeqIO.parse(tf, 'fasta')
+        sequences = SeqIO.parse(io.TextIOWrapper(tf, encoding='utf8'), 'fasta')
 
         # Align
         sys.stderr.write(
@@ -75,7 +76,7 @@ def fill_lonely_worker(
         # Run FastTree
         sys.stderr.write('Node {0}: FastTree {1} sequences\r'.format(
             node_id, len(other_sequence_ids)))
-        wrap.fasttree(aligned, tree_fp, gtr=True)
+        wrap.fasttree(aligned, tree_fp.name, gtr=True)
         tree_fp.close()
 
         # Select reps
