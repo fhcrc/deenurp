@@ -189,7 +189,7 @@ def rppr_min_adcl_tree(newick_file, leaves, algorithm='pam', always_include=None
     if always_include:
         cmd.extend(('--always-include', always_include))
     logging.debug(' '.join(cmd))
-    output = subprocess.check_output(cmd)
+    output = subprocess.check_output(cmd, text=True)
     return output.splitlines()
 
 
