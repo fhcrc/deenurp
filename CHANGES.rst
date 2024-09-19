@@ -2,6 +2,11 @@
  Changes for deenurp
 =====================
 
+0.3.2
+=====
+
+* Dependency updates and Python3 conversion bug fixes
+
 0.3.1
 =====
 
